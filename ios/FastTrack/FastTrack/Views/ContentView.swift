@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import Combine
 
 struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
