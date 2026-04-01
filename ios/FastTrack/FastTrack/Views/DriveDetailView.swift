@@ -4,7 +4,6 @@ import MapKit
 struct DriveDetailView: View {
     let drive: Drive
     
-    @State private var region = MKCoordinateRegion()
     @State private var routeCoordinates: [CLLocationCoordinate2D] = []
     
     var body: some View {
@@ -13,7 +12,7 @@ struct DriveDetailView: View {
                 // Map with route
                 Group {
                     if !routeCoordinates.isEmpty {
-                        Map(coordinateRegion: $region, annotationItems: mapAnnotations) { annotation in
+                        Map(coordinateRegion: .constant(regionForRoute), interactionModes: .all, showsUserLocation: false, annotationItems: routeAnnotations) { annotation in
                             MapAnnotation(coordinate: annotation.coordinate) {
                                 Circle()
                                     .fill(annotation.isStart ? Color.green : Color.red)
@@ -24,13 +23,8 @@ struct DriveDetailView: View {
                                     )
                             }
                         }
-                        .overlay(
-                            MapPolyline(coordinates: routeCoordinates)
-                                .stroke(Color.blue, lineWidth: 3)
-                        )
                         .frame(height: 200)
                         .cornerRadius(12)
-                        .onAppear { setupMap() }
                     } else {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.systemGray6))
@@ -116,11 +110,40 @@ struct DriveDetailView: View {
     
     // MARK: - Map Data
     
-    private var mapAnnotations: [MapAnnotation] {
+    private var regionForRoute: MKCoordinateRegion {
+        guard !routeCoordinates.isEmpty else {
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: drive.startLatitude, longitude: drive.startLongitude),
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+        
+        let latitudes = routeCoordinates.map(\.latitude)
+        let longitudes = routeCoordinates.map(\.longitude)
+        
+        let minLat = latitudes.min()!
+        let maxLat = latitudes.max()!
+        let minLng = longitudes.min()!
+        let maxLng = longitudes.max()!
+        
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLng + maxLng) / 2
+        )
+        
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.001, (maxLat - minLat) * 1.3),
+            longitudeDelta: max(0.001, (maxLng - minLng) * 1.3)
+        )
+        
+        return MKCoordinateRegion(center: center, span: span)
+    }
+    
+    private var routeAnnotations: [RouteAnnotation] {
         guard !routeCoordinates.isEmpty else { return [] }
         return [
-            MapAnnotation(coordinate: routeCoordinates.first!, isStart: true),
-            MapAnnotation(coordinate: routeCoordinates.last!, isStart: false)
+            RouteAnnotation(coordinate: routeCoordinates.first!, isStart: true),
+            RouteAnnotation(coordinate: routeCoordinates.last!, isStart: false)
         ]
     }
     
@@ -138,31 +161,6 @@ struct DriveDetailView: View {
         }
     }
     
-    private func setupMap() {
-        guard !routeCoordinates.isEmpty else { return }
-        
-        // Calculate bounding region for all coordinates
-        let latitudes = routeCoordinates.map(\.latitude)
-        let longitudes = routeCoordinates.map(\.longitude)
-        
-        let minLat = latitudes.min()!
-        let maxLat = latitudes.max()!
-        let minLng = longitudes.min()!
-        let maxLng = longitudes.max()!
-        
-        let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLng + maxLng) / 2
-        )
-        
-        let span = MKCoordinateSpan(
-            latitudeDelta: max(0.001, (maxLat - minLat) * 1.3), // 30% padding
-            longitudeDelta: max(0.001, (maxLng - minLng) * 1.3)
-        )
-        
-        region = MKCoordinateRegion(center: center, span: span)
-    }
-    
     private func formatDuration(_ seconds: Double) -> String {
         let h = Int(seconds) / 3600
         let m = (Int(seconds) % 3600) / 60
@@ -171,9 +169,9 @@ struct DriveDetailView: View {
     }
 }
 
-// MARK: - Map Annotation
+// MARK: - Route Annotation
 
-private struct MapAnnotation: Identifiable {
+private struct RouteAnnotation: Identifiable {
     let id = UUID()
     let coordinate: CLLocationCoordinate2D
     let isStart: Bool
