@@ -20,6 +20,16 @@ type Drive struct {
 	MinSpeed        float64   `json:"min_speed"`
 	AvgSpeed        float64   `json:"avg_speed"`
 	RouteData       string    `gorm:"type:text" json:"route_data"`
+	
+	// Car information
+	CarID       *string `json:"car_id"`
+	CarMake     *string `json:"car_make"`
+	CarModel    *string `json:"car_model"`
+	CarYear     *int    `json:"car_year"`
+	CarTrim     *string `json:"car_trim"`
+	CarNickname *string `json:"car_nickname"`
+	
+	// Extended stats
 	StoppedTime     float64   `json:"stopped_time"`
 	LeftTurns       int       `json:"left_turns"`
 	RightTurns      int       `json:"right_turns"`

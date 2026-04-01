@@ -17,6 +17,14 @@ struct Drive: Identifiable, Codable {
     var avgSpeed: Double        // meters per second
     var routeData: String?
 
+    // Car information
+    var carId: String?          // Reference to UserCar.id
+    var carMake: String?        // Stored snapshot for history
+    var carModel: String?       // Stored snapshot for history
+    var carYear: Int?           // Stored snapshot for history
+    var carTrim: String?        // Stored snapshot for history
+    var carNickname: String?    // Stored snapshot for history
+
     // Extended stats
     var stoppedTime: Double     // seconds at < 1 mph
     var leftTurns: Int
@@ -28,6 +36,21 @@ struct Drive: Identifiable, Codable {
     var peakGForce: Double       // G
     var topCornerSpeed: Double   // m/s
     var best060Time: Double?     // seconds; nil if never hit 60 mph
+    
+    var carDisplayString: String {
+        if let nickname = carNickname, !nickname.isEmpty {
+            return nickname
+        }
+        
+        let parts: [String] = [
+            carYear.map { String($0) } ?? "",
+            carMake ?? "",
+            carModel ?? "",
+            carTrim ?? ""
+        ].filter { !$0.isEmpty }
+        
+        return parts.isEmpty ? "Unknown Car" : parts.joined(separator: " ")
+    }
 
     var durationString: String {
         let h = Int(duration) / 3600
@@ -51,6 +74,12 @@ struct Drive: Identifiable, Codable {
         case minSpeed = "min_speed"
         case avgSpeed = "avg_speed"
         case routeData = "route_data"
+        case carId = "car_id"
+        case carMake = "car_make"
+        case carModel = "car_model"
+        case carYear = "car_year"
+        case carTrim = "car_trim"
+        case carNickname = "car_nickname"
         case stoppedTime = "stopped_time"
         case leftTurns = "left_turns"
         case rightTurns = "right_turns"
@@ -79,6 +108,12 @@ struct Drive: Identifiable, Codable {
             minSpeed: 0,
             avgSpeed: 22.352,
             routeData: nil,
+            carId: "example-car",
+            carMake: "Porsche",
+            carModel: "911",
+            carYear: 2023,
+            carTrim: "GT3",
+            carNickname: "Track Car",
             stoppedTime: 180,
             leftTurns: 12,
             rightTurns: 10,

@@ -140,10 +140,17 @@ struct User: Codable, Identifiable {
     let fullName: String?
     let username: String?
     let country: String?
+    
+    // Legacy car fields
     let carMake: String?
     let carModel: String?
     let carYear: Int?
     let carTrim: String?
+    
+    // New garage fields
+    let garage: String?
+    let selectedCarID: String?
+    
     let authProvider: String?
     let createdAt: Date
     let updatedAt: Date
@@ -160,6 +167,8 @@ struct User: Codable, Identifiable {
         case carModel     = "car_model"
         case carYear      = "car_year"
         case carTrim      = "car_trim"
+        case garage
+        case selectedCarID = "selected_car_id"
         case authProvider = "auth_provider"
         case createdAt    = "created_at"
         case updatedAt    = "updated_at"

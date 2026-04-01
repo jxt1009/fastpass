@@ -24,7 +24,7 @@ class CarService: ObservableObject {
     private let cacheKey = "nhtsa_models_cache_v2"
     
     // Popular makes to preload
-    private let popularMakes = ["BMW", "Mercedes-Benz", "Audi", "Porsche", "Tesla", "Ferrari", "Lamborghini"]
+    private let popularMakes = ["BMW", "Mercedes-Benz", "Audi", "Chevrolet", "Porsche", "Tesla", "Ferrari", "Lamborghini"]
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: cacheKey),

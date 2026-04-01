@@ -109,6 +109,7 @@ struct ProfileView: View {
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var locationManager: LocationManager
     @State private var showingSetup = false
+    @State private var showingAddCar = false
 
     private var stats: UserStats {
         UserStats.from(drives: driveManager.drives)
@@ -121,6 +122,7 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
+                        garageSection
                         mainStatsGrid
                         topSpeedCard
                         best060Card
@@ -151,6 +153,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingSetup) {
                 ProfileSetupView()
+            }
+            .sheet(isPresented: $showingAddCar) {
+                AddCarView()
             }
             .onAppear {
                 if !profileManager.isProfileComplete {
@@ -207,6 +212,78 @@ struct ProfileView: View {
                     Text("mph")
                         .font(.caption2)
                         .foregroundColor(Color(white: 0.5))
+                }
+            }
+        }
+    }
+
+    // MARK: - Garage Section
+    
+    private var garageSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Garage")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Spacer()
+                Button {
+                    showingAddCar = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.title2)
+                }
+            }
+            
+            if let profile = profileManager.profile, !profile.garage.isEmpty {
+                LazyVGrid(columns: [GridItem(.flexible())], spacing: 8) {
+                    ForEach(profile.garage) { car in
+                        DarkCard {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(car.shortDisplay)
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                    Text(car.displayString)
+                                        .font(.subheadline)
+                                        .foregroundColor(Color(white: 0.7))
+                                }
+                                Spacer()
+                                if profile.selectedCarId == car.id {
+                                    Text("SELECTED")
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.blue)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.blue.opacity(0.2))
+                                        .cornerRadius(8)
+                                }
+                            }
+                        }
+                        .onTapGesture {
+                            selectCar(car.id)
+                        }
+                    }
+                }
+            } else {
+                DarkCard {
+                    VStack(spacing: 12) {
+                        Image(systemName: "car")
+                            .font(.title2)
+                            .foregroundColor(Color(white: 0.5))
+                        Text("No cars in garage")
+                            .font(.subheadline)
+                            .foregroundColor(Color(white: 0.6))
+                        Button("Add Your First Car") {
+                            showingAddCar = true
+                        }
+                        .foregroundColor(.blue)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
                 }
             }
         }
@@ -407,5 +484,11 @@ struct ProfileView: View {
         let m = (Int(seconds) % 3600) / 60
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
+    }
+    
+    private func selectCar(_ carId: String) {
+        guard var profile = profileManager.profile else { return }
+        profile.selectCar(id: carId)
+        profileManager.saveProfile(profile)
     }
 }

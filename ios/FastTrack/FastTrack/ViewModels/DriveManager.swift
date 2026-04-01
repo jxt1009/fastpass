@@ -69,6 +69,10 @@ class DriveManager: ObservableObject {
 
         locationManager?.startUpdatingLocation()
 
+        // Get selected car from profile
+        let profile = ProfileManager.shared.profile
+        let selectedCar = profile?.selectedCar
+
         currentDrive = Drive(
             id: nil,
             userID: AuthManager.shared.getUser()?.id ?? 0,
@@ -78,6 +82,12 @@ class DriveManager: ObservableObject {
             distance: 0, duration: 0,
             maxSpeed: 0, minSpeed: 0, avgSpeed: 0,
             routeData: nil,
+            carId: selectedCar?.id,
+            carMake: selectedCar?.make,
+            carModel: selectedCar?.model,
+            carYear: selectedCar?.year,
+            carTrim: selectedCar?.trim,
+            carNickname: selectedCar?.nickname,
             stoppedTime: 0, leftTurns: 0, rightTurns: 0,
             brakeEvents: 0, laneChanges: 0,
             maxAcceleration: 0, maxDeceleration: 0,

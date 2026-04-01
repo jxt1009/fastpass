@@ -91,6 +91,7 @@ struct DriveDetailView: View {
                     
                     DetailRow(label: "Start Time", value: drive.startTime.formatted(date: .long, time: .shortened))
                     DetailRow(label: "End Time", value: drive.endTime.formatted(date: .long, time: .shortened))
+                    DetailRow(label: "Car", value: drive.carDisplayString)
                     DetailRow(label: "Start Location", value: String(format: "%.4f, %.4f", drive.startLatitude, drive.startLongitude))
                     DetailRow(label: "End Location", value: String(format: "%.4f, %.4f", drive.endLatitude, drive.endLongitude))
                     if drive.stoppedTime > 0 {

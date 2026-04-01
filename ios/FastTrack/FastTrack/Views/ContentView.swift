@@ -6,6 +6,8 @@ struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
     @State private var elapsedTime: TimeInterval = 0
+    @State private var showingCarPicker = false
+    @ObservedObject private var profileManager = ProfileManager.shared
 
     // 1-second ticker for live timer
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -106,6 +108,33 @@ struct ContentView: View {
 
                         Spacer()
 
+                        // Car selector
+                        if let profile = profileManager.profile, !profile.garage.isEmpty {
+                            VStack(spacing: 12) {
+                                Text("DRIVING")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .fontWeight(.semibold)
+                                
+                                Button { showingCarPicker = true } label: {
+                                    HStack {
+                                        Image(systemName: "car.fill")
+                                        Text(profile.selectedCar?.shortDisplay ?? "Select Car")
+                                            .fontWeight(.medium)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                    }
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                }
+                                .disabled(driveManager.isRecording)
+                            }
+                        }
+
                         // Record button
                         Button {
                             if driveManager.isRecording {
@@ -118,7 +147,7 @@ struct ContentView: View {
                         } label: {
                             HStack {
                                 Image(systemName: driveManager.isRecording ? "stop.fill" : "play.fill")
-                                Text(driveManager.isRecording ? "Stop Recording" : "Start Recording")
+                                Text(driveManager.isRecording ? "Stop Drive" : "Start Drive")
                                     .fontWeight(.semibold)
                             }
                             .font(.title2)
@@ -134,6 +163,9 @@ struct ContentView: View {
             }
             .navigationTitle("FastTrack")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingCarPicker) {
+                CarSelectorView()
+            }
             // Tick the live timer every second
             .onReceive(timer) { _ in
                 guard driveManager.isRecording, let start = driveManager.recordingStartTime else { return }

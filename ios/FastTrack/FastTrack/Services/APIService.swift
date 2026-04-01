@@ -106,25 +106,39 @@ class APIService {
         struct UpdateProfileRequest: Encodable {
             let username: String
             let country: String
+            // Legacy fields for backward compatibility
             let carMake: String
             let carModel: String
             let carYear: Int?
             let carTrim: String
+            // New garage fields
+            let garage: String
+            let selectedCarID: String?
+            
             enum CodingKeys: String, CodingKey {
                 case username, country
                 case carMake = "car_make"
                 case carModel = "car_model"
                 case carYear = "car_year"
                 case carTrim = "car_trim"
+                case garage
+                case selectedCarID = "selected_car_id"
             }
         }
+        
+        // Encode garage as JSON
+        let garageData = try JSONEncoder().encode(profile.garage)
+        let garageString = String(data: garageData, encoding: .utf8) ?? "[]"
+        
         let req = UpdateProfileRequest(
             username: profile.username,
             country: profile.country,
             carMake: profile.carMake,
             carModel: profile.carModel,
             carYear: profile.carYear,
-            carTrim: profile.carTrim
+            carTrim: profile.carTrim,
+            garage: garageString,
+            selectedCarID: profile.selectedCarId
         )
         let _: User = try await put(endpoint: "/profile", body: req)
     }

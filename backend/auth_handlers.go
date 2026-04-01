@@ -141,10 +141,16 @@ func updateProfile(c *gin.Context) {
 
 	user.Username = req.Username
 	user.Country = req.Country
+	
+	// Update legacy car fields for backward compatibility
 	user.CarMake = req.CarMake
 	user.CarModel = req.CarModel
 	user.CarYear = req.CarYear
 	user.CarTrim = req.CarTrim
+	
+	// Update garage fields
+	user.Garage = req.Garage
+	user.SelectedCarID = req.SelectedCarID
 
 	if err := db.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})

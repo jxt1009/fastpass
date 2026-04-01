@@ -12,22 +12,35 @@ type User struct {
 	FullName     string    `json:"full_name"`
 	Username     string    `gorm:"uniqueIndex;size:50" json:"username"`
 	Country      string    `gorm:"size:100" json:"country"`
+	
+	// Legacy single car fields (kept for backward compatibility)
 	CarMake      string    `gorm:"size:100" json:"car_make"`
 	CarModel     string    `gorm:"size:100" json:"car_model"`
 	CarYear      *int      `json:"car_year"`
 	CarTrim      string    `gorm:"size:100" json:"car_trim"`
+	
+	// New garage support
+	Garage       string `gorm:"type:text" json:"garage"`           // JSON array of cars
+	SelectedCarID *string `gorm:"size:100" json:"selected_car_id"`  // ID of selected car
+	
 	AuthProvider string    `json:"auth_provider"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type UpdateProfileRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=20"`
-	Country  string `json:"country"`
-	CarMake  string `json:"car_make"`
-	CarModel string `json:"car_model"`
-	CarYear  *int   `json:"car_year"`
-	CarTrim  string `json:"car_trim"`
+	Username      string `json:"username" binding:"required,min=3,max=20"`
+	Country       string `json:"country"`
+	
+	// Legacy fields (still supported)
+	CarMake       string `json:"car_make"`
+	CarModel      string `json:"car_model"`
+	CarYear       *int   `json:"car_year"`
+	CarTrim       string `json:"car_trim"`
+	
+	// New garage fields
+	Garage        string `json:"garage"`         // JSON array of cars
+	SelectedCarID *string `json:"selected_car_id"` // ID of selected car
 }
 
 type AuthResponse struct {
