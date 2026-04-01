@@ -11,8 +11,8 @@ class LocationManager: NSObject, ObservableObject {
     override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 5  // Update every 5 meters
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = kCLDistanceFilterNone  // every GPS update
         
         // Background location updates are OPTIONAL
         // They require "Background Modes" capability with "Location updates" enabled in Xcode

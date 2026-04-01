@@ -5,21 +5,31 @@ import (
 )
 
 type Drive struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`
-	UserID         uint      `json:"user_id"`                     // Foreign key to users table
-	User           User      `gorm:"foreignKey:UserID" json:"-"` // Relationship
-	StartTime      time.Time `json:"start_time"`
-	EndTime        time.Time `json:"end_time"`
-	StartLatitude  float64   `json:"start_latitude"`
-	StartLongitude float64   `json:"start_longitude"`
-	EndLatitude    float64   `json:"end_latitude"`
-	EndLongitude   float64   `json:"end_longitude"`
-	Distance       float64   `json:"distance"`                          // meters
-	Duration       float64   `json:"duration"`                          // seconds
-	MaxSpeed       float64   `json:"max_speed"`                         // meters per second
-	MinSpeed       float64   `json:"min_speed"`                         // meters per second
-	AvgSpeed       float64   `json:"avg_speed"`                         // meters per second
-	RouteData      string    `gorm:"type:text" json:"route_data"`       // JSON array of coordinates
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	UserID          uint      `json:"user_id"`
+	User            User      `gorm:"foreignKey:UserID" json:"-"`
+	StartTime       time.Time `json:"start_time"`
+	EndTime         time.Time `json:"end_time"`
+	StartLatitude   float64   `json:"start_latitude"`
+	StartLongitude  float64   `json:"start_longitude"`
+	EndLatitude     float64   `json:"end_latitude"`
+	EndLongitude    float64   `json:"end_longitude"`
+	Distance        float64   `json:"distance"`
+	Duration        float64   `json:"duration"`
+	MaxSpeed        float64   `json:"max_speed"`
+	MinSpeed        float64   `json:"min_speed"`
+	AvgSpeed        float64   `json:"avg_speed"`
+	RouteData       string    `gorm:"type:text" json:"route_data"`
+	StoppedTime     float64   `json:"stopped_time"`
+	LeftTurns       int       `json:"left_turns"`
+	RightTurns      int       `json:"right_turns"`
+	BrakeEvents     int       `json:"brake_events"`
+	LaneChanges     int       `json:"lane_changes"`
+	MaxAcceleration float64   `json:"max_acceleration"`
+	MaxDeceleration float64   `json:"max_deceleration"`
+	PeakGForce      float64   `json:"peak_g_force"`
+	TopCornerSpeed  float64   `json:"top_corner_speed"`
+	Best060Time     *float64  `json:"best_060_time"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }

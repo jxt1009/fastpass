@@ -37,8 +37,13 @@ struct RootView: View {
     var body: some View {
         Group {
             if authManager.isAuthenticated {
-                ContentView()
-                    .onAppear { locationManager.requestPermission() }
+                TabView {
+                    ContentView()
+                        .tabItem { Label("Track", systemImage: "location.fill") }
+                    ProfileView()
+                        .tabItem { Label("Profile", systemImage: "person.fill") }
+                }
+                .onAppear { locationManager.requestPermission() }
             } else {
                 SignInView()
                     .environmentObject(authManager)

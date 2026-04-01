@@ -119,3 +119,35 @@ func getCurrentUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, user)
 }
+
+func updateProfile(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	user.Username = req.Username
+	user.Country = req.Country
+	user.CarMake = req.CarMake
+	user.CarModel = req.CarModel
+
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}

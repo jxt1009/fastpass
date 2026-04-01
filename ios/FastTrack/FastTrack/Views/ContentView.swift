@@ -5,20 +5,24 @@ struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
     @State private var showingHistory = false
-    
+    @State private var elapsedTime: TimeInterval = 0
+
+    // 1-second ticker for live timer
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Map View
+                // Map
                 if driveManager.isRecording {
                     LiveMapView(
-                        userLocation: locationManager.currentLocation?.coordinate ?? CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                        userLocation: locationManager.currentLocation?.coordinate
+                            ?? CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
                         routeCoordinates: driveManager.routeCoordinates
                     )
                     .frame(height: 300)
                     .ignoresSafeArea(edges: .top)
                 } else {
-                    // Placeholder when not recording
                     ZStack {
                         Color.gray.opacity(0.2)
                         VStack(spacing: 12) {
@@ -32,68 +36,61 @@ struct ContentView: View {
                     }
                     .frame(height: 200)
                 }
-                
+
                 ScrollView {
                     VStack(spacing: 20) {
-                        // Speed Display
+                        // Speed
                         VStack {
                             Text("\(Int(locationManager.currentSpeed * 2.23694))")
                                 .font(.system(size: 80, weight: .bold, design: .rounded))
                                 .foregroundColor(speedColor(for: locationManager.currentSpeed))
+                                .contentTransition(.numericText())
+                                .animation(.easeInOut(duration: 0.2), value: Int(locationManager.currentSpeed * 2.23694))
                             Text("MPH")
                                 .font(.title2)
                                 .foregroundStyle(.secondary)
                         }
                         .padding()
-                        
-                        // Trip Info
+
+                        // Live stats during recording
                         if driveManager.isRecording, let drive = driveManager.currentDrive {
                             VStack(spacing: 16) {
                                 Text("CURRENT DRIVE")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .fontWeight(.semibold)
-                                
-                                // Stats Grid
-                                LazyVGrid(columns: [
-                                    GridItem(.flexible()),
-                                    GridItem(.flexible())
-                                ], spacing: 12) {
+
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                                     StatCard(
                                         title: "Time",
-                                        value: drive.durationString,
+                                        value: formatElapsed(elapsedTime),
                                         icon: "clock.fill",
                                         color: .blue
                                     )
-                                    
                                     StatCard(
                                         title: "Distance",
                                         value: String(format: "%.2f mi", drive.distance * 0.000621371),
                                         icon: "road.lanes",
                                         color: .green
                                     )
-                                    
                                     StatCard(
                                         title: "Max",
                                         value: String(format: "%.0f mph", drive.maxSpeed * 2.23694),
                                         icon: "speedometer",
                                         color: .red
                                     )
-                                    
                                     StatCard(
                                         title: "Min",
                                         value: String(format: "%.0f mph", drive.minSpeed * 2.23694),
                                         icon: "gauge.with.dots.needle.bottom.50percent",
                                         color: .orange
                                     )
-                                    
                                     StatCard(
                                         title: "Avg",
                                         value: String(format: "%.0f mph", drive.avgSpeed * 2.23694),
                                         icon: "chart.line.uptrend.xyaxis",
                                         color: .purple
                                     )
-                                    
                                     StatCard(
                                         title: "Points",
                                         value: "\(driveManager.routeCoordinates.count)",
@@ -106,17 +103,19 @@ struct ContentView: View {
                             .background(Color(.systemGray6))
                             .cornerRadius(12)
                         }
-                        
+
                         Spacer()
-                        
-                        // Record Button
-                        Button(action: {
+
+                        // Record button
+                        Button {
                             if driveManager.isRecording {
                                 driveManager.stopRecording()
+                                elapsedTime = 0
                             } else {
                                 driveManager.startRecording()
+                                elapsedTime = 0
                             }
-                        }) {
+                        } label: {
                             HStack {
                                 Image(systemName: driveManager.isRecording ? "stop.fill" : "play.fill")
                                 Text(driveManager.isRecording ? "Stop Recording" : "Start Recording")
@@ -129,15 +128,12 @@ struct ContentView: View {
                             .background(driveManager.isRecording ? Color.red : Color.blue)
                             .cornerRadius(12)
                         }
-                        
-                        // History Button
-                        Button(action: {
-                            showingHistory = true
-                        }) {
+
+                        // History button
+                        Button { showingHistory = true } label: {
                             HStack {
                                 Image(systemName: "clock.arrow.circlepath")
-                                Text("View History")
-                                    .fontWeight(.medium)
+                                Text("View History").fontWeight(.medium)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                             }
@@ -154,12 +150,22 @@ struct ContentView: View {
             }
             .navigationTitle("FastTrack")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showingHistory) {
-                DriveHistoryView()
+            .sheet(isPresented: $showingHistory) { DriveHistoryView() }
+            // Tick the live timer every second
+            .onReceive(timer) { _ in
+                guard driveManager.isRecording, let start = driveManager.recordingStartTime else { return }
+                elapsedTime = Date().timeIntervalSince(start)
             }
         }
     }
-    
+
+    private func formatElapsed(_ t: TimeInterval) -> String {
+        let h = Int(t) / 3600
+        let m = (Int(t) % 3600) / 60
+        let s = Int(t) % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
     private func speedColor(for speed: Double) -> Color {
         let mph = speed * 2.23694
         if mph < 25 { return .green }

@@ -49,6 +49,7 @@ func main() {
 	api.Use(authMiddleware())
 	{
 		api.GET("/me", getCurrentUser)
+		api.PUT("/profile", updateProfile)
 		api.POST("/drives", createDrive)
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)

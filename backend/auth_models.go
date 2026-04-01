@@ -5,14 +5,25 @@ import (
 )
 
 type User struct {
-	ID            uint      `gorm:"primaryKey" json:"id"`
-	AppleUserID   string    `gorm:"uniqueIndex" json:"apple_user_id,omitempty"`
-	GoogleUserID  string    `gorm:"uniqueIndex" json:"google_user_id,omitempty"`
-	Email         string    `json:"email"`
-	FullName      string    `json:"full_name"`
-	AuthProvider  string    `json:"auth_provider"` // "apple", "google"
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	AppleUserID  string    `gorm:"uniqueIndex" json:"apple_user_id,omitempty"`
+	GoogleUserID string    `gorm:"uniqueIndex" json:"google_user_id,omitempty"`
+	Email        string    `json:"email"`
+	FullName     string    `json:"full_name"`
+	Username     string    `gorm:"uniqueIndex;size:50" json:"username"`
+	Country      string    `gorm:"size:100" json:"country"`
+	CarMake      string    `gorm:"size:100" json:"car_make"`
+	CarModel     string    `gorm:"size:100" json:"car_model"`
+	AuthProvider string    `json:"auth_provider"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type UpdateProfileRequest struct {
+	Username string `json:"username" binding:"required,min=3,max=20"`
+	Country  string `json:"country"`
+	CarMake  string `json:"car_make"`
+	CarModel string `json:"car_model"`
 }
 
 type AuthResponse struct {

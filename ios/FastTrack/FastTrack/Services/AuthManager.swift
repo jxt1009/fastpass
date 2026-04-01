@@ -138,6 +138,10 @@ struct User: Codable, Identifiable {
     let googleUserID: String?
     let email: String?
     let fullName: String?
+    let username: String?
+    let country: String?
+    let carMake: String?
+    let carModel: String?
     let authProvider: String?
     let createdAt: Date
     let updatedAt: Date
@@ -148,6 +152,10 @@ struct User: Codable, Identifiable {
         case googleUserID = "google_user_id"
         case email
         case fullName     = "full_name"
+        case username
+        case country
+        case carMake      = "car_make"
+        case carModel     = "car_model"
         case authProvider = "auth_provider"
         case createdAt    = "created_at"
         case updatedAt    = "updated_at"

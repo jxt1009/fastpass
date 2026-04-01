@@ -86,6 +86,38 @@ class APIService {
     func fetchDrive(id: Int) async throws -> Drive {
         return try await get(endpoint: "/drives/\(id)")
     }
+
+    func put<T: Encodable, R: Decodable>(endpoint: String, body: T) async throws -> R {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = AuthManager.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try encoder.encode(body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
+        return try decoder.decode(R.self, from: data)
+    }
+
+    func updateProfile(_ profile: UserProfile) async throws {
+        struct UpdateProfileRequest: Encodable {
+            let username: String
+            let country: String
+            let carMake: String
+            let carModel: String
+            enum CodingKeys: String, CodingKey {
+                case username, country
+                case carMake = "car_make"
+                case carModel = "car_model"
+            }
+        }
+        let req = UpdateProfileRequest(username: profile.username, country: profile.country,
+                                        carMake: profile.carMake, carModel: profile.carModel)
+        let _: User = try await put(endpoint: "/profile", body: req)
+    }
 }
 
 enum APIError: Error, LocalizedError {
