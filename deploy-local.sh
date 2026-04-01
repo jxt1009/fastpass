@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 FastPass Local Deployment Script"
+echo "🚀 FastTrack Local Deployment Script"
 echo "===================================="
 echo "Running on: $(hostname)"
 echo "User: $(whoami)"
@@ -10,7 +10,7 @@ echo ""
 
 # Configuration
 NAMESPACE="default"
-APP_NAME="fastpass-api"
+APP_NAME="fasttrack-api"
 DOMAIN="fast.toper.dev"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="${SCRIPT_DIR}/backend"
@@ -27,7 +27,7 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}→ Checking environment...${NC}"
 if [ ! -d "$BACKEND_DIR" ]; then
     echo -e "${RED}✗ Backend directory not found: $BACKEND_DIR${NC}"
-    echo "  Please run this script from the FastPass repository root"
+    echo "  Please run this script from the FastTrack repository root"
     exit 1
 fi
 echo -e "${GREEN}✓ Repository found${NC}"
@@ -55,24 +55,24 @@ echo ""
 
 # Check if PostgreSQL is available
 echo -e "${BLUE}→ Checking PostgreSQL availability...${NC}"
-if kubectl get svc -n $NAMESPACE fastpass-postgres-service &>/dev/null; then
-    echo -e "${GREEN}✓ FastPass PostgreSQL service found${NC}"
-    POSTGRES_SERVICE="fastpass-postgres-service"
-    POSTGRES_USER="fastpass"
+if kubectl get svc -n $NAMESPACE fasttrack-postgres-service &>/dev/null; then
+    echo -e "${GREEN}✓ FastTrack PostgreSQL service found${NC}"
+    POSTGRES_SERVICE="fasttrack-postgres-service"
+    POSTGRES_USER="fasttrack"
 else
-    echo -e "${YELLOW}⚠ FastPass PostgreSQL not found${NC}"
+    echo -e "${YELLOW}⚠ FastTrack PostgreSQL not found${NC}"
     echo ""
-    echo "FastPass needs its own PostgreSQL database (independent from other services)."
-    echo "Would you like to deploy PostgreSQL for FastPass now? (y/n)"
+    echo "FastTrack needs its own PostgreSQL database (independent from other services)."
+    echo "Would you like to deploy PostgreSQL for FastTrack now? (y/n)"
     read -r response
     if [[ "$response" =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}→ Deploying PostgreSQL for FastPass...${NC}"
+        echo -e "${BLUE}→ Deploying PostgreSQL for FastTrack...${NC}"
         
         # Generate random password
         PG_PASSWORD=$(openssl rand -base64 24)
         
         # Create postgres secret
-        kubectl create secret generic fastpass-postgres-secret -n $NAMESPACE \
+        kubectl create secret generic fasttrack-postgres-secret -n $NAMESPACE \
             --from-literal=postgres-password="$PG_PASSWORD" \
             --dry-run=client -o yaml | kubectl apply -f -
         
@@ -80,18 +80,18 @@ else
         kubectl apply -f "$K8S_DIR/postgres.yaml"
         
         echo -e "${GREEN}✓ PostgreSQL deployed${NC}"
-        echo -e "${YELLOW}  Database: fastpass${NC}"
-        echo -e "${YELLOW}  User: fastpass${NC}"
+        echo -e "${YELLOW}  Database: fasttrack${NC}"
+        echo -e "${YELLOW}  User: fasttrack${NC}"
         echo -e "${YELLOW}  Password: $PG_PASSWORD${NC}"
         echo -e "${YELLOW}  (Save this password securely!)${NC}"
         
-        POSTGRES_SERVICE="fastpass-postgres-service"
-        POSTGRES_USER="fastpass"
+        POSTGRES_SERVICE="fasttrack-postgres-service"
+        POSTGRES_USER="fasttrack"
         DB_PASSWORD="$PG_PASSWORD"
         
         # Wait for postgres to be ready
         echo -e "${BLUE}→ Waiting for PostgreSQL to be ready...${NC}"
-        kubectl wait --for=condition=ready pod -l app=fastpass-postgres -n $NAMESPACE --timeout=180s
+        kubectl wait --for=condition=ready pod -l app=fasttrack-postgres -n $NAMESPACE --timeout=180s
         echo -e "${GREEN}✓ PostgreSQL is ready${NC}"
         
         # Deploy backup CronJob
@@ -99,7 +99,7 @@ else
         kubectl apply -f "$K8S_DIR/backup-cronjob.yaml"
         echo -e "${GREEN}✓ Backup CronJob configured (runs daily at 2 AM)${NC}"
     else
-        echo -e "${RED}✗ PostgreSQL is required for FastPass${NC}"
+        echo -e "${RED}✗ PostgreSQL is required for FastTrack${NC}"
         echo "  Deploy it manually or re-run this script"
         exit 1
     fi
@@ -120,7 +120,7 @@ echo ""
 
 # Step 2: Create or update secret
 echo -e "${BLUE}→ Checking for Kubernetes secrets...${NC}"
-if kubectl get secret fastpass-secrets -n $NAMESPACE &>/dev/null; then
+if kubectl get secret fasttrack-secrets -n $NAMESPACE &>/dev/null; then
     echo -e "${YELLOW}⚠ Secret already exists${NC}"
     echo "Update secret? (y/n)"
     read -r response
@@ -141,9 +141,9 @@ if kubectl get secret fastpass-secrets -n $NAMESPACE &>/dev/null; then
         fi
         
         if [ ! -z "$DB_PASSWORD" ]; then
-            kubectl delete secret fastpass-secrets -n $NAMESPACE
-            kubectl create secret generic fastpass-secrets -n $NAMESPACE \
-                --from-literal=database-url="host=${POSTGRES_SERVICE:-postgres-service} user=postgres password=$DB_PASSWORD dbname=fastpass port=5432 sslmode=disable" \
+            kubectl delete secret fasttrack-secrets -n $NAMESPACE
+            kubectl create secret generic fasttrack-secrets -n $NAMESPACE \
+                --from-literal=database-url="host=${POSTGRES_SERVICE:-postgres-service} user=postgres password=$DB_PASSWORD dbname=fasttrack port=5432 sslmode=disable" \
                 --from-literal=jwt-secret="$jwt_secret"
             echo -e "${GREEN}✓ Secret updated${NC}"
         else
@@ -163,11 +163,11 @@ else
     jwt_secret=$(openssl rand -base64 32)
     echo -e "${GREEN}✓ Generated JWT secret${NC}"
     
-    POSTGRES_USER="${POSTGRES_USER:-fastpass}"
-    POSTGRES_SERVICE="${POSTGRES_SERVICE:-fastpass-postgres-service}"
+    POSTGRES_USER="${POSTGRES_USER:-fasttrack}"
+    POSTGRES_SERVICE="${POSTGRES_SERVICE:-fasttrack-postgres-service}"
     
-    kubectl create secret generic fastpass-secrets -n $NAMESPACE \
-        --from-literal=database-url="host=$POSTGRES_SERVICE user=$POSTGRES_USER password=$DB_PASSWORD dbname=fastpass port=5432 sslmode=disable" \
+    kubectl create secret generic fasttrack-secrets -n $NAMESPACE \
+        --from-literal=database-url="host=$POSTGRES_SERVICE user=$POSTGRES_USER password=$DB_PASSWORD dbname=fasttrack port=5432 sslmode=disable" \
         --from-literal=jwt-secret="$jwt_secret"
     echo -e "${GREEN}✓ Secret created${NC}"
     echo -e "${YELLOW}  JWT Secret: $jwt_secret${NC}"
@@ -251,7 +251,7 @@ echo "  Scale:        kubectl scale deployment/$APP_NAME --replicas=3 -n $NAMESP
 echo ""
 echo "Check SSL certificate:"
 echo "  kubectl get certificate -n $NAMESPACE"
-echo "  kubectl describe certificate fastpass-api-tls -n $NAMESPACE"
+echo "  kubectl describe certificate fasttrack-api-tls -n $NAMESPACE"
 echo ""
 echo "Next steps:"
 echo "  1. Configure DNS for $DOMAIN to point to your ingress IP"

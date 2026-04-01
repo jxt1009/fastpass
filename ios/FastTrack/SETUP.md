@@ -1,12 +1,12 @@
-# FastPass Setup - Final Steps
+# FastTrack Setup - Final Steps
 
 ## ✅ Files Added
 
-All source files have been copied to your FastPass project! Here's what's in place:
+All source files have been copied to your FastTrack project! Here's what's in place:
 
 ```
-FastPass/FastPass/
-├── FastPassApp.swift       ✅ Updated with managers
+FastTrack/FastTrack/
+├── FastTrackApp.swift       ✅ Updated with managers
 ├── Views/
 │   ├── ContentView.swift   ✅ Main screen with speed tracking
 │   ├── DriveHistoryView.swift  ✅ Drive list
@@ -24,8 +24,8 @@ FastPass/FastPass/
 
 ### Step 1: Add Files to Xcode Project
 
-1. In Xcode, in the Project Navigator (left sidebar), right-click on the **FastPass** group
-2. Select **"Add Files to FastPass..."**
+1. In Xcode, in the Project Navigator (left sidebar), right-click on the **FastTrack** group
+2. Select **"Add Files to FastTrack..."**
 3. Navigate to and select these folders:
    - `Views`
    - `Models`
@@ -38,8 +38,8 @@ FastPass/FastPass/
 
 Since iOS 18 doesn't always use Info.plist, add permissions in the project settings:
 
-1. Select **FastPass** project in Project Navigator
-2. Select the **FastPass** target
+1. Select **FastTrack** project in Project Navigator
+2. Select the **FastTrack** target
 3. Go to the **Info** tab
 4. Click the **+** button under "Custom iOS Target Properties"
 5. Add these keys:
@@ -95,7 +95,7 @@ Since iOS 18 doesn't always use Info.plist, add permissions in the project setti
 - Restart Xcode if needed
 
 ### Location Not Working
-- Check location permissions in Settings → FastPass
+- Check location permissions in Settings → FastTrack
 - Make sure "Location updates" is enabled in Background Modes
 - Run on a physical device for best GPS accuracy
 

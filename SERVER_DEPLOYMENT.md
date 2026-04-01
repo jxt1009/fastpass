@@ -12,16 +12,16 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/fastpass.git
-cd fastpass
+git clone https://github.com/YOUR_USERNAME/fasttrack.git
+cd fasttrack
 ```
 
 ### 2. Build Docker Image
 
 ```bash
 cd backend
-docker build -t your-registry/fastpass-api:latest .
-docker push your-registry/fastpass-api:latest
+docker build -t your-registry/fasttrack-api:latest .
+docker push your-registry/fasttrack-api:latest
 ```
 
 ### 3. Configure Kubernetes
@@ -84,16 +84,16 @@ The backend will auto-create tables on first run:
 ```bash
 # Install PostgreSQL
 # Create database
-createdb fastpass
+createdb fasttrack
 
 # Set environment
-export DATABASE_URL="host=localhost user=postgres password=postgres dbname=fastpass port=5432 sslmode=disable"
+export DATABASE_URL="host=localhost user=postgres password=postgres dbname=fasttrack port=5432 sslmode=disable"
 export JWT_SECRET="your-secret-here"
 
 # Run
 cd backend
-go build -o fastpass-api
-./fastpass-api
+go build -o fasttrack-api
+./fasttrack-api
 ```
 
 ## iOS App Configuration
@@ -101,7 +101,7 @@ go build -o fastpass-api
 Before deploying, update the backend URL in iOS app:
 
 ```swift
-// ios/FastPass/FastPass/Services/APIService.swift
+// ios/FastTrack/FastTrack/Services/APIService.swift
 private let baseURL = "https://your-domain.com/api/v1"
 ```
 
@@ -150,7 +150,7 @@ kubectl scale deployment triprank-api --replicas=3
 
 Update deployment:
 ```bash
-kubectl set image deployment/triprank-api triprank-api=your-registry/fastpass-api:v2
+kubectl set image deployment/triprank-api triprank-api=your-registry/fasttrack-api:v2
 ```
 
 ## Rollback

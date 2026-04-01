@@ -17,13 +17,13 @@ The app tries to enable background location updates, but the **Background Modes*
 ### Step 1: Open Xcode Project
 
 ```bash
-open ios/FastPass/FastPass.xcodeproj
+open ios/FastTrack/FastTrack.xcodeproj
 ```
 
 ### Step 2: Configure Background Modes
 
-1. Click on **FastPass** (blue icon) in Project Navigator
-2. Select **FastPass** target (under TARGETS)
+1. Click on **FastTrack** (blue icon) in Project Navigator
+2. Select **FastTrack** target (under TARGETS)
 3. Click on **Signing & Capabilities** tab
 4. Click **+ Capability** button (top left)
 5. Search for: **Background Modes**

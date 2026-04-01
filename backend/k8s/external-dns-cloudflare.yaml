@@ -58,7 +58,7 @@ spec:
         - --provider=cloudflare
         - --cloudflare-proxied=false  # Set to true for Cloudflare proxy (orange cloud)
         - --log-level=info
-        - --txt-owner-id=fastpass-k8s  # Unique identifier for this cluster
+        - --txt-owner-id=fasttrack-k8s  # Unique identifier for this cluster
         - --txt-prefix=_external-dns.  # Prefix for TXT records
         env:
         - name: CF_API_TOKEN

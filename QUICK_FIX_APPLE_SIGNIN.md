@@ -11,7 +11,7 @@ ASAuthorizationController credential request failed with error: Code=1000
 
 ### In Xcode:
 
-1. Click **FastPass** project → **FastPass** target
+1. Click **FastTrack** project → **FastTrack** target
 2. **Signing & Capabilities** tab
 3. Click **+ Capability**
 4. Add **"Sign in with Apple"**

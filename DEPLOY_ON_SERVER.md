@@ -1,4 +1,4 @@
-# Deploy FastPass on Ubuntu Server (Local Deployment)
+# Deploy FastTrack on Ubuntu Server (Local Deployment)
 
 This guide is for running the deployment **directly on your Ubuntu server** at 10.0.0.102.
 
@@ -12,8 +12,8 @@ Choose one of these methods:
 ```bash
 # On your server
 cd ~
-git clone https://github.com/YOUR_USERNAME/fastpass.git
-cd fastpass
+git clone https://github.com/YOUR_USERNAME/fasttrack.git
+cd fasttrack
 ```
 
 #### Option B: SCP Transfer from Mac
@@ -32,7 +32,7 @@ cd triprank
 ### Step 2: Run Deployment Script
 ```bash
 # On your server
-cd ~/fastpass  # or ~/triprank
+cd ~/fasttrack  # or ~/triprank
 ./deploy-local.sh
 ```
 
@@ -43,7 +43,7 @@ That's it! The script handles everything else.
 ## 📋 What the Script Does
 
 1. ✅ Checks Docker and kubectl are installed
-2. ✅ Checks for FastPass PostgreSQL (offers to deploy if missing)
+2. ✅ Checks for FastTrack PostgreSQL (offers to deploy if missing)
 3. ✅ Deploys independent PostgreSQL instance (not shared with other services)
 4. ✅ Builds Docker image locally
 5. ✅ Creates Kubernetes secrets (auto-generates JWT)
@@ -99,9 +99,9 @@ The script will prompt for:
 
 ### PostgreSQL
 If PostgreSQL not found:
-- Offers to deploy **independent** PostgreSQL instance for FastPass
+- Offers to deploy **independent** PostgreSQL instance for FastTrack
 - Does NOT use existing PostgreSQL (ensures isolation)
-- Creates database named "fastpass" with user "fastpass"
+- Creates database named "fasttrack" with user "fasttrack"
 - Generates secure random password
 - Sets up automated daily backups at 2 AM
 - Configures 20GB storage for data + 10GB for backups
@@ -117,25 +117,25 @@ If secrets don't exist:
 
 ### Check Pods
 ```bash
-kubectl get pods -l app=fastpass-api
+kubectl get pods -l app=fasttrack-api
 ```
 
 Expected:
 ```
 NAME                            READY   STATUS    RESTARTS   AGE
-fastpass-api-xxxxxxxxxx-xxxxx   1/1     Running   0          2m
-fastpass-api-xxxxxxxxxx-xxxxx   1/1     Running   0          2m
+fasttrack-api-xxxxxxxxxx-xxxxx   1/1     Running   0          2m
+fasttrack-api-xxxxxxxxxx-xxxxx   1/1     Running   0          2m
 ```
 
 ### Check Logs
 ```bash
-kubectl logs -l app=fastpass-api --tail=50
+kubectl logs -l app=fasttrack-api --tail=50
 ```
 
 ### Test Health Endpoint
 ```bash
 # Internal (from server)
-curl http://fastpass-api/health
+curl http://fasttrack-api/health
 
 # External (requires DNS)
 curl https://fast.toper.dev/health
@@ -169,7 +169,7 @@ kubectl get svc -n ingress-nginx
 
 **Or check ingress:**
 ```bash
-kubectl get ingress fastpass-api
+kubectl get ingress fasttrack-api
 ```
 
 ---
@@ -184,7 +184,7 @@ The ingress is configured with cert-manager to automatically request a Let's Enc
 kubectl get certificate
 
 # Detailed info
-kubectl describe certificate fastpass-api-tls
+kubectl describe certificate fasttrack-api-tls
 ```
 
 ### If Certificate Fails
@@ -198,7 +198,7 @@ Common issues:
 kubectl logs -n cert-manager deployment/cert-manager
 
 # Force renewal
-kubectl delete certificate fastpass-api-tls
+kubectl delete certificate fasttrack-api-tls
 # It will be recreated automatically
 ```
 
@@ -211,7 +211,7 @@ When you make code changes:
 ### Option 1: Re-run Script
 ```bash
 # Pull latest code
-cd ~/fastpass
+cd ~/fasttrack
 git pull
 
 # Re-deploy
@@ -221,11 +221,11 @@ git pull
 ### Option 2: Manual Update
 ```bash
 # Rebuild image
-cd ~/fastpass/backend
-docker build -t fastpass-api:latest .
+cd ~/fasttrack/backend
+docker build -t fasttrack-api:latest .
 
 # Restart deployment
-kubectl rollout restart deployment/fastpass-api
+kubectl rollout restart deployment/fasttrack-api
 ```
 
 ---
@@ -236,12 +236,12 @@ kubectl rollout restart deployment/fastpass-api
 
 **Check pod status:**
 ```bash
-kubectl describe pod -l app=fastpass-api
+kubectl describe pod -l app=fasttrack-api
 ```
 
 **Common issues:**
 - Image pull error (image not found locally)
-- Secret not found (fastpass-secrets)
+- Secret not found (fasttrack-secrets)
 - Insufficient resources
 
 ### Database Connection Failed
@@ -249,13 +249,13 @@ kubectl describe pod -l app=fastpass-api
 **Test connectivity:**
 ```bash
 # From within a pod
-kubectl exec -it deployment/fastpass-api -- sh
+kubectl exec -it deployment/fasttrack-api -- sh
 nc -zv postgres-service 5432
 ```
 
 **Check secret:**
 ```bash
-kubectl get secret fastpass-secrets -o yaml
+kubectl get secret fasttrack-secrets -o yaml
 # Decode values:
 echo "BASE64_STRING" | base64 -d
 ```
@@ -274,7 +274,7 @@ docker system prune  # if needed
 
 **Check ingress:**
 ```bash
-kubectl describe ingress fastpass-api
+kubectl describe ingress fasttrack-api
 ```
 
 **Check nginx logs:**
@@ -294,18 +294,18 @@ dig fast.toper.dev
 
 ### View Logs (Live)
 ```bash
-kubectl logs -f deployment/fastpass-api
+kubectl logs -f deployment/fasttrack-api
 ```
 
 ### Resource Usage
 ```bash
-kubectl top pods -l app=fastpass-api
+kubectl top pods -l app=fasttrack-api
 kubectl top nodes
 ```
 
 ### Pod Status (Watch)
 ```bash
-kubectl get pods -l app=fastpass-api -w
+kubectl get pods -l app=fasttrack-api -w
 ```
 
 ---
@@ -314,25 +314,25 @@ kubectl get pods -l app=fastpass-api -w
 
 ### Restart Deployment
 ```bash
-kubectl rollout restart deployment/fastpass-api
+kubectl rollout restart deployment/fasttrack-api
 ```
 
 ### Scale Replicas
 ```bash
-kubectl scale deployment fastpass-api --replicas=3
+kubectl scale deployment fasttrack-api --replicas=3
 ```
 
 ### View All Resources
 ```bash
-kubectl get all -l app=fastpass-api
+kubectl get all -l app=fasttrack-api
 ```
 
 ### Delete Deployment
 ```bash
-kubectl delete deployment fastpass-api
-kubectl delete service fastpass-api
-kubectl delete ingress fastpass-api
-kubectl delete secret fastpass-secrets
+kubectl delete deployment fasttrack-api
+kubectl delete service fasttrack-api
+kubectl delete ingress fasttrack-api
+kubectl delete secret fasttrack-secrets
 ```
 
 ### Check Ingress Controller
@@ -348,14 +348,14 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
 ```bash
 # 1. Get code
 cd ~
-git clone https://github.com/yourname/fastpass.git
-cd fastpass
+git clone https://github.com/yourname/fasttrack.git
+cd fasttrack
 
 # 2. Run deployment
 ./deploy-local.sh
 
 # Output:
-🚀 FastPass Local Deployment Script
+🚀 FastTrack Local Deployment Script
 ====================================
 → Checking environment...
 ✓ Repository found
@@ -410,7 +410,7 @@ Before going live:
 kubectl get pods -l app=postgres
 
 # Backup database
-kubectl exec <postgres-pod-name> -- pg_dump -U postgres fastpass > fastpass_backup_$(date +%Y%m%d).sql
+kubectl exec <postgres-pod-name> -- pg_dump -U postgres fasttrack > fasttrack_backup_$(date +%Y%m%d).sql
 ```
 
 ### Automated Backups
@@ -432,12 +432,12 @@ spec:
             command:
             - /bin/sh
             - -c
-            - pg_dump -h postgres-service -U postgres fastpass > /backup/fastpass_$(date +%Y%m%d).sql
+            - pg_dump -h postgres-service -U postgres fasttrack > /backup/fasttrack_$(date +%Y%m%d).sql
             env:
             - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: fastpass-secrets
+                  name: fasttrack-secrets
                   key: postgres-password
           restartPolicy: OnFailure
 ```

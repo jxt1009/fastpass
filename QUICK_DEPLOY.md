@@ -1,4 +1,4 @@
-# FastPass Deployment Quick Reference
+# FastTrack Deployment Quick Reference
 
 ## 🚀 Deploy to fast.toper.dev
 
@@ -8,7 +8,7 @@
 
 ```bash
 # On server (10.0.0.102)
-cd ~/fastpass
+cd ~/fasttrack
 ./deploy-local.sh
 ```
 
@@ -34,8 +34,8 @@ cd /Users/jtoper/DEV/triprank
 ```bash
 ssh jtoper@10.0.0.102
 cd ~
-git clone https://github.com/YOUR_USERNAME/fastpass.git
-cd fastpass
+git clone https://github.com/YOUR_USERNAME/fasttrack.git
+cd fasttrack
 ./deploy-local.sh
 ```
 
@@ -73,7 +73,7 @@ The deployment needs two secrets:
 
 ### 1. Database URL
 ```
-host=postgres-service user=postgres password=YOUR_PASSWORD dbname=fastpass port=5432 sslmode=disable
+host=postgres-service user=postgres password=YOUR_PASSWORD dbname=fasttrack port=5432 sslmode=disable
 ```
 
 ### 2. JWT Secret
@@ -90,10 +90,10 @@ The script will prompt for these or generate them.
 
 ```bash
 # 1. Check pods
-ssh jtoper@10.0.0.102 "kubectl get pods -l app=fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl get pods -l app=fasttrack-api"
 
 # 2. Check logs
-ssh jtoper@10.0.0.102 "kubectl logs -l app=fastpass-api --tail=50"
+ssh jtoper@10.0.0.102 "kubectl logs -l app=fasttrack-api --tail=50"
 
 # 3. Test health
 curl https://fast.toper.dev/health
@@ -107,31 +107,31 @@ curl https://fast.toper.dev/health
 
 ### View Logs (Live)
 ```bash
-ssh jtoper@10.0.0.102 "kubectl logs -f deployment/fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl logs -f deployment/fasttrack-api"
 ```
 
 ### Restart Deployment
 ```bash
-ssh jtoper@10.0.0.102 "kubectl rollout restart deployment/fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl rollout restart deployment/fasttrack-api"
 ```
 
 ### Scale Replicas
 ```bash
-ssh jtoper@10.0.0.102 "kubectl scale deployment fastpass-api --replicas=3"
+ssh jtoper@10.0.0.102 "kubectl scale deployment fasttrack-api --replicas=3"
 ```
 
 ### Check SSL Certificate
 ```bash
-ssh jtoper@10.0.0.102 "kubectl get certificate fastpass-api-tls"
+ssh jtoper@10.0.0.102 "kubectl get certificate fasttrack-api-tls"
 ```
 
 ### Delete Everything
 ```bash
 ssh jtoper@10.0.0.102 << 'EOF'
-kubectl delete deployment fastpass-api
-kubectl delete service fastpass-api
-kubectl delete ingress fastpass-api
-kubectl delete secret fastpass-secrets
+kubectl delete deployment fasttrack-api
+kubectl delete service fasttrack-api
+kubectl delete ingress fasttrack-api
+kubectl delete secret fasttrack-secrets
 EOF
 ```
 
@@ -142,7 +142,7 @@ EOF
 ### Pods Not Starting
 ```bash
 # Check pod description
-ssh jtoper@10.0.0.102 "kubectl describe pod -l app=fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl describe pod -l app=fasttrack-api"
 
 # Check events
 ssh jtoper@10.0.0.102 "kubectl get events --sort-by=.metadata.creationTimestamp"
@@ -151,16 +151,16 @@ ssh jtoper@10.0.0.102 "kubectl get events --sort-by=.metadata.creationTimestamp"
 ### Database Connection Failed
 ```bash
 # Test from within pod
-ssh jtoper@10.0.0.102 "kubectl exec -it deployment/fastpass-api -- nc -zv postgres-service 5432"
+ssh jtoper@10.0.0.102 "kubectl exec -it deployment/fasttrack-api -- nc -zv postgres-service 5432"
 ```
 
 ### SSL Not Working
 ```bash
 # Check certificate status
-ssh jtoper@10.0.0.102 "kubectl describe certificate fastpass-api-tls"
+ssh jtoper@10.0.0.102 "kubectl describe certificate fasttrack-api-tls"
 
 # Check ingress
-ssh jtoper@10.0.0.102 "kubectl describe ingress fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl describe ingress fasttrack-api"
 ```
 
 Wait 2-5 minutes for Let's Encrypt to issue certificate.
@@ -168,7 +168,7 @@ Wait 2-5 minutes for Let's Encrypt to issue certificate.
 ### Health Check Fails
 ```bash
 # Test internally
-ssh jtoper@10.0.0.102 "kubectl run test --rm -it --image=curlimages/curl -- curl http://fastpass-api/health"
+ssh jtoper@10.0.0.102 "kubectl run test --rm -it --image=curlimages/curl -- curl http://fasttrack-api/health"
 ```
 
 ---
@@ -178,7 +178,7 @@ ssh jtoper@10.0.0.102 "kubectl run test --rm -it --image=curlimages/curl -- curl
 After deployment, iOS app is already configured to use:
 
 ```swift
-// File: ios/FastPass/FastPass/Services/APIService.swift
+// File: ios/FastTrack/FastTrack/Services/APIService.swift
 private let baseURL = "https://fast.toper.dev/api/v1"
 ```
 
@@ -197,7 +197,7 @@ When you make code changes:
 ```bash
 # 1. Rebuild backend
 cd /Users/jtoper/DEV/triprank/backend
-go build -o fastpass-api
+go build -o fasttrack-api
 
 # 2. Run deploy script again
 cd /Users/jtoper/DEV/triprank
@@ -215,12 +215,12 @@ cd /Users/jtoper/DEV/triprank
 
 ### Resource Usage
 ```bash
-ssh jtoper@10.0.0.102 "kubectl top pods -l app=fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl top pods -l app=fasttrack-api"
 ```
 
 ### Pod Status
 ```bash
-ssh jtoper@10.0.0.102 "kubectl get pods -l app=fastpass-api -w"
+ssh jtoper@10.0.0.102 "kubectl get pods -l app=fasttrack-api -w"
 ```
 
 ### Ingress Traffic
@@ -256,9 +256,9 @@ Before going live:
 
 ## 📞 Need Help?
 
-1. Check logs: `kubectl logs -l app=fastpass-api`
+1. Check logs: `kubectl logs -l app=fasttrack-api`
 2. Check pod status: `kubectl get pods`
-3. Check ingress: `kubectl describe ingress fastpass-api`
+3. Check ingress: `kubectl describe ingress fasttrack-api`
 4. Check certificate: `kubectl get certificate`
 5. Test DNS: `nslookup fast.toper.dev`
 6. Test endpoint: `curl -v https://fast.toper.dev/health`

@@ -15,7 +15,7 @@ struct SignInView: View {
                 Image(systemName: "speedometer")
                     .font(.system(size: 80))
                     .foregroundColor(.blue)
-                Text("FastPass")
+                Text("FastTrack")
                     .font(.largeTitle).fontWeight(.bold)
                 Text("Track Your Speed")
                     .font(.title3).foregroundColor(.secondary)

@@ -30,7 +30,7 @@ The backend verifies the Google ID token with Google's servers and creates/updat
 1. Go to **APIs & Services** → **Credentials**
 2. Click **Create Credentials** → **OAuth client ID**
 3. Application type: **iOS**
-4. Bundle ID: `com.toper.FastPass` (match your Xcode bundle ID)
+4. Bundle ID: `com.toper.FastTrack` (match your Xcode bundle ID)
 5. Click **Create**
 6. Copy the **Client ID** (looks like: `123456789-abcdefg.apps.googleusercontent.com`)
 
@@ -82,7 +82,7 @@ Add your Google Client ID to `Info.plist`:
 Replace `SignInView.swift` with `SignInView_Updated.swift`:
 
 ```bash
-cd ios/FastPass/FastPass/Views
+cd ios/FastTrack/FastTrack/Views
 mv SignInView.swift SignInView_Old.swift
 mv SignInView_Updated.swift SignInView.swift
 ```
@@ -137,7 +137,7 @@ If you want to add email/password, phone auth, etc. in the future, Firebase is a
 ssh -p 2222 jtoper@10.0.0.102
 
 # Connect to database
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack
 
 # Check users
 SELECT id, email, full_name, auth_provider FROM users;
@@ -256,7 +256,7 @@ Content-Type: application/json
 **Fix**: 
 1. Backend can't verify token
 2. Check network connectivity
-3. Check backend logs: `kubectl logs -l app=fastpass-api`
+3. Check backend logs: `kubectl logs -l app=fasttrack-api`
 
 ---
 

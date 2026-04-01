@@ -1,8 +1,8 @@
-# FastPass - Complete End-to-End Testing Guide
+# FastTrack - Complete End-to-End Testing Guide
 
 ## 🎉 Deployment Complete!
 
-Your FastPass speed tracking app is now fully deployed and ready to test!
+Your FastTrack speed tracking app is now fully deployed and ready to test!
 
 **API Endpoint**: https://fast.toper.dev  
 **Status**: ✅ Live and responding
@@ -19,8 +19,8 @@ Your FastPass speed tracking app is now fully deployed and ready to test!
 
 ### Step 1: Configure Xcode Capabilities
 
-1. Open Xcode project: `ios/FastPass/FastPass.xcodeproj`
-2. Select "FastPass" target
+1. Open Xcode project: `ios/FastTrack/FastTrack.xcodeproj`
+2. Select "FastTrack" target
 3. Go to "Signing & Capabilities" tab
 4. Enable the following capabilities:
 
@@ -31,7 +31,7 @@ Your FastPass speed tracking app is now fully deployed and ready to test!
    - Should already be added (if not, click + and add it)
 
 5. Ensure your development team is selected
-6. Verify bundle identifier matches: `com.toper.FastPass`
+6. Verify bundle identifier matches: `com.toper.FastTrack`
 
 Full setup guide: See `XCODE_SETUP.md`
 
@@ -114,7 +114,7 @@ Full setup guide: See `XCODE_SETUP.md`
 
 **Solution**: 
 1. Go to iPhone Settings → Privacy & Security → Location Services
-2. Find "FastPass"
+2. Find "FastTrack"
 3. Set to "Always" or "While Using the App"
 4. Enable "Precise Location"
 
@@ -165,17 +165,17 @@ Full setup guide: See `XCODE_SETUP.md`
 ssh -p 2222 jtoper@10.0.0.102
 
 # View API logs
-kubectl logs -f -l app=fastpass-api
+kubectl logs -f -l app=fasttrack-api
 
 # View PostgreSQL logs
-kubectl logs -f -l app=fastpass-postgres
+kubectl logs -f -l app=fasttrack-postgres
 ```
 
 ### Check Database
 
 ```bash
 # Connect to postgres pod
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack
 
 # List users
 SELECT id, apple_user_id, email, full_name FROM users;

@@ -1,8 +1,8 @@
-# 🎉 FastPass - Complete Deployment Summary
+# 🎉 FastTrack - Complete Deployment Summary
 
 ## Overview
 
-FastPass is a complete iOS speed tracking application with:
+FastTrack is a complete iOS speed tracking application with:
 - **iOS App**: SwiftUI with real-time GPS tracking, live maps, and detailed statistics
 - **Backend API**: Go + Gin framework with JWT authentication
 - **Database**: Independent PostgreSQL with automated backups
@@ -18,8 +18,8 @@ FastPass is a complete iOS speed tracking application with:
 ```bash
 # 1. Get the code
 cd ~
-git clone https://github.com/YOUR_USERNAME/fastpass.git
-cd fastpass
+git clone https://github.com/YOUR_USERNAME/fasttrack.git
+cd fasttrack
 
 # 2. Deploy everything
 ./deploy-local.sh
@@ -97,11 +97,11 @@ fast.toper.dev/
 
 ### Database (PostgreSQL)
 ```
-FastPass PostgreSQL (Independent)
-├── Database: fastpass
-├── User: fastpass
+FastTrack PostgreSQL (Independent)
+├── Database: fasttrack
+├── User: fasttrack
 ├── Storage: 20GB (data) + 10GB (backups)
-├── Service: fastpass-postgres-service
+├── Service: fasttrack-postgres-service
 └── Namespace: default
 
 Tables:
@@ -114,28 +114,28 @@ Tables:
 Namespace: default
 
 Deployments:
-├── fastpass-api (2 replicas)
-└── fastpass-postgres (1 replica)
+├── fasttrack-api (2 replicas)
+└── fasttrack-postgres (1 replica)
 
 Services:
-├── fastpass-api (ClusterIP:80 → 8080)
-└── fastpass-postgres-service (ClusterIP:5432)
+├── fasttrack-api (ClusterIP:80 → 8080)
+└── fasttrack-postgres-service (ClusterIP:5432)
 
 Ingress:
-└── fast.toper.dev → fastpass-api
+└── fast.toper.dev → fasttrack-api
     ├── SSL: Let's Encrypt
     └── CORS: Enabled
 
 CronJobs:
-└── fastpass-postgres-backup (Daily 2 AM)
+└── fasttrack-postgres-backup (Daily 2 AM)
 
 Secrets:
-├── fastpass-secrets (database-url, jwt-secret)
-└── fastpass-postgres-secret (postgres-password)
+├── fasttrack-secrets (database-url, jwt-secret)
+└── fasttrack-postgres-secret (postgres-password)
 
 Storage:
-├── fastpass-postgres-pvc (20GB)
-└── fastpass-postgres-backup-pvc (10GB)
+├── fasttrack-postgres-pvc (20GB)
+└── fasttrack-postgres-backup-pvc (10GB)
 ```
 
 ---
@@ -230,7 +230,7 @@ All guides are in the repository:
 - [ ] Verify pods running: `kubectl get pods`
 - [ ] Test health: `curl https://fast.toper.dev/health`
 - [ ] Check SSL certificate: `kubectl get certificate`
-- [ ] View logs: `kubectl logs -l app=fastpass-api`
+- [ ] View logs: `kubectl logs -l app=fasttrack-api`
 - [ ] Test database connection: `./backup-restore.sh test`
 
 ### Configure DNS
@@ -274,10 +274,10 @@ All guides are in the repository:
 ### View Logs
 ```bash
 # API logs
-kubectl logs -f deployment/fastpass-api
+kubectl logs -f deployment/fasttrack-api
 
 # Database logs
-kubectl logs -f deployment/fastpass-postgres
+kubectl logs -f deployment/fasttrack-postgres
 
 # Ingress logs
 kubectl logs -n ingress-nginx deployment/ingress-nginx-controller | grep fast.toper.dev
@@ -286,19 +286,19 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller | grep fast.to
 ### Restart Services
 ```bash
 # Restart API
-kubectl rollout restart deployment/fastpass-api
+kubectl rollout restart deployment/fasttrack-api
 
 # Restart database
-kubectl rollout restart deployment/fastpass-postgres
+kubectl rollout restart deployment/fasttrack-postgres
 
 # Scale API replicas
-kubectl scale deployment fastpass-api --replicas=3
+kubectl scale deployment fasttrack-api --replicas=3
 ```
 
 ### Update Code
 ```bash
 # Pull latest code
-cd ~/fastpass
+cd ~/fasttrack
 git pull
 
 # Rebuild and deploy
@@ -308,16 +308,16 @@ git pull
 ### Check Status
 ```bash
 # All resources
-kubectl get all -l app=fastpass-api
+kubectl get all -l app=fasttrack-api
 
 # Storage
-kubectl get pvc | grep fastpass
+kubectl get pvc | grep fasttrack
 
 # Certificates
 kubectl get certificate
 
 # Backups
-kubectl get cronjob fastpass-postgres-backup
+kubectl get cronjob fasttrack-postgres-backup
 ```
 
 ---
@@ -345,8 +345,8 @@ kubectl top pods
 kubectl top nodes
 
 # Database size
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c \
-  "SELECT pg_size_pretty(pg_database_size('fastpass'));"
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c \
+  "SELECT pg_size_pretty(pg_database_size('fasttrack'));"
 ```
 
 ---
@@ -356,14 +356,14 @@ kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c
 ### API Not Responding
 ```bash
 # Check pods
-kubectl get pods -l app=fastpass-api
+kubectl get pods -l app=fasttrack-api
 
 # Check logs
-kubectl logs -l app=fastpass-api
+kubectl logs -l app=fasttrack-api
 
 # Check service
-kubectl get svc fastpass-api
-kubectl describe svc fastpass-api
+kubectl get svc fasttrack-api
+kubectl describe svc fasttrack-api
 ```
 
 ### Database Connection Failed
@@ -372,16 +372,16 @@ kubectl describe svc fastpass-api
 ./backup-restore.sh test
 
 # Check service
-kubectl get svc fastpass-postgres-service
+kubectl get svc fasttrack-postgres-service
 
 # Check secret
-kubectl get secret fastpass-secrets
+kubectl get secret fasttrack-secrets
 ```
 
 ### SSL Not Working
 ```bash
 # Check certificate
-kubectl describe certificate fastpass-api-tls
+kubectl describe certificate fasttrack-api-tls
 
 # Check cert-manager
 kubectl logs -n cert-manager deployment/cert-manager
@@ -395,7 +395,7 @@ kubectl logs -n cert-manager deployment/cert-manager
 kubectl get cronjob
 
 # Check recent jobs
-kubectl get jobs -l app=fastpass-postgres-backup
+kubectl get jobs -l app=fasttrack-postgres-backup
 
 # Check logs
 kubectl logs job/<job-name>
@@ -408,10 +408,10 @@ kubectl logs job/<job-name>
 ### Horizontal Scaling (API)
 ```bash
 # Scale to 5 replicas
-kubectl scale deployment fastpass-api --replicas=5
+kubectl scale deployment fasttrack-api --replicas=5
 
 # Auto-scaling (HPA)
-kubectl autoscale deployment fastpass-api --min=2 --max=10 --cpu-percent=80
+kubectl autoscale deployment fasttrack-api --min=2 --max=10 --cpu-percent=80
 ```
 
 ### Vertical Scaling (Database)
@@ -420,11 +420,11 @@ kubectl autoscale deployment fastpass-api --min=2 --max=10 --cpu-percent=80
 ./backup-restore.sh backup
 
 # 2. Expand PVC
-kubectl edit pvc fastpass-postgres-pvc
+kubectl edit pvc fasttrack-postgres-pvc
 # Change: storage: 20Gi → storage: 50Gi
 
 # 3. Restart pod
-kubectl rollout restart deployment/fastpass-postgres
+kubectl rollout restart deployment/fasttrack-postgres
 ```
 
 ---
@@ -433,7 +433,7 @@ kubectl rollout restart deployment/fastpass-postgres
 
 ### Project Structure
 ```
-fastpass/
+fasttrack/
 ├── backend/                 # Go API
 │   ├── main.go
 │   ├── models.go
@@ -443,8 +443,8 @@ fastpass/
 │   ├── middleware.go
 │   ├── Dockerfile
 │   └── k8s/                # Kubernetes manifests
-├── ios/FastPass/FastPass/  # iOS app
-│   ├── FastPassApp.swift
+├── ios/FastTrack/FastTrack/  # iOS app
+│   ├── FastTrackApp.swift
 │   ├── Models/
 │   ├── Views/
 │   ├── ViewModels/
@@ -479,12 +479,12 @@ fastpass/
 
 **Files:**
 - `/Users/jtoper/DEV/triprank` - Source code
-- `~/fastpass` - On server
+- `~/fasttrack` - On server
 
 **Commands:**
 - Deploy: `./deploy-local.sh`
 - Backup: `./backup-restore.sh backup`
-- Logs: `kubectl logs -f deployment/fastpass-api`
+- Logs: `kubectl logs -f deployment/fasttrack-api`
 - Status: `kubectl get pods`
 
 **URLs:**

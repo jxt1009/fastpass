@@ -11,8 +11,8 @@ NSInternalInconsistencyException: Invalid parameter not satisfying:
 
 ### In Xcode:
 
-1. Click **FastPass** project (blue icon at top)
-2. Click **FastPass** under TARGETS
+1. Click **FastTrack** project (blue icon at top)
+2. Click **FastTrack** under TARGETS
 3. Click **Signing & Capabilities** tab
 4. Click **+ Capability**
 5. Add **Background Modes**

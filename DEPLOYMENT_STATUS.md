@@ -1,27 +1,27 @@
-# FastPass Deployment Status
+# FastTrack Deployment Status
 
 ## ✅ Deployment Complete
 
 ### Current State (April 1, 2026)
 
 **Backend API**: ✅ Running
-- 2 healthy pods: `fastpass-api-84d58d7b74-4cr87`, `fastpass-api-84d58d7b74-ww2xw`
+- 2 healthy pods: `fasttrack-api-84d58d7b74-4cr87`, `fasttrack-api-84d58d7b74-ww2xw`
 - Health check passing: `{"status":"ok"}`
 - Connected to database successfully
 - Endpoints: `/health`, `/api/v1/auth/*`, `/api/v1/drives/*`, `/api/v1/me`
 
 **PostgreSQL Database**: ✅ Running
-- Pod: `fastpass-postgres-56b84659c6-wg2tm`
-- Database: `fastpass`
-- User: `fastpass`
+- Pod: `fasttrack-postgres-56b84659c6-wg2tm`
+- Database: `fasttrack`
+- User: `fasttrack`
 - Password: `18fAqd0Qz08LXifXi28zQCfDX7nwcqRe`
-- Storage: hostPath volumes at `/data/fastpass/postgres` (20GB) and `/data/fastpass/backups` (10GB)
+- Storage: hostPath volumes at `/data/fasttrack/postgres` (20GB) and `/data/fasttrack/backups` (10GB)
 
 **Kubernetes Resources**: ✅ Deployed
-- Service: `fastpass-api` (ClusterIP: 10.102.8.138:80)
-- Service: `fastpass-postgres-service` (ClusterIP: 10.107.174.177:5432)
-- Ingress: `fastpass-api` (Host: fast.toper.dev, Address: 10.0.0.102)
-- SSL Certificate: `fastpass-api-tls` (Let's Encrypt)
+- Service: `fasttrack-api` (ClusterIP: 10.102.8.138:80)
+- Service: `fasttrack-postgres-service` (ClusterIP: 10.107.174.177:5432)
+- Ingress: `fasttrack-api` (Host: fast.toper.dev, Address: 10.0.0.102)
+- SSL Certificate: `fasttrack-api-tls` (Let's Encrypt)
 
 ## ⚠️ DNS Configuration Required
 
@@ -75,8 +75,8 @@ curl https://fast.toper.dev/health
 **Problem**: Original postgres.yaml used `storageClassName: local-path`, but the cluster had no storage classes configured.
 
 **Solution**: Created `postgres-hostpath.yaml` with explicit PersistentVolume definitions using hostPath:
-- `/data/fastpass/postgres` - 20GB for database
-- `/data/fastpass/backups` - 10GB for backups
+- `/data/fasttrack/postgres` - 20GB for database
+- `/data/fasttrack/backups` - 10GB for backups
 
 ### Issue 2: Password Mismatch
 **Problem**: The postgres secret and API secret had different passwords (typo in one of them).
@@ -86,19 +86,19 @@ curl https://fast.toper.dev/health
 **Solution**:
 ```bash
 # Updated postgres secret
-kubectl delete secret fastpass-postgres-secret
-kubectl create secret generic fastpass-postgres-secret \
+kubectl delete secret fasttrack-postgres-secret
+kubectl create secret generic fasttrack-postgres-secret \
   --from-literal=postgres-password='18fAqd0Qz08LXifXi28zQCfDX7nwcqRe'
 
 # Updated API secret
-kubectl delete secret fastpass-secrets
-kubectl create secret generic fastpass-secrets \
-  --from-literal=database-url='host=fastpass-postgres-service user=fastpass password=18fAqd0Qz08LXifXi28zQCfDX7nwcqRe dbname=fastpass port=5432 sslmode=disable' \
+kubectl delete secret fasttrack-secrets
+kubectl create secret generic fasttrack-secrets \
+  --from-literal=database-url='host=fasttrack-postgres-service user=fasttrack password=18fAqd0Qz08LXifXi28zQCfDX7nwcqRe dbname=fasttrack port=5432 sslmode=disable' \
   --from-literal=jwt-secret='<existing-jwt-secret>'
 
 # Restarted services
-kubectl rollout restart deployment/fastpass-postgres
-kubectl rollout restart deployment/fastpass-api
+kubectl rollout restart deployment/fasttrack-postgres
+kubectl rollout restart deployment/fasttrack-api
 ```
 
 ## 📊 Verification
@@ -106,7 +106,7 @@ kubectl rollout restart deployment/fastpass-api
 ### Internal Cluster Test (✅ Working)
 ```bash
 ssh -p 2222 jtoper@10.0.0.102
-kubectl run -it --rm test-curl --image=curlimages/curl -- curl -s http://fastpass-api/health
+kubectl run -it --rm test-curl --image=curlimages/curl -- curl -s http://fasttrack-api/health
 # Output: {"status":"ok"}
 ```
 
@@ -133,16 +133,16 @@ curl https://fast.toper.dev/health
 3. **Monitor Logs**:
    ```bash
    # API logs
-   kubectl logs -f -l app=fastpass-api
+   kubectl logs -f -l app=fasttrack-api
 
    # Postgres logs
-   kubectl logs -f -l app=fastpass-postgres
+   kubectl logs -f -l app=fasttrack-postgres
    ```
 
 4. **Set Up Automated Backups** (already configured):
    - CronJob runs daily at 2 AM UTC
    - Check: `kubectl get cronjob`
-   - Test: `kubectl create job --from=cronjob/fastpass-postgres-backup manual-backup-test`
+   - Test: `kubectl create job --from=cronjob/fasttrack-postgres-backup manual-backup-test`
 
 5. **Push to GitHub**:
    ```bash
@@ -183,10 +183,10 @@ Once DNS is configured:
 
 **Connection Details** (from within cluster):
 ```
-Host: fastpass-postgres-service
+Host: fasttrack-postgres-service
 Port: 5432
-Database: fastpass
-User: fastpass
+Database: fasttrack
+User: fasttrack
 Password: 18fAqd0Qz08LXifXi28zQCfDX7nwcqRe
 ```
 
@@ -195,5 +195,5 @@ Password: 18fAqd0Qz08LXifXi28zQCfDX7nwcqRe
 - `drives` - Drive records with stats and route data
 
 **Storage Locations** (on server):
-- Database data: `/data/fastpass/postgres/`
-- Backups: `/data/fastpass/backups/`
+- Database data: `/data/fasttrack/postgres/`
+- Backups: `/data/fasttrack/backups/`

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: fastpass-postgres-pvc
+  name: fasttrack-postgres-pvc
   namespace: default
 spec:
   accessModes:
@@ -14,34 +14,34 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fastpass-postgres
+  name: fasttrack-postgres
   namespace: default
   labels:
-    app: fastpass-postgres
+    app: fasttrack-postgres
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: fastpass-postgres
+      app: fasttrack-postgres
   strategy:
     type: Recreate  # Important for stateful apps
   template:
     metadata:
       labels:
-        app: fastpass-postgres
+        app: fasttrack-postgres
     spec:
       containers:
       - name: postgres
         image: postgres:15-alpine
         env:
         - name: POSTGRES_DB
-          value: fastpass
+          value: fasttrack
         - name: POSTGRES_USER
-          value: fastpass
+          value: fasttrack
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: fastpass-postgres-secret
+              name: fasttrack-postgres-secret
               key: postgres-password
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
@@ -65,7 +65,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - fastpass
+            - fasttrack
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
@@ -73,25 +73,25 @@ spec:
             command:
             - pg_isready
             - -U
-            - fastpass
+            - fasttrack
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
-          claimName: fastpass-postgres-pvc
+          claimName: fasttrack-postgres-pvc
       - name: postgres-backup
         persistentVolumeClaim:
-          claimName: fastpass-postgres-backup-pvc
+          claimName: fasttrack-postgres-backup-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: fastpass-postgres-service
+  name: fasttrack-postgres-service
   namespace: default
 spec:
   selector:
-    app: fastpass-postgres
+    app: fasttrack-postgres
   ports:
   - port: 5432
     targetPort: 5432
@@ -101,7 +101,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: fastpass-postgres-backup-pvc
+  name: fasttrack-postgres-backup-pvc
   namespace: default
 spec:
   accessModes:

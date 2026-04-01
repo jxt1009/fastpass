@@ -1,13 +1,13 @@
-# ✅ FastPass Integration Complete
+# ✅ FastTrack Integration Complete
 
 ## What Was Done
 
-All source files have been successfully integrated into your FastPass Xcode project!
+All source files have been successfully integrated into your FastTrack Xcode project!
 
 ### Files Copied (8 Swift files)
 ```
-FastPass/FastPass/
-├── FastPassApp.swift          ✅ Updated with LocationManager & DriveManager
+FastTrack/FastTrack/
+├── FastTrackApp.swift          ✅ Updated with LocationManager & DriveManager
 ├── Views/
 │   ├── ContentView.swift      ✅ Main screen with speed display
 │   ├── DriveHistoryView.swift ✅ List of all drives
@@ -23,7 +23,7 @@ FastPass/FastPass/
 
 ### What's Ready
 - ✅ All Swift source code in place
-- ✅ FastPassApp.swift configured with dependency injection
+- ✅ FastTrackApp.swift configured with dependency injection
 - ✅ Location tracking integrated
 - ✅ API service ready for backend communication
 - ✅ Drive recording logic complete
@@ -35,25 +35,25 @@ FastPass/FastPass/
 
 The files are on disk but need to be added to your Xcode project:
 
-1. Open **FastPass.xcodeproj** in Xcode
-2. In Project Navigator (left sidebar), right-click on **FastPass** folder (the one with the blue icon)
-3. Select **"Add Files to FastPass..."**
-4. Navigate to `/Users/jtoper/DEV/triprank/ios/FastPass/FastPass/`
+1. Open **FastTrack.xcodeproj** in Xcode
+2. In Project Navigator (left sidebar), right-click on **FastTrack** folder (the one with the blue icon)
+3. Select **"Add Files to FastTrack..."**
+4. Navigate to `/Users/jtoper/DEV/triprank/ios/FastTrack/FastTrack/`
 5. Select these 4 folders:
    - `Views`
    - `Models`
    - `Services`
    - `ViewModels`
 6. **IMPORTANT**: Make sure **"Copy items if needed"** is **UNCHECKED**
-7. Make sure **"FastPass"** target is checked
+7. Make sure **"FastTrack"** target is checked
 8. Click **Add**
 
 ### 2. Configure Info.plist
 
 Add location permission strings:
 
-1. Select **FastPass** project in navigator
-2. Select **FastPass** target
+1. Select **FastTrack** project in navigator
+2. Select **FastTrack** target
 3. Go to **Info** tab
 4. Click **+** button and add:
 
@@ -94,7 +94,7 @@ Press **Cmd+R** to build and run!
 **Build errors?**
 - Clean build folder: Product → Clean Build Folder (Cmd+Shift+K)
 - Make sure all files show in Project Navigator
-- Check that files have FastPass target selected
+- Check that files have FastTrack target selected
 
 **Location not working?**
 - Verify permissions are in Info.plist
@@ -120,7 +120,7 @@ cd /Users/jtoper/DEV/triprank/backend
 
 Run the integration checker anytime:
 ```bash
-cd /Users/jtoper/DEV/triprank/ios/FastPass
+cd /Users/jtoper/DEV/triprank/ios/FastTrack
 ./check-integration.sh
 ```
 

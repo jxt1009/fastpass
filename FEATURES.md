@@ -1,4 +1,4 @@
-# FastPass Features
+# FastTrack Features
 
 ## Live Map Tracking 🗺️
 

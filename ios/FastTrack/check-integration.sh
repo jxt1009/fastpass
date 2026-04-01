@@ -1,17 +1,17 @@
 #!/bin/bash
 
-echo "🎯 FastPass Integration Checklist"
+echo "🎯 FastTrack Integration Checklist"
 echo "================================="
 echo ""
 
-cd "$(dirname "$0")/FastPass"
+cd "$(dirname "$0")/FastTrack"
 
 echo "✅ Swift Files (should be 8):"
 find . -name "*.swift" -type f | wc -l | xargs echo "   Found:"
 
 echo ""
 echo "📁 File Structure:"
-echo "   FastPassApp.swift"
+echo "   FastTrackApp.swift"
 ls -1 Models/*.swift 2>/dev/null | sed 's/^/   /'
 ls -1 Services/*.swift 2>/dev/null | sed 's/^/   /'
 ls -1 ViewModels/*.swift 2>/dev/null | sed 's/^/   /'
@@ -21,7 +21,7 @@ echo ""
 echo "📋 Next Steps in Xcode:"
 echo ""
 echo "1. ⚠️  Add files to Xcode project:"
-echo "   • Right-click 'FastPass' group → Add Files"
+echo "   • Right-click 'FastTrack' group → Add Files"
 echo "   • Select: Views, Models, Services, ViewModels folders"
 echo "   • UNCHECK 'Copy items if needed'"
 echo ""

@@ -1,4 +1,4 @@
-# FastPass - GPS Speed Tracking App 🚗💨
+# FastTrack - GPS Speed Tracking App 🚗💨
 
 A complete iOS speed tracking application with real-time GPS, live maps, drive statistics, and cloud sync. Like TripRank, but self-hosted!
 
@@ -19,8 +19,8 @@ A complete iOS speed tracking application with real-time GPS, live maps, drive s
 ```bash
 # On your server (10.0.0.102)
 cd ~
-git clone https://github.com/YOUR_USERNAME/fastpass.git
-cd fastpass
+git clone https://github.com/YOUR_USERNAME/fasttrack.git
+cd fasttrack
 ./deploy-local.sh
 ```
 
@@ -39,7 +39,7 @@ See **[DEPLOY_ON_SERVER.md](DEPLOY_ON_SERVER.md)** for details.
 
 ### 1. Open in Xcode
 ```bash
-open ios/FastPass/FastPass.xcodeproj
+open ios/FastTrack/FastTrack.xcodeproj
 ```
 
 ### 2. Configure (One-Time Setup)
@@ -83,7 +83,7 @@ Follow **[XCODE_SETUP.md](XCODE_SETUP.md)**:
 
 ### iOS App (SwiftUI)
 ```
-FastPass.app
+FastTrack.app
 ├── Views/           # UI components
 │   ├── ContentView.swift        # Main tracking screen + live map
 │   ├── DriveHistoryView.swift   # List of drives
@@ -115,7 +115,7 @@ fast.toper.dev/
 
 ### Database (PostgreSQL)
 ```
-fastpass (database)
+fasttrack (database)
 ├── users   # Apple user data
 └── drives  # GPS tracks with stats
 ```
@@ -164,7 +164,7 @@ fastpass (database)
 
 ### View Logs
 ```bash
-kubectl logs -f deployment/fastpass-api
+kubectl logs -f deployment/fasttrack-api
 ```
 
 ### Create Backup
@@ -174,7 +174,7 @@ kubectl logs -f deployment/fastpass-api
 
 ### Restart API
 ```bash
-kubectl rollout restart deployment/fastpass-api
+kubectl rollout restart deployment/fasttrack-api
 ```
 
 ### Update Code
@@ -188,8 +188,8 @@ git pull && ./deploy-local.sh
 
 ### API Not Responding
 ```bash
-kubectl get pods -l app=fastpass-api
-kubectl logs -l app=fastpass-api
+kubectl get pods -l app=fasttrack-api
+kubectl logs -l app=fasttrack-api
 ```
 
 ### iOS App Crashes
@@ -200,7 +200,7 @@ kubectl logs -l app=fastpass-api
 ### Database Issues
 ```bash
 ./backup-restore.sh test
-kubectl get pods -l app=fastpass-postgres
+kubectl get pods -l app=fasttrack-postgres
 ```
 
 ### More Help
@@ -225,7 +225,7 @@ See individual documentation files for detailed troubleshooting.
 ## 🎓 Project Structure
 
 ```
-fastpass/
+fasttrack/
 ├── backend/
 │   ├── main.go              # API entry point
 │   ├── models.go            # Database models
@@ -239,8 +239,8 @@ fastpass/
 │       ├── ingress.yaml
 │       ├── postgres.yaml
 │       └── backup-cronjob.yaml
-├── ios/FastPass/FastPass/
-│   ├── FastPassApp.swift    # App entry
+├── ios/FastTrack/FastTrack/
+│   ├── FastTrackApp.swift    # App entry
 │   ├── Models/
 │   ├── Views/
 │   ├── ViewModels/

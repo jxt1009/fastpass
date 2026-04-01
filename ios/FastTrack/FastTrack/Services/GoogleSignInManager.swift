@@ -7,9 +7,9 @@ class GoogleSignInManager: NSObject, ObservableObject {
     @Published var error: String?
 
     // Replace with your Google OAuth Client ID from https://console.cloud.google.com/
-    // Application type: iOS, Bundle ID: com.toper.FastPass
-    static let clientID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
-    static let redirectURI = "com.toper.fastpass:/oauth2callback"
+    // Application type: iOS, Bundle ID: com.toper.FastTrack
+    static let clientID = "761710305317-v7fqdoiqqveva29pc2461qm5ku7dadmp.apps.googleusercontent.com"
+    static let redirectURI = "com.toper.fasttrack:/oauth2callback"
 
     private var codeVerifier: String = ""
 
@@ -36,7 +36,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
 
         let session = ASWebAuthenticationSession(
             url: authURL,
-            callbackURLScheme: "com.toper.fastpass"
+            callbackURLScheme: "com.toper.fasttrack"
         ) { [weak self] callbackURL, error in
             guard let self = self else { return }
 

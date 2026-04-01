@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FastPass Database Backup and Restore Script
+# FastTrack Database Backup and Restore Script
 # Usage:
 #   ./backup-restore.sh backup          - Create a manual backup
 #   ./backup-restore.sh restore <file>  - Restore from a backup file
@@ -10,12 +10,12 @@
 set -e
 
 NAMESPACE="default"
-POSTGRES_POD=$(kubectl get pod -n $NAMESPACE -l app=fastpass-postgres -o jsonpath='{.items[0].metadata.name}')
+POSTGRES_POD=$(kubectl get pod -n $NAMESPACE -l app=fasttrack-postgres -o jsonpath='{.items[0].metadata.name}')
 BACKUP_DIR="/backups"
 
 if [ -z "$POSTGRES_POD" ]; then
     echo "❌ Error: PostgreSQL pod not found"
-    echo "   Make sure fastpass-postgres is deployed"
+    echo "   Make sure fasttrack-postgres is deployed"
     exit 1
 fi
 
@@ -23,10 +23,10 @@ case "$1" in
     backup)
         echo "📦 Creating manual backup..."
         TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-        BACKUP_FILE="fastpass_backup_${TIMESTAMP}.sql"
+        BACKUP_FILE="fasttrack_backup_${TIMESTAMP}.sql"
         
         kubectl exec -n $NAMESPACE $POSTGRES_POD -- sh -c "
-            pg_dump -U fastpass -d fastpass > ${BACKUP_DIR}/${BACKUP_FILE}
+            pg_dump -U fasttrack -d fasttrack > ${BACKUP_DIR}/${BACKUP_FILE}
             gzip ${BACKUP_DIR}/${BACKUP_FILE}
             ls -lh ${BACKUP_DIR}/${BACKUP_FILE}.gz
         "
@@ -65,11 +65,11 @@ case "$1" in
         # Check if file is gzipped
         if [[ $BACKUP_FILE == *.gz ]]; then
             kubectl exec -n $NAMESPACE $POSTGRES_POD -- sh -c "
-                gunzip -c ${BACKUP_DIR}/${BACKUP_FILE} | psql -U fastpass -d fastpass
+                gunzip -c ${BACKUP_DIR}/${BACKUP_FILE} | psql -U fasttrack -d fasttrack
             "
         else
             kubectl exec -n $NAMESPACE $POSTGRES_POD -- sh -c "
-                psql -U fastpass -d fastpass < ${BACKUP_DIR}/${BACKUP_FILE}
+                psql -U fasttrack -d fasttrack < ${BACKUP_DIR}/${BACKUP_FILE}
             "
         fi
         
@@ -79,14 +79,14 @@ case "$1" in
     list)
         echo "📋 Available backups:"
         kubectl exec -n $NAMESPACE $POSTGRES_POD -- sh -c "
-            ls -lh ${BACKUP_DIR}/ | grep fastpass_backup || echo 'No backups found'
+            ls -lh ${BACKUP_DIR}/ | grep fasttrack_backup || echo 'No backups found'
         "
         ;;
         
     clean)
         echo "🧹 Cleaning old backups (>30 days)..."
         kubectl exec -n $NAMESPACE $POSTGRES_POD -- sh -c "
-            find ${BACKUP_DIR} -name 'fastpass_backup_*.sql.gz' -mtime +30 -ls -delete
+            find ${BACKUP_DIR} -name 'fasttrack_backup_*.sql.gz' -mtime +30 -ls -delete
         "
         echo "✅ Cleanup complete"
         ;;
@@ -131,18 +131,18 @@ case "$1" in
         
     test)
         echo "🧪 Testing database connection..."
-        kubectl exec -n $NAMESPACE $POSTGRES_POD -- psql -U fastpass -d fastpass -c "SELECT 'Connection successful!' as status;"
+        kubectl exec -n $NAMESPACE $POSTGRES_POD -- psql -U fasttrack -d fasttrack -c "SELECT 'Connection successful!' as status;"
         echo ""
         echo "📊 Database size:"
-        kubectl exec -n $NAMESPACE $POSTGRES_POD -- psql -U fastpass -d fastpass -c "
+        kubectl exec -n $NAMESPACE $POSTGRES_POD -- psql -U fasttrack -d fasttrack -c "
             SELECT 
-                pg_size_pretty(pg_database_size('fastpass')) as size,
+                pg_size_pretty(pg_database_size('fasttrack')) as size,
                 (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public') as table_count;
         "
         ;;
         
     *)
-        echo "FastPass Database Backup & Restore"
+        echo "FastTrack Database Backup & Restore"
         echo ""
         echo "Usage: $0 <command> [options]"
         echo ""
@@ -158,8 +158,8 @@ case "$1" in
         echo "Examples:"
         echo "  $0 backup"
         echo "  $0 list"
-        echo "  $0 restore fastpass_backup_20260401_020000.sql.gz"
-        echo "  $0 download fastpass_backup_20260401_020000.sql.gz"
+        echo "  $0 restore fasttrack_backup_20260401_020000.sql.gz"
+        echo "  $0 download fasttrack_backup_20260401_020000.sql.gz"
         echo ""
         echo "Automated backups run daily at 2 AM (configured in backup-cronjob.yaml)"
         exit 1

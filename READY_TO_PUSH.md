@@ -1,8 +1,8 @@
-# FastPass - Repository Ready! 🎉
+# FastTrack - Repository Ready! 🎉
 
 ## ✅ What's Complete
 
-Your FastPass project is fully implemented and ready to push to GitHub!
+Your FastTrack project is fully implemented and ready to push to GitHub!
 
 ### 📦 Repository Status
 - **3 commits** ready to push
@@ -13,14 +13,14 @@ Your FastPass project is fully implemented and ready to push to GitHub!
 ### 🏗️ Project Structure
 
 ```
-fastpass/
+fasttrack/
 ├── backend/                 # Go API Server
 │   ├── *.go files          # 7 Go source files with auth
 │   ├── Dockerfile          # Container build
 │   ├── k8s/                # Kubernetes manifests
 │   └── DEPLOYMENT.md       # K8s deployment guide
-├── ios/FastPass/           # iOS Xcode Project
-│   └── FastPass/
+├── ios/FastTrack/           # iOS Xcode Project
+│   └── FastTrack/
 │       ├── Models/         # Drive model
 │       ├── Services/       # Auth, API, Location
 │       ├── ViewModels/     # DriveManager
@@ -65,8 +65,8 @@ fastpass/
 
 Go to: **https://github.com/new**
 
-- Repository name: `fastpass` (or your choice)
-- Description: "FastPass - iOS speed tracking app with Go backend"
+- Repository name: `fasttrack` (or your choice)
+- Description: "FastTrack - iOS speed tracking app with Go backend"
 - Visibility: **Private** ✓
 - **Don't** initialize with README/gitignore (we have them)
 - Click **Create repository**
@@ -77,7 +77,7 @@ Go to: **https://github.com/new**
 cd /Users/jtoper/DEV/triprank
 
 # Add remote (replace YOUR_USERNAME)
-git remote add origin https://github.com/YOUR_USERNAME/fastpass.git
+git remote add origin https://github.com/YOUR_USERNAME/fasttrack.git
 
 # Push to GitHub
 git branch -M main
@@ -97,14 +97,14 @@ Visit your repo URL and verify:
 
 ```bash
 # On your server
-git clone https://github.com/YOUR_USERNAME/fastpass.git
-cd fastpass/backend
+git clone https://github.com/YOUR_USERNAME/fasttrack.git
+cd fasttrack/backend
 
 # Generate JWT secret
 export JWT_SECRET=$(openssl rand -base64 32)
 
 # Build
-go build -o fastpass-api
+go build -o fasttrack-api
 
 # Deploy to Kubernetes
 cd k8s
@@ -126,9 +126,9 @@ See **SERVER_DEPLOYMENT.md** for complete instructions.
 
 ### In Xcode:
 
-1. **Open project**: `ios/FastPass/FastPass.xcodeproj`
+1. **Open project**: `ios/FastTrack/FastTrack.xcodeproj`
 2. **Add files to project** (if not already):
-   - Right-click FastPass group → Add Files
+   - Right-click FastTrack group → Add Files
    - Select: Models, Services, ViewModels, Views folders
    - Uncheck "Copy items if needed"
 3. **Configure capabilities**:
@@ -229,7 +229,7 @@ Run `./setup-github.sh` for the push commands, or just:
 
 ```bash
 cd /Users/jtoper/DEV/triprank
-git remote add origin https://github.com/YOUR_USERNAME/fastpass.git
+git remote add origin https://github.com/YOUR_USERNAME/fasttrack.git
 git push -u origin main
 ```
 

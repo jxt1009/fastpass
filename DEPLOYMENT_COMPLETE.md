@@ -1,4 +1,4 @@
-# 🎉 FastPass Deployment Complete!
+# 🎉 FastTrack Deployment Complete!
 
 ## Deployment Summary
 
@@ -72,20 +72,20 @@ curl https://fast.toper.dev/api/v1/drives \
 ssh -p 2222 jtoper@10.0.0.102
 
 # Check pods
-kubectl get pods -l app=fastpass-api
-kubectl get pods -l app=fastpass-postgres
+kubectl get pods -l app=fasttrack-api
+kubectl get pods -l app=fasttrack-postgres
 
 # View logs
-kubectl logs -f -l app=fastpass-api
-kubectl logs -f -l app=fastpass-postgres
+kubectl logs -f -l app=fasttrack-api
+kubectl logs -f -l app=fasttrack-postgres
 
 # Database access
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack
 ```
 
 ### Key Files
-- **iOS Project**: `ios/FastPass/FastPass.xcodeproj`
-- **Backend**: `backend/main.go` (compiled to `backend/fastpass-api`)
+- **iOS Project**: `ios/FastTrack/FastTrack.xcodeproj`
+- **Backend**: `backend/main.go` (compiled to `backend/fasttrack-api`)
 - **Kubernetes**: `backend/k8s/*.yaml`
 - **Deployment**: `deploy-local.sh`, `deploy-to-toper.sh`
 - **Backups**: `backup-restore.sh`
@@ -150,7 +150,7 @@ curl https://fast.toper.dev/api/v1/drives
 ```
 
 ### iOS App Testing
-1. Open Xcode project: `ios/FastPass/FastPass.xcodeproj`
+1. Open Xcode project: `ios/FastTrack/FastTrack.xcodeproj`
 2. Connect physical iOS device
 3. Enable "Background Modes" → "Location updates" capability
 4. Build and run to device
@@ -168,16 +168,16 @@ curl https://fast.toper.dev/api/v1/drives
 ### Backend Health
 ```bash
 # API pods
-kubectl get pods -l app=fastpass-api
+kubectl get pods -l app=fasttrack-api
 # Should show: 2/2 Running
 
 # Database pod
-kubectl get pods -l app=fastpass-postgres
+kubectl get pods -l app=fasttrack-postgres
 # Should show: 1/1 Running
 
 # Service endpoints
 kubectl get endpoints
-# Should show IPs for fastpass-api and fastpass-postgres-service
+# Should show IPs for fasttrack-api and fasttrack-postgres-service
 
 # Ingress
 kubectl get ingress
@@ -186,24 +186,24 @@ kubectl get ingress
 
 ### Database Stats
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "
 SELECT 
   (SELECT COUNT(*) FROM users) as total_users,
   (SELECT COUNT(*) FROM drives) as total_drives,
-  (SELECT pg_database_size('fastpass')/1024/1024 || ' MB') as db_size;
+  (SELECT pg_database_size('fasttrack')/1024/1024 || ' MB') as db_size;
 "
 ```
 
 ### Backups
 ```bash
 # List backups
-ls -lh /data/fastpass/backups/
+ls -lh /data/fasttrack/backups/
 
 # Or via script
 bash backup-restore.sh list
 
 # Test backup
-kubectl create job --from=cronjob/fastpass-postgres-backup manual-test
+kubectl create job --from=cronjob/fasttrack-postgres-backup manual-test
 kubectl logs job/manual-test
 ```
 
@@ -237,7 +237,7 @@ kubectl logs job/manual-test
 
 ## Important Links
 
-**GitHub**: https://github.com/jxt1009/fastpass  
+**GitHub**: https://github.com/jxt1009/fasttrack  
 **API**: https://fast.toper.dev  
 **Server**: ssh -p 2222 jtoper@10.0.0.102  
 
@@ -254,13 +254,13 @@ kubectl logs job/manual-test
 ## Credentials & Secrets
 
 **Stored in Kubernetes Secrets** (not in git):
-- Database password: `kubectl get secret fastpass-postgres-secret`
-- JWT secret: `kubectl get secret fastpass-secrets`
-- Database URL: `kubectl get secret fastpass-secrets`
+- Database password: `kubectl get secret fasttrack-postgres-secret`
+- JWT secret: `kubectl get secret fasttrack-secrets`
+- Database URL: `kubectl get secret fasttrack-secrets`
 
 **To view**:
 ```bash
-kubectl get secret fastpass-secrets -o jsonpath='{.data.jwt-secret}' | base64 -d
+kubectl get secret fasttrack-secrets -o jsonpath='{.data.jwt-secret}' | base64 -d
 ```
 
 ---
@@ -278,7 +278,7 @@ kubectl get secret fastpass-secrets -o jsonpath='{.data.jwt-secret}' | base64 -d
 
 ## Success! 🚀
 
-The FastPass speed tracking app is now:
+The FastTrack speed tracking app is now:
 - ✅ Fully deployed and operational
 - ✅ Accessible at https://fast.toper.dev
 - ✅ Ready for testing on iOS devices

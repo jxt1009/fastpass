@@ -152,7 +152,7 @@ struct ContentView: View {
                     .padding()
                 }
             }
-            .navigationTitle("FastPass")
+            .navigationTitle("FastTrack")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingHistory) {
                 DriveHistoryView()

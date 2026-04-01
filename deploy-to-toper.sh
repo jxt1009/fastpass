@@ -2,14 +2,14 @@
 
 set -e
 
-echo "🚀 FastPass Deployment to toper.dev"
+echo "🚀 FastTrack Deployment to toper.dev"
 echo "===================================="
 echo ""
 
 # Configuration
 SERVER="jtoper@10.0.0.102"
 NAMESPACE="default"
-APP_NAME="fastpass-api"
+APP_NAME="fasttrack-api"
 DOMAIN="fast.toper.dev"
 
 # Colors for output
@@ -81,7 +81,7 @@ rm /tmp/${APP_NAME}.tar.gz
 
 # Step 5: Create secret if it doesn't exist
 echo -e "${BLUE}→ Checking for secrets...${NC}"
-if ssh $SERVER "kubectl get secret fastpass-secrets -n $NAMESPACE" 2>/dev/null; then
+if ssh $SERVER "kubectl get secret fasttrack-secrets -n $NAMESPACE" 2>/dev/null; then
     echo -e "${YELLOW}⚠ Secret already exists. Update it? (y/n)${NC}"
     read -r response
     if [[ "$response" =~ ^[Yy]$ ]]; then
@@ -97,8 +97,8 @@ if ssh $SERVER "kubectl get secret fastpass-secrets -n $NAMESPACE" 2>/dev/null; 
         fi
         
         if [ ! -z "$db_url" ]; then
-            ssh $SERVER "kubectl delete secret fastpass-secrets -n $NAMESPACE"
-            ssh $SERVER "kubectl create secret generic fastpass-secrets -n $NAMESPACE \
+            ssh $SERVER "kubectl delete secret fasttrack-secrets -n $NAMESPACE"
+            ssh $SERVER "kubectl create secret generic fasttrack-secrets -n $NAMESPACE \
                 --from-literal=database-url='$db_url' \
                 --from-literal=jwt-secret='$jwt_secret'"
             echo -e "${GREEN}✓ Secret updated${NC}"
@@ -107,13 +107,13 @@ if ssh $SERVER "kubectl get secret fastpass-secrets -n $NAMESPACE" 2>/dev/null; 
 else
     echo -e "${YELLOW}⚠ Secret not found. Creating...${NC}"
     echo "Enter PostgreSQL connection string:"
-    echo "Format: host=HOSTNAME user=USERNAME password=PASSWORD dbname=fastpass port=5432 sslmode=disable"
+    echo "Format: host=HOSTNAME user=USERNAME password=PASSWORD dbname=fasttrack port=5432 sslmode=disable"
     read -r db_url
     
     jwt_secret=$(openssl rand -base64 32)
     echo -e "${GREEN}✓ Generated JWT secret: $jwt_secret${NC}"
     
-    ssh $SERVER "kubectl create secret generic fastpass-secrets -n $NAMESPACE \
+    ssh $SERVER "kubectl create secret generic fasttrack-secrets -n $NAMESPACE \
         --from-literal=database-url='$db_url' \
         --from-literal=jwt-secret='$jwt_secret'"
     echo -e "${GREEN}✓ Secret created${NC}"

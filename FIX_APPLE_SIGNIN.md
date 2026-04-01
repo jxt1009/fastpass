@@ -23,12 +23,12 @@ Error Domain=com.apple.AuthenticationServices.AuthorizationError Code=1000
 
 1. **Open Xcode**:
    ```bash
-   open ios/FastPass/FastPass.xcodeproj
+   open ios/FastTrack/FastTrack.xcodeproj
    ```
 
 2. **Select Project**:
-   - Click **FastPass** (blue icon) in Project Navigator
-   - Select **FastPass** under TARGETS
+   - Click **FastTrack** (blue icon) in Project Navigator
+   - Select **FastTrack** under TARGETS
 
 3. **Go to Signing & Capabilities Tab**
 
@@ -55,13 +55,13 @@ The bundle ID must match what's registered with Apple.
 ### Check Bundle ID:
 
 1. In Xcode, go to **General** tab
-2. **Identity** section → **Bundle Identifier**: `com.toper.FastPass`
+2. **Identity** section → **Bundle Identifier**: `com.toper.FastTrack`
 3. This should match your Apple Developer account
 
 ### If You Need to Change It:
 
 1. Update Bundle Identifier to match your team
-2. Example: `com.yourname.FastPass`
+2. Example: `com.yourname.FastTrack`
 3. Update in **both**:
    - General tab → Bundle Identifier
    - Signing & Capabilities → Team
@@ -144,7 +144,7 @@ The entitlements file should be auto-generated when you add the capability.
 
 ### Verify:
 
-1. In Project Navigator, find: `FastPass.entitlements`
+1. In Project Navigator, find: `FastTrack.entitlements`
 2. Should contain:
    ```xml
    <key>com.apple.developer.applesignin</key>
@@ -167,7 +167,7 @@ Before testing Apple Sign In:
 
 - [ ] Sign in with Apple capability added in Xcode
 - [ ] Background Modes capability added with Location updates
-- [ ] Bundle ID set: `com.toper.FastPass` (or your own)
+- [ ] Bundle ID set: `com.toper.FastTrack` (or your own)
 - [ ] Team selected in Signing & Capabilities
 - [ ] Apple ID added to Xcode Accounts
 - [ ] Automatically manage signing enabled

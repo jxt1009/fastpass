@@ -1,6 +1,6 @@
 # Deployment Guide for toper.dev
 
-This guide will help you deploy FastPass to your Kubernetes cluster at toper.dev with the endpoint `fast.toper.dev`.
+This guide will help you deploy FastTrack to your Kubernetes cluster at toper.dev with the endpoint `fast.toper.dev`.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ Follow these steps if you prefer manual control:
 
 ```bash
 cd /Users/jtoper/DEV/triprank/backend
-docker build -t fastpass-api:latest .
+docker build -t fasttrack-api:latest .
 ```
 
 ---
@@ -48,13 +48,13 @@ Save and transfer the image:
 
 ```bash
 # Save image
-docker save fastpass-api:latest | gzip > /tmp/fastpass-api.tar.gz
+docker save fasttrack-api:latest | gzip > /tmp/fasttrack-api.tar.gz
 
 # Transfer to server
-scp /tmp/fastpass-api.tar.gz jtoper@10.0.0.102:/tmp/
+scp /tmp/fasttrack-api.tar.gz jtoper@10.0.0.102:/tmp/
 
 # Load on server
-ssh jtoper@10.0.0.102 "docker load < /tmp/fastpass-api.tar.gz"
+ssh jtoper@10.0.0.102 "docker load < /tmp/fasttrack-api.tar.gz"
 ```
 
 ---
@@ -71,7 +71,7 @@ ssh jtoper@10.0.0.102
 kubectl exec -it <postgres-pod-name> -- psql -U postgres
 
 # Create database
-CREATE DATABASE fastpass;
+CREATE DATABASE fasttrack;
 \q
 ```
 
@@ -110,7 +110,7 @@ spec:
         image: postgres:15-alpine
         env:
         - name: POSTGRES_DB
-          value: fastpass
+          value: fasttrack
         - name: POSTGRES_USER
           value: postgres
         - name: POSTGRES_PASSWORD
@@ -152,8 +152,8 @@ echo "Generated JWT Secret: $JWT_SECRET"
 
 # Create secret on server
 ssh jtoper@10.0.0.102 << 'EOF'
-kubectl create secret generic fastpass-secrets \
-  --from-literal=database-url="host=postgres-service user=postgres password=YOUR_PASSWORD dbname=fastpass port=5432 sslmode=disable" \
+kubectl create secret generic fasttrack-secrets \
+  --from-literal=database-url="host=postgres-service user=postgres password=YOUR_PASSWORD dbname=fasttrack port=5432 sslmode=disable" \
   --from-literal=jwt-secret="YOUR_JWT_SECRET_HERE"
 EOF
 ```
@@ -203,20 +203,20 @@ ssh jtoper@10.0.0.102 "kubectl get svc -n ingress-nginx"
 Check pods are running:
 
 ```bash
-ssh jtoper@10.0.0.102 "kubectl get pods -l app=fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl get pods -l app=fasttrack-api"
 ```
 
 Expected output:
 ```
 NAME                            READY   STATUS    RESTARTS   AGE
-fastpass-api-xxxxxxxxxx-xxxxx   1/1     Running   0          1m
-fastpass-api-xxxxxxxxxx-xxxxx   1/1     Running   0          1m
+fasttrack-api-xxxxxxxxxx-xxxxx   1/1     Running   0          1m
+fasttrack-api-xxxxxxxxxx-xxxxx   1/1     Running   0          1m
 ```
 
 Check logs:
 
 ```bash
-ssh jtoper@10.0.0.102 "kubectl logs -l app=fastpass-api --tail=50"
+ssh jtoper@10.0.0.102 "kubectl logs -l app=fasttrack-api --tail=50"
 ```
 
 Test health endpoint:
@@ -236,7 +236,7 @@ Expected response:
 
 Update the API endpoint in your iOS app:
 
-**File**: `ios/FastPass/FastPass/Services/APIService.swift`
+**File**: `ios/FastTrack/FastTrack/Services/APIService.swift`
 
 Change line 5 from:
 ```swift
@@ -256,7 +256,7 @@ private let baseURL = "https://fast.toper.dev/api/v1"
 
 ```bash
 # Check pod status
-ssh jtoper@10.0.0.102 "kubectl describe pod -l app=fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl describe pod -l app=fasttrack-api"
 
 # Check events
 ssh jtoper@10.0.0.102 "kubectl get events --sort-by=.metadata.creationTimestamp"
@@ -266,7 +266,7 @@ ssh jtoper@10.0.0.102 "kubectl get events --sort-by=.metadata.creationTimestamp"
 
 ```bash
 # Test database connectivity from pod
-ssh jtoper@10.0.0.102 "kubectl exec -it deployment/fastpass-api -- sh"
+ssh jtoper@10.0.0.102 "kubectl exec -it deployment/fasttrack-api -- sh"
 # Inside pod:
 nc -zv postgres-service 5432
 ```
@@ -276,10 +276,10 @@ nc -zv postgres-service 5432
 ```bash
 # Check cert-manager
 ssh jtoper@10.0.0.102 "kubectl get certificate"
-ssh jtoper@10.0.0.102 "kubectl describe certificate fastpass-api-tls"
+ssh jtoper@10.0.0.102 "kubectl describe certificate fasttrack-api-tls"
 
 # Check ingress
-ssh jtoper@10.0.0.102 "kubectl describe ingress fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl describe ingress fasttrack-api"
 ```
 
 Certificate may take 2-5 minutes to provision.
@@ -291,7 +291,7 @@ Certificate may take 2-5 minutes to provision.
 ssh jtoper@10.0.0.102 << 'EOF'
 kubectl run test-pod --rm -it --image=curlimages/curl -- sh
 # Inside pod:
-curl http://fastpass-api/health
+curl http://fasttrack-api/health
 EOF
 ```
 
@@ -301,32 +301,32 @@ EOF
 
 ### View logs
 ```bash
-ssh jtoper@10.0.0.102 "kubectl logs -f deployment/fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl logs -f deployment/fasttrack-api"
 ```
 
 ### Restart deployment
 ```bash
-ssh jtoper@10.0.0.102 "kubectl rollout restart deployment/fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl rollout restart deployment/fasttrack-api"
 ```
 
 ### Scale replicas
 ```bash
-ssh jtoper@10.0.0.102 "kubectl scale deployment fastpass-api --replicas=3"
+ssh jtoper@10.0.0.102 "kubectl scale deployment fasttrack-api --replicas=3"
 ```
 
 ### Update image
 ```bash
 # After rebuilding and transferring new image
-ssh jtoper@10.0.0.102 "kubectl rollout restart deployment/fastpass-api"
+ssh jtoper@10.0.0.102 "kubectl rollout restart deployment/fasttrack-api"
 ```
 
 ### Delete deployment
 ```bash
 ssh jtoper@10.0.0.102 << 'EOF'
-kubectl delete deployment fastpass-api
-kubectl delete service fastpass-api
-kubectl delete ingress fastpass-api
-kubectl delete secret fastpass-secrets
+kubectl delete deployment fasttrack-api
+kubectl delete service fasttrack-api
+kubectl delete ingress fasttrack-api
+kubectl delete secret fasttrack-secrets
 EOF
 ```
 
@@ -370,9 +370,9 @@ Once deployed, your API will be available at:
 
 If you encounter issues:
 
-1. Check pod logs: `kubectl logs -l app=fastpass-api`
+1. Check pod logs: `kubectl logs -l app=fasttrack-api`
 2. Check pod status: `kubectl get pods`
-3. Check ingress: `kubectl describe ingress fastpass-api`
+3. Check ingress: `kubectl describe ingress fasttrack-api`
 4. Check cert-manager: `kubectl get certificate`
 5. Test DNS: `nslookup fast.toper.dev`
 6. Test endpoint: `curl -v https://fast.toper.dev/health`

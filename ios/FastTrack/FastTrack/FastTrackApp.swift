@@ -1,6 +1,6 @@
 //
-//  FastPassApp.swift
-//  FastPass
+//  FastTrackApp.swift
+//  FastTrack
 //
 //  Created by Jameson Toper on 3/31/26.
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct FastPassApp: App {
+struct FastTrackApp: App {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var driveManager: DriveManager
     

@@ -1,4 +1,4 @@
-# Authentication Strategy for FastPass
+# Authentication Strategy for FastTrack
 
 ## Recommendation: Apple Sign In + JWT
 
@@ -79,7 +79,7 @@ go get github.com/dgrijalva/jwt-go  # Alternative
 
 **Updates needed:**
 - `APIService.swift` - Add JWT to request headers
-- `FastPassApp.swift` - Check auth state on launch
+- `FastTrackApp.swift` - Check auth state on launch
 - Add login screen before main app
 
 ## Alternative Options

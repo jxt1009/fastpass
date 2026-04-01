@@ -1,21 +1,21 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: fastpass-postgres-pv
+  name: fasttrack-postgres-pv
 spec:
   capacity:
     storage: 20Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: /data/fastpass/postgres
+    path: /data/fasttrack/postgres
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: fastpass-postgres-pvc
+  name: fasttrack-postgres-pvc
   namespace: default
 spec:
   accessModes:
@@ -23,26 +23,26 @@ spec:
   resources:
     requests:
       storage: 20Gi
-  volumeName: fastpass-postgres-pv
+  volumeName: fasttrack-postgres-pv
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: fastpass-postgres-backup-pv
+  name: fasttrack-postgres-backup-pv
 spec:
   capacity:
     storage: 10Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: /data/fastpass/backups
+    path: /data/fasttrack/backups
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: fastpass-postgres-backup-pvc
+  name: fasttrack-postgres-backup-pvc
   namespace: default
 spec:
   accessModes:
@@ -50,39 +50,39 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  volumeName: fastpass-postgres-backup-pv
+  volumeName: fasttrack-postgres-backup-pv
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fastpass-postgres
+  name: fasttrack-postgres
   namespace: default
   labels:
-    app: fastpass-postgres
+    app: fasttrack-postgres
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: fastpass-postgres
+      app: fasttrack-postgres
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: fastpass-postgres
+        app: fasttrack-postgres
     spec:
       containers:
       - name: postgres
         image: postgres:15-alpine
         env:
         - name: POSTGRES_DB
-          value: fastpass
+          value: fasttrack
         - name: POSTGRES_USER
-          value: fastpass
+          value: fasttrack
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: fastpass-postgres-secret
+              name: fasttrack-postgres-secret
               key: postgres-password
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
@@ -106,7 +106,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - fastpass
+            - fasttrack
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
@@ -114,25 +114,25 @@ spec:
             command:
             - pg_isready
             - -U
-            - fastpass
+            - fasttrack
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
-          claimName: fastpass-postgres-pvc
+          claimName: fasttrack-postgres-pvc
       - name: postgres-backup
         persistentVolumeClaim:
-          claimName: fastpass-postgres-backup-pvc
+          claimName: fasttrack-postgres-backup-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: fastpass-postgres-service
+  name: fasttrack-postgres-service
   namespace: default
 spec:
   selector:
-    app: fastpass-postgres
+    app: fasttrack-postgres
   ports:
   - port: 5432
     targetPort: 5432

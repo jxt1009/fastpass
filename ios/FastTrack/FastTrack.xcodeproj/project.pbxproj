@@ -7,26 +7,26 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		B6B2AAA82F7CBF1700AA4AA0 /* FastPass.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastPass.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B6B2AAD32F7CCEA800AA4AA0 /* Exceptions for "FastPass" folder in "FastPass" target */ = {
+		B6B2AAD32F7CCEA800AA4AA0 /* Exceptions for "FastTrack" folder in "FastTrack" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = B6B2AAA72F7CBF1700AA4AA0 /* FastPass */;
+			target = B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B6B2AAAA2F7CBF1700AA4AA0 /* FastPass */ = {
+		B6B2AAAA2F7CBF1700AA4AA0 /* FastTrack */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				B6B2AAD32F7CCEA800AA4AA0 /* Exceptions for "FastPass" folder in "FastPass" target */,
+				B6B2AAD32F7CCEA800AA4AA0 /* Exceptions for "FastTrack" folder in "FastTrack" target */,
 			);
-			path = FastPass;
+			path = FastTrack;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -45,7 +45,7 @@
 		B6B2AA9F2F7CBF1700AA4AA0 = {
 			isa = PBXGroup;
 			children = (
-				B6B2AAAA2F7CBF1700AA4AA0 /* FastPass */,
+				B6B2AAAA2F7CBF1700AA4AA0 /* FastTrack */,
 				B6B2AAA92F7CBF1700AA4AA0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -53,7 +53,7 @@
 		B6B2AAA92F7CBF1700AA4AA0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B6B2AAA82F7CBF1700AA4AA0 /* FastPass.app */,
+				B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,9 +61,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B6B2AAA72F7CBF1700AA4AA0 /* FastPass */ = {
+		B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B6B2AAB32F7CBF1900AA4AA0 /* Build configuration list for PBXNativeTarget "FastPass" */;
+			buildConfigurationList = B6B2AAB32F7CBF1900AA4AA0 /* Build configuration list for PBXNativeTarget "FastTrack" */;
 			buildPhases = (
 				B6B2AAA42F7CBF1700AA4AA0 /* Sources */,
 				B6B2AAA52F7CBF1700AA4AA0 /* Frameworks */,
@@ -74,13 +74,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				B6B2AAAA2F7CBF1700AA4AA0 /* FastPass */,
+				B6B2AAAA2F7CBF1700AA4AA0 /* FastTrack */,
 			);
-			name = FastPass;
+			name = FastTrack;
 			packageProductDependencies = (
 			);
-			productName = FastPass;
-			productReference = B6B2AAA82F7CBF1700AA4AA0 /* FastPass.app */;
+			productName = FastTrack;
+			productReference = B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -98,7 +98,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B6B2AAA32F7CBF1700AA4AA0 /* Build configuration list for PBXProject "FastPass" */;
+			buildConfigurationList = B6B2AAA32F7CBF1700AA4AA0 /* Build configuration list for PBXProject "FastTrack" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -112,7 +112,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B6B2AAA72F7CBF1700AA4AA0 /* FastPass */,
+				B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */,
 			);
 		};
 /* End PBXProject section */
@@ -267,7 +267,7 @@
 				DEVELOPMENT_TEAM = 4L6H9V7Z6D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FastPass/Info.plist;
+				INFOPLIST_FILE = FastTrack/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -278,7 +278,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastPass;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastTrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -300,7 +300,7 @@
 				DEVELOPMENT_TEAM = 4L6H9V7Z6D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FastPass/Info.plist;
+				INFOPLIST_FILE = FastTrack/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -311,7 +311,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastPass;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastTrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -326,7 +326,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B6B2AAA32F7CBF1700AA4AA0 /* Build configuration list for PBXProject "FastPass" */ = {
+		B6B2AAA32F7CBF1700AA4AA0 /* Build configuration list for PBXProject "FastTrack" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B6B2AAB12F7CBF1900AA4AA0 /* Debug */,
@@ -335,7 +335,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B6B2AAB32F7CBF1900AA4AA0 /* Build configuration list for PBXNativeTarget "FastPass" */ = {
+		B6B2AAB32F7CBF1900AA4AA0 /* Build configuration list for PBXNativeTarget "FastTrack" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B6B2AAB42F7CBF1900AA4AA0 /* Debug */,

@@ -2,7 +2,7 @@
 
 ## What's Been Added
 
-Your FastPass app now has secure authentication using Apple Sign In + JWT tokens!
+Your FastTrack app now has secure authentication using Apple Sign In + JWT tokens!
 
 ### Backend (Go)
 ✅ **New Files:**
@@ -32,7 +32,7 @@ Your FastPass app now has secure authentication using Apple Sign In + JWT tokens
 - `Services/APIService.swift` - Adds JWT to API requests
 - `Models/Drive.swift` - Updated userID to Int
 - `ViewModels/DriveManager.swift` - Simplified user handling
-- `FastPassApp.swift` - Auth state management
+- `FastTrackApp.swift` - Auth state management
 
 ## How It Works
 
@@ -106,7 +106,7 @@ stringData:
 ### iOS: Sign in with Apple Capability
 
 In Xcode:
-1. Select FastPass target
+1. Select FastTrack target
 2. Go to **Signing & Capabilities**
 3. Click **+ Capability**
 4. Add **Sign in with Apple**

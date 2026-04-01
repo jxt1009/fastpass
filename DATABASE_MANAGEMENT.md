@@ -1,10 +1,10 @@
-# FastPass Database Management Guide
+# FastTrack Database Management Guide
 
 ## 🗄️ Independent PostgreSQL Database
 
-FastPass uses its own PostgreSQL instance, completely separate from any other services on your server. This ensures:
+FastTrack uses its own PostgreSQL instance, completely separate from any other services on your server. This ensures:
 - ✅ **Isolation**: No conflicts with other databases
-- ✅ **Version control**: Specific PostgreSQL version for FastPass
+- ✅ **Version control**: Specific PostgreSQL version for FastTrack
 - ✅ **Resource management**: Dedicated resources
 - ✅ **Easy backup/restore**: Independent backup strategy
 - ✅ **Security**: Separate credentials
@@ -14,10 +14,10 @@ FastPass uses its own PostgreSQL instance, completely separate from any other se
 ## 📦 Database Components
 
 ### 1. PostgreSQL Deployment
-- **Name**: `fastpass-postgres`
-- **Database**: `fastpass`
-- **User**: `fastpass`
-- **Service**: `fastpass-postgres-service`
+- **Name**: `fasttrack-postgres`
+- **Database**: `fasttrack`
+- **User**: `fasttrack`
+- **Service**: `fasttrack-postgres-service`
 - **Storage**: 20GB PVC (expandable)
 
 ### 2. Backup Storage
@@ -33,7 +33,7 @@ FastPass uses its own PostgreSQL instance, completely separate from any other se
 ### Deploy Database
 ```bash
 # Automatically deployed when running:
-cd ~/fastpass
+cd ~/fasttrack
 ./deploy-local.sh
 
 # Or manually:
@@ -45,10 +45,10 @@ kubectl apply -f backend/k8s/backup-cronjob.yaml
 ### Verify Deployment
 ```bash
 # Check if PostgreSQL is running
-kubectl get pods -l app=fastpass-postgres
+kubectl get pods -l app=fasttrack-postgres
 
 # Test connection
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "SELECT version();"
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "SELECT version();"
 ```
 
 ---
@@ -71,13 +71,13 @@ kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c
 Backups run automatically every day at 2 AM:
 ```bash
 # Check CronJob status
-kubectl get cronjob fastpass-postgres-backup
+kubectl get cronjob fasttrack-postgres-backup
 
 # View recent backup jobs
-kubectl get jobs -l app=fastpass-postgres-backup
+kubectl get jobs -l app=fasttrack-postgres-backup
 
 # Check last backup log
-kubectl logs job/fastpass-postgres-backup-<timestamp>
+kubectl logs job/fasttrack-postgres-backup-<timestamp>
 ```
 
 ### Download Backup to Local Machine
@@ -86,7 +86,7 @@ kubectl logs job/fastpass-postgres-backup-<timestamp>
 ./backup-restore.sh list
 
 # Download specific backup
-./backup-restore.sh download fastpass_backup_20260401_020000.sql.gz
+./backup-restore.sh download fasttrack_backup_20260401_020000.sql.gz
 ```
 
 ---
@@ -99,7 +99,7 @@ kubectl logs job/fastpass-postgres-backup-<timestamp>
 ./backup-restore.sh list
 
 # Restore from backup (CAUTION: This overwrites current data!)
-./backup-restore.sh restore fastpass_backup_20260401_020000.sql.gz
+./backup-restore.sh restore fasttrack_backup_20260401_020000.sql.gz
 ```
 
 ### From Local File
@@ -123,17 +123,17 @@ kubectl logs job/fastpass-postgres-backup-<timestamp>
 ### Connect to Database
 ```bash
 # Interactive psql session
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack
 
 # Run a query
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "SELECT * FROM users LIMIT 5;"
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "SELECT * FROM users LIMIT 5;"
 ```
 
 ### Check Database Size
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "
 SELECT 
-    pg_size_pretty(pg_database_size('fastpass')) as total_size,
+    pg_size_pretty(pg_database_size('fasttrack')) as total_size,
     pg_size_pretty(pg_total_relation_size('users')) as users_table,
     pg_size_pretty(pg_total_relation_size('drives')) as drives_table;
 "
@@ -141,12 +141,12 @@ SELECT
 
 ### View Tables
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "\dt"
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "\dt"
 ```
 
 ### View Recent Drives
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "
 SELECT id, user_id, start_time, distance, max_speed 
 FROM drives 
 ORDER BY start_time DESC 
@@ -162,12 +162,12 @@ LIMIT 10;
 
 **View Current Secret (Base64 encoded):**
 ```bash
-kubectl get secret fastpass-postgres-secret -o yaml
+kubectl get secret fasttrack-postgres-secret -o yaml
 ```
 
 **Decode Password:**
 ```bash
-kubectl get secret fastpass-postgres-secret -o jsonpath='{.data.postgres-password}' | base64 -d
+kubectl get secret fasttrack-postgres-secret -o jsonpath='{.data.postgres-password}' | base64 -d
 echo ""
 ```
 
@@ -177,19 +177,19 @@ echo ""
 NEW_PASSWORD=$(openssl rand -base64 24)
 
 # 2. Update secret
-kubectl delete secret fastpass-postgres-secret
-kubectl create secret generic fastpass-postgres-secret \
+kubectl delete secret fasttrack-postgres-secret
+kubectl create secret generic fasttrack-postgres-secret \
   --from-literal=postgres-password="$NEW_PASSWORD"
 
 # 3. Update API secret with new database URL
-kubectl delete secret fastpass-secrets
-kubectl create secret generic fastpass-secrets \
-  --from-literal=database-url="host=fastpass-postgres-service user=fastpass password=$NEW_PASSWORD dbname=fastpass port=5432 sslmode=disable" \
+kubectl delete secret fasttrack-secrets
+kubectl create secret generic fasttrack-secrets \
+  --from-literal=database-url="host=fasttrack-postgres-service user=fasttrack password=$NEW_PASSWORD dbname=fasttrack port=5432 sslmode=disable" \
   --from-literal=jwt-secret="YOUR_JWT_SECRET"
 
 # 4. Restart both deployments
-kubectl rollout restart deployment/fastpass-postgres
-kubectl rollout restart deployment/fastpass-api
+kubectl rollout restart deployment/fasttrack-postgres
+kubectl rollout restart deployment/fasttrack-api
 ```
 
 ---
@@ -199,23 +199,23 @@ kubectl rollout restart deployment/fastpass-api
 ### Check Storage Usage
 ```bash
 # Check PVC status
-kubectl get pvc | grep fastpass
+kubectl get pvc | grep fasttrack
 
 # Detailed info
-kubectl describe pvc fastpass-postgres-pvc
-kubectl describe pvc fastpass-postgres-backup-pvc
+kubectl describe pvc fasttrack-postgres-pvc
+kubectl describe pvc fasttrack-postgres-backup-pvc
 ```
 
 ### Expand Storage (if needed)
 ```bash
 # Edit PVC to increase size
-kubectl edit pvc fastpass-postgres-pvc
+kubectl edit pvc fasttrack-postgres-pvc
 
 # Change storage request from 20Gi to desired size (e.g., 50Gi)
 # Save and exit
 
 # Watch for resize
-kubectl get pvc fastpass-postgres-pvc -w
+kubectl get pvc fasttrack-postgres-pvc -w
 ```
 
 ### Clean Old Backups
@@ -224,9 +224,9 @@ kubectl get pvc fastpass-postgres-pvc -w
 ./backup-restore.sh clean
 
 # Manually clean specific files
-kubectl exec -it deployment/fastpass-postgres -- sh -c "
+kubectl exec -it deployment/fasttrack-postgres -- sh -c "
   ls -lh /backups/
-  rm /backups/fastpass_backup_OLD_FILE.sql.gz
+  rm /backups/fasttrack_backup_OLD_FILE.sql.gz
 "
 ```
 
@@ -236,12 +236,12 @@ kubectl exec -it deployment/fastpass-postgres -- sh -c "
 
 ### Database Vacuum (Optimize Performance)
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "VACUUM ANALYZE;"
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "VACUUM ANALYZE;"
 ```
 
 ### Check Database Statistics
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "
 SELECT 
     schemaname,
     tablename,
@@ -254,7 +254,7 @@ FROM pg_stat_user_tables;
 
 ### View Active Connections
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass -c "
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack -c "
 SELECT 
     pid,
     usename,
@@ -263,7 +263,7 @@ SELECT
     state,
     query
 FROM pg_stat_activity
-WHERE datname = 'fastpass';
+WHERE datname = 'fasttrack';
 "
 ```
 
@@ -275,7 +275,7 @@ WHERE datname = 'fastpass';
 
 **Check pod status:**
 ```bash
-kubectl describe pod -l app=fastpass-postgres
+kubectl describe pod -l app=fasttrack-postgres
 ```
 
 **Common issues:**
@@ -297,20 +297,20 @@ kubectl edit -f backend/k8s/postgres.yaml
 **Test from within cluster:**
 ```bash
 kubectl run test-db --rm -it --image=postgres:15-alpine --restart=Never -- \
-  psql -h fastpass-postgres-service -U fastpass -d fastpass
+  psql -h fasttrack-postgres-service -U fasttrack -d fasttrack
 ```
 
 **Check service:**
 ```bash
-kubectl get svc fastpass-postgres-service
-kubectl describe svc fastpass-postgres-service
+kubectl get svc fasttrack-postgres-service
+kubectl describe svc fasttrack-postgres-service
 ```
 
 ### Out of Space
 
 **Check disk usage in pod:**
 ```bash
-kubectl exec -it deployment/fastpass-postgres -- df -h
+kubectl exec -it deployment/fasttrack-postgres -- df -h
 ```
 
 **Solutions:**
@@ -323,7 +323,7 @@ kubectl exec -it deployment/fastpass-postgres -- df -h
 **Check CronJob logs:**
 ```bash
 # Get recent job
-JOB=$(kubectl get jobs -l app=fastpass-postgres-backup --sort-by=.metadata.creationTimestamp | tail -n 1 | awk '{print $1}')
+JOB=$(kubectl get jobs -l app=fasttrack-postgres-backup --sort-by=.metadata.creationTimestamp | tail -n 1 | awk '{print $1}')
 
 # View logs
 kubectl logs job/$JOB
@@ -370,8 +370,8 @@ kubectl logs job/$JOB
 ./backup-restore.sh download <latest-backup>
 
 # 3. Delete old deployment
-kubectl delete deployment fastpass-postgres
-kubectl delete pvc fastpass-postgres-pvc
+kubectl delete deployment fasttrack-postgres
+kubectl delete pvc fasttrack-postgres-pvc
 
 # 4. Edit postgres.yaml to increase storage
 # Change: storage: 20Gi -> storage: 50Gi
@@ -380,7 +380,7 @@ kubectl delete pvc fastpass-postgres-pvc
 kubectl apply -f backend/k8s/postgres.yaml
 
 # 6. Wait for ready
-kubectl wait --for=condition=ready pod -l app=fastpass-postgres --timeout=180s
+kubectl wait --for=condition=ready pod -l app=fasttrack-postgres --timeout=180s
 
 # 7. Restore data
 ./backup-restore.sh restore <backup-file>
@@ -395,21 +395,21 @@ If you want to use external PostgreSQL (e.g., managed service):
 ./backup-restore.sh backup
 ./backup-restore.sh download <latest-backup>
 
-# 2. Update fastpass-secrets with new connection string
-kubectl delete secret fastpass-secrets
-kubectl create secret generic fastpass-secrets \
-  --from-literal=database-url="host=EXTERNAL_HOST user=USER password=PASS dbname=fastpass port=5432 sslmode=require" \
+# 2. Update fasttrack-secrets with new connection string
+kubectl delete secret fasttrack-secrets
+kubectl create secret generic fasttrack-secrets \
+  --from-literal=database-url="host=EXTERNAL_HOST user=USER password=PASS dbname=fasttrack port=5432 sslmode=require" \
   --from-literal=jwt-secret="YOUR_JWT_SECRET"
 
 # 3. Restore to external database (manually)
-gunzip -c <backup-file> | psql -h EXTERNAL_HOST -U USER -d fastpass
+gunzip -c <backup-file> | psql -h EXTERNAL_HOST -U USER -d fasttrack
 
 # 4. Restart API
-kubectl rollout restart deployment/fastpass-api
+kubectl rollout restart deployment/fasttrack-api
 
 # 5. Delete internal PostgreSQL (optional)
-kubectl delete deployment fastpass-postgres
-kubectl delete svc fastpass-postgres-service
+kubectl delete deployment fasttrack-postgres
+kubectl delete svc fasttrack-postgres-service
 ```
 
 ---
@@ -456,23 +456,23 @@ kubectl delete svc fastpass-postgres-service
 ./backup-restore.sh test            # Test connection
 
 # Database Access
-kubectl exec -it deployment/fastpass-postgres -- psql -U fastpass -d fastpass
+kubectl exec -it deployment/fasttrack-postgres -- psql -U fasttrack -d fasttrack
 
 # Monitoring
-kubectl get pods -l app=fastpass-postgres
-kubectl logs -f deployment/fastpass-postgres
-kubectl top pod -l app=fastpass-postgres
+kubectl get pods -l app=fasttrack-postgres
+kubectl logs -f deployment/fasttrack-postgres
+kubectl top pod -l app=fasttrack-postgres
 
 # Maintenance
-kubectl rollout restart deployment/fastpass-postgres
-kubectl get cronjob fastpass-postgres-backup
-kubectl get pvc | grep fastpass
+kubectl rollout restart deployment/fasttrack-postgres
+kubectl get cronjob fasttrack-postgres-backup
+kubectl get pvc | grep fasttrack
 ```
 
 ---
 
-**Database**: fastpass  
-**User**: fastpass  
-**Service**: fastpass-postgres-service  
+**Database**: fasttrack  
+**User**: fasttrack  
+**Service**: fasttrack-postgres-service  
 **Namespace**: default  
 **Storage**: 20GB (data) + 10GB (backups)

@@ -1,6 +1,6 @@
 # Xcode Project Setup Guide
 
-## Required Configuration for FastPass iOS App
+## Required Configuration for FastTrack iOS App
 
 After adding files to your Xcode project, you need to configure capabilities and permissions.
 
@@ -8,12 +8,12 @@ After adding files to your Xcode project, you need to configure capabilities and
 
 ## 1. Add Files to Xcode Target
 
-1. Open `FastPass.xcodeproj` in Xcode
-2. Right-click on the `FastPass` group in Project Navigator
-3. Select "Add Files to 'FastPass'..."
-4. Navigate to the `FastPass` folder you copied
+1. Open `FastTrack.xcodeproj` in Xcode
+2. Right-click on the `FastTrack` group in Project Navigator
+3. Select "Add Files to 'FastTrack'..."
+4. Navigate to the `FastTrack` folder you copied
 5. Select all folders: `Models/`, `Views/`, `ViewModels/`, `Services/`
-6. **Important**: Check "Add to targets: FastPass"
+6. **Important**: Check "Add to targets: FastTrack"
 7. Click "Add"
 
 **Verify:**
@@ -26,7 +26,7 @@ After adding files to your Xcode project, you need to configure capabilities and
 
 **Steps:**
 1. Select your project in Project Navigator
-2. Select the `FastPass` target
+2. Select the `FastTrack` target
 3. Go to "Signing & Capabilities" tab
 4. Click "+ Capability"
 5. Search for and add: **"Sign in with Apple"**
@@ -64,13 +64,13 @@ After adding files to your Xcode project, you need to configure capabilities and
 ```xml
 <!-- Location permission descriptions -->
 <key>NSLocationWhenInUseUsageDescription</key>
-<string>FastPass needs your location to track your speed and route during drives.</string>
+<string>FastTrack needs your location to track your speed and route during drives.</string>
 
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-<string>FastPass needs background location access to continue tracking your drives even when the app is in the background.</string>
+<string>FastTrack needs background location access to continue tracking your drives even when the app is in the background.</string>
 
 <key>NSLocationAlwaysUsageDescription</key>
-<string>FastPass tracks your drives in the background to provide accurate statistics.</string>
+<string>FastTrack tracks your drives in the background to provide accurate statistics.</string>
 ```
 
 **Or add via Property List editor:**
@@ -80,9 +80,9 @@ After adding files to your Xcode project, you need to configure capabilities and
 
 | Key | Type | Value |
 |-----|------|-------|
-| Privacy - Location When In Use Usage Description | String | FastPass needs your location to track your speed and route during drives. |
-| Privacy - Location Always and When In Use Usage Description | String | FastPass needs background location access to continue tracking your drives even when the app is in the background. |
-| Privacy - Location Always Usage Description | String | FastPass tracks your drives in the background to provide accurate statistics. |
+| Privacy - Location When In Use Usage Description | String | FastTrack needs your location to track your speed and route during drives. |
+| Privacy - Location Always and When In Use Usage Description | String | FastTrack needs background location access to continue tracking your drives even when the app is in the background. |
+| Privacy - Location Always Usage Description | String | FastTrack tracks your drives in the background to provide accurate statistics. |
 
 ---
 
@@ -91,7 +91,7 @@ After adding files to your Xcode project, you need to configure capabilities and
 **Steps:**
 1. Select project → Target → General tab
 2. Update **Bundle Identifier** to match your Apple Developer account
-3. Example: `com.yourname.FastPass`
+3. Example: `com.yourname.FastTrack`
 
 **For Apple Sign In:**
 - Must match the identifier registered in Apple Developer Portal
@@ -122,7 +122,7 @@ If you see error: `Filename "ContentView.swift" used twice`
 **Solution:**
 1. In Project Navigator, find the **old** `ContentView.swift` (in root)
 2. Right-click → Delete → "Move to Trash"
-3. Keep only: `FastPass/Views/ContentView.swift`
+3. Keep only: `FastTrack/Views/ContentView.swift`
 4. Clean build folder: Product → Clean Build Folder (Shift+Cmd+K)
 
 ### Missing Target Membership
@@ -132,7 +132,7 @@ If files show in Xcode but don't compile:
 **Solution:**
 1. Select the file in Project Navigator
 2. Open File Inspector (right panel, first tab)
-3. Under "Target Membership", check ☑️ **FastPass**
+3. Under "Target Membership", check ☑️ **FastTrack**
 
 ---
 
@@ -201,7 +201,7 @@ Already configured in project, but verify:
 When ready to distribute:
 
 1. **Register App ID** in Apple Developer Portal
-   - Identifier: `com.yourname.FastPass`
+   - Identifier: `com.yourname.FastTrack`
    - Capabilities: Sign in with Apple, Background Modes
 
 2. **Create App in App Store Connect**

@@ -158,7 +158,7 @@ This opens a browser to authenticate and downloads a cert to `~/.cloudflared/cer
 #### 3. Create Tunnel
 
 ```bash
-cloudflared tunnel create fastpass-tunnel
+cloudflared tunnel create fasttrack-tunnel
 # Note the tunnel ID shown
 ```
 
@@ -172,7 +172,7 @@ credentials-file: /root/.cloudflared/YOUR_TUNNEL_ID.json
 
 ingress:
   - hostname: fast.toper.dev
-    service: http://fastpass-api.default.svc.cluster.local:80
+    service: http://fasttrack-api.default.svc.cluster.local:80
   - hostname: "*.toper.dev"
     service: http://ingress-nginx-controller.ingress-nginx.svc.cluster.local:80
   - service: http_status:404
@@ -181,7 +181,7 @@ ingress:
 #### 5. Create DNS Record (One Time)
 
 ```bash
-cloudflared tunnel route dns fastpass-tunnel fast.toper.dev
+cloudflared tunnel route dns fasttrack-tunnel fast.toper.dev
 ```
 
 #### 6. Run Tunnel in Kubernetes
@@ -216,7 +216,7 @@ data:
     no-autoupdate: true
     ingress:
       - hostname: fast.toper.dev
-        service: http://fastpass-api:80
+        service: http://fasttrack-api:80
       - service: http_status:404
 ---
 apiVersion: apps/v1
@@ -392,5 +392,5 @@ kubectl logs -l app=external-dns -f
 # - Ingress doesn't have external IP/hostname
 
 # Check ingress has address
-kubectl get ingress fastpass-api -o jsonpath='{.status.loadBalancer.ingress[0]}'
+kubectl get ingress fasttrack-api -o jsonpath='{.status.loadBalancer.ingress[0]}'
 ```
