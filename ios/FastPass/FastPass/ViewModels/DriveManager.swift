@@ -12,7 +12,9 @@ class DriveManager: ObservableObject {
     private var recordingStartTime: Date?
     private var recordingLocations: [CLLocation] = []
     private var speedReadings: [Double] = []
-    private var updateTimer: Timer?
+    
+    // Simple user ID for now - in production, this should come from authentication
+    private let userID = UUID().uuidString
     
     func setLocationManager(_ manager: LocationManager) {
         self.locationManager = manager
@@ -41,7 +43,7 @@ class DriveManager: ObservableObject {
         // Initialize current drive
         currentDrive = Drive(
             id: nil,
-            userID: 0, // Will be set by backend
+            userID: userID,
             startTime: Date(),
             endTime: Date(),
             startLatitude: 0,
@@ -52,34 +54,19 @@ class DriveManager: ObservableObject {
             duration: 0,
             maxSpeed: 0,
             avgSpeed: 0,
-            minSpeed: 0,
             routeData: nil
         )
-        
-        // Update duration every second
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.updateCurrentDrive()
-        }
     }
     
     func stopRecording() {
         guard isRecording else { return }
         
         isRecording = false
-        updateTimer?.invalidate()
-        updateTimer = nil
         locationManager?.stopUpdatingLocation()
         
         // Finalize drive
         if var drive = currentDrive, !recordingLocations.isEmpty {
             drive.endTime = Date()
-            
-            // Convert route to JSON
-            let coordinates = recordingLocations.map { ["lat": $0.coordinate.latitude, "lng": $0.coordinate.longitude] }
-            if let jsonData = try? JSONSerialization.data(withJSONObject: coordinates),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                drive.routeData = jsonString
-            }
             
             // Save drive to backend
             Task {
@@ -122,10 +109,9 @@ class DriveManager: ObservableObject {
             drive.duration = Date().timeIntervalSince(startTime)
         }
         
-        // Calculate max, min, and avg speed
+        // Calculate max and avg speed
         if !speedReadings.isEmpty {
             drive.maxSpeed = speedReadings.max() ?? 0
-            drive.minSpeed = speedReadings.min() ?? 0
             drive.avgSpeed = speedReadings.reduce(0, +) / Double(speedReadings.count)
         }
         
@@ -135,7 +121,7 @@ class DriveManager: ObservableObject {
     func fetchDrives() {
         Task {
             do {
-                let fetchedDrives = try await APIService.shared.fetchDrives()
+                let fetchedDrives = try await APIService.shared.fetchDrives(userID: userID)
                 await MainActor.run {
                     self.drives = fetchedDrives
                 }
@@ -143,28 +129,5 @@ class DriveManager: ObservableObject {
                 print("Failed to fetch drives: \(error.localizedDescription)")
             }
         }
-    }
-    
-    // Get route coordinates for map display
-    var routeCoordinates: [CLLocationCoordinate2D] {
-        return recordingLocations.map { $0.coordinate }
-    }
-}
-
-// MARK: - Preview Helpers
-
-extension LocationManager {
-    static func preview() -> LocationManager {
-        let manager = LocationManager()
-        manager.currentSpeed = 25.0 // ~56 mph for preview
-        return manager
-    }
-}
-
-extension DriveManager {
-    static func preview() -> DriveManager {
-        let manager = DriveManager()
-        manager.drives = [Drive.example]
-        return manager
     }
 }

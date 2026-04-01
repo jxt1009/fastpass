@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fastpass-postgres-backup
+  namespace: default
+spec:
+  # Run daily at 2 AM
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: fastpass-postgres-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              BACKUP_FILE="/backups/fastpass_backup_$(date +%Y%m%d_%H%M%S).sql"
+              echo "Starting backup to $BACKUP_FILE"
+              pg_dump -h fastpass-postgres-service -U fastpass -d fastpass > "$BACKUP_FILE"
+              gzip "$BACKUP_FILE"
+              echo "Backup completed: ${BACKUP_FILE}.gz"
+              
+              # Keep only last 30 days of backups
+              find /backups -name "fastpass_backup_*.sql.gz" -mtime +30 -delete
+              echo "Cleaned up old backups (>30 days)"
+              
+              # List current backups
+              ls -lh /backups/
+            env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fastpass-postgres-secret
+                  key: postgres-password
+            volumeMounts:
+            - name: postgres-backup
+              mountPath: /backups
+          volumes:
+          - name: postgres-backup
+            persistentVolumeClaim:
+              claimName: fastpass-postgres-backup-pvc

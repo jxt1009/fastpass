@@ -2,19 +2,55 @@
 
 ## 🚀 Deploy to fast.toper.dev
 
-### One-Line Deploy (Automated)
+### Method 1: Deploy on Server (Recommended)
+
+**Run directly on your Ubuntu server:**
+
 ```bash
-cd /Users/jtoper/DEV/triprank && ./deploy-to-toper.sh
+# On server (10.0.0.102)
+cd ~/fastpass
+./deploy-local.sh
 ```
 
-### What It Does
-1. ✅ Builds Docker image
-2. ✅ Transfers to 10.0.0.102
-3. ✅ Creates K8s secrets (JWT + DB)
-4. ✅ Deploys 2 replicas
-5. ✅ Configures nginx ingress
-6. ✅ Requests SSL certificate
-7. ✅ Tests health endpoint
+See: `DEPLOY_ON_SERVER.md` for detailed guide
+
+### Method 2: Deploy from Mac
+
+**Run from your Mac (requires SSH access):**
+
+```bash
+# On Mac
+cd /Users/jtoper/DEV/triprank
+./deploy-to-toper.sh
+```
+
+---
+
+## 📋 Quick Setup
+
+### Get Code on Server
+
+**Option A: Git Clone**
+```bash
+ssh jtoper@10.0.0.102
+cd ~
+git clone https://github.com/YOUR_USERNAME/fastpass.git
+cd fastpass
+./deploy-local.sh
+```
+
+**Option B: SCP Transfer**
+```bash
+# From Mac
+cd /Users/jtoper/DEV
+tar -czf triprank.tar.gz triprank/
+scp triprank.tar.gz jtoper@10.0.0.102:~/
+
+# On server
+tar -xzf triprank.tar.gz
+cd triprank
+./deploy-local.sh
+```
 
 ---
 

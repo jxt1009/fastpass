@@ -168,37 +168,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Stat Card Component
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(color)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundColor(color)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(color.opacity(0.1))
-        .cornerRadius(10)
-    }
-}
-
-// MARK: - Live Map View
 
 struct LiveMapView: View {
     let userLocation: CLLocationCoordinate2D
