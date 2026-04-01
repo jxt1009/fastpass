@@ -143,6 +143,8 @@ func updateProfile(c *gin.Context) {
 	user.Country = req.Country
 	user.CarMake = req.CarMake
 	user.CarModel = req.CarModel
+	user.CarYear = req.CarYear
+	user.CarTrim = req.CarTrim
 
 	if err := db.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})

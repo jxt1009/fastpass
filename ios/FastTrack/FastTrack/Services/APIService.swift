@@ -108,14 +108,24 @@ class APIService {
             let country: String
             let carMake: String
             let carModel: String
+            let carYear: Int?
+            let carTrim: String
             enum CodingKeys: String, CodingKey {
                 case username, country
                 case carMake = "car_make"
                 case carModel = "car_model"
+                case carYear = "car_year"
+                case carTrim = "car_trim"
             }
         }
-        let req = UpdateProfileRequest(username: profile.username, country: profile.country,
-                                        carMake: profile.carMake, carModel: profile.carModel)
+        let req = UpdateProfileRequest(
+            username: profile.username,
+            country: profile.country,
+            carMake: profile.carMake,
+            carModel: profile.carModel,
+            carYear: profile.carYear,
+            carTrim: profile.carTrim
+        )
         let _: User = try await put(endpoint: "/profile", body: req)
     }
 }

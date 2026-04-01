@@ -7,15 +7,14 @@ struct ProfileSetupView: View {
 
     @State private var username = ""
     @State private var country = ""
-    @State private var carMake = ""
-    @State private var carModel = ""
+    @State private var carSelection = CarSelection()
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var avatarImage: UIImage?
     @State private var showCarPicker = false
     @State private var isSaving = false
     @State private var usernameError = ""
 
-    private var isValid: Bool { username.count >= 3 && username.count <= 20 }
+    private var isValid: Bool { username.count >= 3 && username.count <= 20 && usernameError.isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -78,9 +77,7 @@ struct ProfileSetupView: View {
                     TextField("Country (optional)", text: $country)
                         .autocorrectionDisabled()
                 }
-                .onChange(of: username) { _, val in
-                    validateUsername(val)
-                }
+                .onChange(of: username) { _, val in validateUsername(val) }
 
                 // Car
                 Section("Your Car") {
@@ -90,12 +87,15 @@ struct ProfileSetupView: View {
                         HStack {
                             Image(systemName: "car.fill")
                                 .foregroundColor(.blue)
-                            if carMake.isEmpty {
+                            if carSelection.isComplete {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(carSelection.displayString)
+                                        .foregroundColor(.primary)
+                                        .fontWeight(.medium)
+                                }
+                            } else {
                                 Text("Select a car")
                                     .foregroundColor(.secondary)
-                            } else {
-                                Text("\(carMake) \(carModel)")
-                                    .foregroundColor(.primary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -103,10 +103,9 @@ struct ProfileSetupView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    if !carMake.isEmpty {
+                    if carSelection.isComplete {
                         Button("Remove car", role: .destructive) {
-                            carMake = ""
-                            carModel = ""
+                            carSelection = CarSelection()
                         }
                     }
                 }
@@ -126,40 +125,50 @@ struct ProfileSetupView: View {
                 }
             }
             .sheet(isPresented: $showCarPicker) {
-                CarPickerView(selectedMake: $carMake, selectedModel: $carModel)
+                CarPickerView(selection: $carSelection)
             }
-            .onAppear {
-                if let p = profileManager.profile {
-                    username = p.username
-                    country = p.country
-                    carMake = p.carMake
-                    carModel = p.carModel
-                }
-                avatarImage = profileManager.profileImage
-            }
+            .onAppear { loadExisting() }
         }
     }
 
-    private func validateUsername(_ val: String) {
-        if val.count < 3 {
-            usernameError = val.isEmpty ? "" : "Must be at least 3 characters"
-        } else if val.count > 20 {
-            usernameError = "Maximum 20 characters"
-        } else if val.contains(" ") {
-            usernameError = "No spaces allowed"
-        } else {
-            usernameError = ""
+    private func loadExisting() {
+        if let p = profileManager.profile {
+            username = p.username
+            country = p.country
+            if !p.carMake.isEmpty {
+                let make = performanceMakes.first { $0.displayName == p.carMake }
+                carSelection = CarSelection(
+                    make: make,
+                    model: p.carModel,
+                    year: p.carYear,
+                    trim: p.carTrim
+                )
+            }
         }
+        avatarImage = profileManager.profileImage
+    }
+
+    private func validateUsername(_ val: String) {
+        if val.isEmpty { usernameError = ""; return }
+        if val.count < 3 { usernameError = "Must be at least 3 characters"; return }
+        if val.count > 20 { usernameError = "Maximum 20 characters"; return }
+        if val.contains(" ") { usernameError = "No spaces allowed"; return }
+        usernameError = ""
     }
 
     private func save() {
         guard isValid else { return }
         isSaving = true
-        let p = UserProfile(username: username, country: country, carMake: carMake, carModel: carModel)
+        let p = UserProfile(
+            username: username,
+            country: country,
+            carMake: carSelection.make?.displayName ?? "",
+            carModel: carSelection.model,
+            carYear: carSelection.year,
+            carTrim: carSelection.trim
+        )
         profileManager.saveProfile(p)
-        if let img = avatarImage {
-            profileManager.saveAvatar(img)
-        }
+        if let img = avatarImage { profileManager.saveAvatar(img) }
         isSaving = false
         dismiss()
     }

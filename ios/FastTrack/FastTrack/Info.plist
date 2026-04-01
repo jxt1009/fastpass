@@ -12,6 +12,11 @@
 
     <key>NSLocationAlwaysUsageDescription</key>
     <string>FastTrack tracks your drives in the background to provide accurate statistics.</string>
+    
+    <!-- Motion permission for accelerometer/gyroscope sensor fusion -->
+    <key>NSMotionUsageDescription</key>
+    <string>FastTrack uses motion data to improve speed accuracy by combining GPS with accelerometer data.</string>
+    
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

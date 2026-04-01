@@ -142,6 +142,8 @@ struct User: Codable, Identifiable {
     let country: String?
     let carMake: String?
     let carModel: String?
+    let carYear: Int?
+    let carTrim: String?
     let authProvider: String?
     let createdAt: Date
     let updatedAt: Date
@@ -156,6 +158,8 @@ struct User: Codable, Identifiable {
         case country
         case carMake      = "car_make"
         case carModel     = "car_model"
+        case carYear      = "car_year"
+        case carTrim      = "car_trim"
         case authProvider = "auth_provider"
         case createdAt    = "created_at"
         case updatedAt    = "updated_at"

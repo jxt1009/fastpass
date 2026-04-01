@@ -14,6 +14,8 @@ type User struct {
 	Country      string    `gorm:"size:100" json:"country"`
 	CarMake      string    `gorm:"size:100" json:"car_make"`
 	CarModel     string    `gorm:"size:100" json:"car_model"`
+	CarYear      *int      `json:"car_year"`
+	CarTrim      string    `gorm:"size:100" json:"car_trim"`
 	AuthProvider string    `json:"auth_provider"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -24,6 +26,8 @@ type UpdateProfileRequest struct {
 	Country  string `json:"country"`
 	CarMake  string `json:"car_make"`
 	CarModel string `json:"car_model"`
+	CarYear  *int   `json:"car_year"`
+	CarTrim  string `json:"car_trim"`
 }
 
 type AuthResponse struct {

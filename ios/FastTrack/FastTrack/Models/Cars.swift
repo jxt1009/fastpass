@@ -1,179 +1,186 @@
 import Foundation
 
-enum CarCategory: String, CaseIterable, Codable {
-    case hypercar = "Hypercar"
-    case supercar = "Supercar"
-    case sportsCar = "Sports Car"
-    case muscleCar = "Muscle Car"
-    case sportsSedan = "Sports Sedan"
-    case electricPerformance = "Electric"
-    case jdm = "JDM"
-}
+// MARK: - Curated Performance Makes
+// These are the makes shown in the picker. Models come from NHTSA API.
 
-struct PerformanceCar: Identifiable, Hashable {
+struct PerformanceMake: Identifiable, Hashable {
     let id = UUID()
-    let make: String
-    let model: String
-    let category: CarCategory
+    let displayName: String   // shown in UI
+    let nhtsa: String         // exact name to use in NHTSA API URL (URL-encoded internally)
+    let emoji: String
 
-    var displayName: String { "\(make) \(model)" }
+    var urlEncoded: String {
+        nhtsa.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? nhtsa
+    }
+    
+    public func hash(into hasher: inout Hasher) { hasher.combine(nhtsa) }
+    public static func == (l: PerformanceMake, r: PerformanceMake) -> Bool { l.nhtsa == r.nhtsa }
 }
 
-let performanceCars: [PerformanceCar] = [
-    // Ferrari
-    PerformanceCar(make: "Ferrari", model: "296 GTB", category: .supercar),
-    PerformanceCar(make: "Ferrari", model: "F8 Tributo", category: .supercar),
-    PerformanceCar(make: "Ferrari", model: "SF90 Stradale", category: .hypercar),
-    PerformanceCar(make: "Ferrari", model: "812 Superfast", category: .supercar),
-    PerformanceCar(make: "Ferrari", model: "812 Competizione", category: .supercar),
-    PerformanceCar(make: "Ferrari", model: "Purosangue", category: .supercar),
-    PerformanceCar(make: "Ferrari", model: "Roma", category: .sportsCar),
-    PerformanceCar(make: "Ferrari", model: "Portofino M", category: .sportsCar),
-    PerformanceCar(make: "Ferrari", model: "LaFerrari", category: .hypercar),
-    // Lamborghini
-    PerformanceCar(make: "Lamborghini", model: "Huracán EVO", category: .supercar),
-    PerformanceCar(make: "Lamborghini", model: "Huracán STO", category: .supercar),
-    PerformanceCar(make: "Lamborghini", model: "Huracán Tecnica", category: .supercar),
-    PerformanceCar(make: "Lamborghini", model: "Revuelto", category: .supercar),
-    PerformanceCar(make: "Lamborghini", model: "Aventador SVJ", category: .supercar),
-    PerformanceCar(make: "Lamborghini", model: "Urus Performante", category: .sportsCar),
-    PerformanceCar(make: "Lamborghini", model: "Sterrato", category: .sportsCar),
-    // McLaren
-    PerformanceCar(make: "McLaren", model: "Artura", category: .supercar),
-    PerformanceCar(make: "McLaren", model: "720S", category: .supercar),
-    PerformanceCar(make: "McLaren", model: "765LT", category: .supercar),
-    PerformanceCar(make: "McLaren", model: "GT", category: .sportsCar),
-    PerformanceCar(make: "McLaren", model: "Senna", category: .hypercar),
-    PerformanceCar(make: "McLaren", model: "P1", category: .hypercar),
-    // Porsche
-    PerformanceCar(make: "Porsche", model: "911 GT3", category: .supercar),
-    PerformanceCar(make: "Porsche", model: "911 GT3 RS", category: .supercar),
-    PerformanceCar(make: "Porsche", model: "911 Turbo S", category: .supercar),
-    PerformanceCar(make: "Porsche", model: "911 GT2 RS", category: .supercar),
-    PerformanceCar(make: "Porsche", model: "911 Carrera S", category: .sportsCar),
-    PerformanceCar(make: "Porsche", model: "Cayman GT4", category: .sportsCar),
-    PerformanceCar(make: "Porsche", model: "Cayman GT4 RS", category: .sportsCar),
-    PerformanceCar(make: "Porsche", model: "Taycan Turbo S", category: .electricPerformance),
-    PerformanceCar(make: "Porsche", model: "Cayenne Turbo GT", category: .sportsCar),
-    // Bugatti
-    PerformanceCar(make: "Bugatti", model: "Chiron", category: .hypercar),
-    PerformanceCar(make: "Bugatti", model: "Chiron Super Sport", category: .hypercar),
-    PerformanceCar(make: "Bugatti", model: "Tourbillon", category: .hypercar),
-    // Koenigsegg
-    PerformanceCar(make: "Koenigsegg", model: "Agera RS", category: .hypercar),
-    PerformanceCar(make: "Koenigsegg", model: "Regera", category: .hypercar),
-    PerformanceCar(make: "Koenigsegg", model: "Jesko", category: .hypercar),
-    PerformanceCar(make: "Koenigsegg", model: "CC850", category: .hypercar),
-    // Pagani
-    PerformanceCar(make: "Pagani", model: "Huayra", category: .hypercar),
-    PerformanceCar(make: "Pagani", model: "Huayra R", category: .hypercar),
-    PerformanceCar(make: "Pagani", model: "Utopia", category: .hypercar),
-    // Aston Martin
-    PerformanceCar(make: "Aston Martin", model: "Vantage", category: .sportsCar),
-    PerformanceCar(make: "Aston Martin", model: "DB11", category: .sportsCar),
-    PerformanceCar(make: "Aston Martin", model: "DBS Superleggera", category: .supercar),
-    PerformanceCar(make: "Aston Martin", model: "Valkyrie", category: .hypercar),
-    PerformanceCar(make: "Aston Martin", model: "DB12", category: .sportsCar),
-    PerformanceCar(make: "Aston Martin", model: "Vanquish", category: .supercar),
-    // BMW
-    PerformanceCar(make: "BMW", model: "M2", category: .sportsCar),
-    PerformanceCar(make: "BMW", model: "M3 Competition", category: .sportsSedan),
-    PerformanceCar(make: "BMW", model: "M4 Competition", category: .sportsCar),
-    PerformanceCar(make: "BMW", model: "M4 CSL", category: .sportsCar),
-    PerformanceCar(make: "BMW", model: "M5", category: .sportsSedan),
-    PerformanceCar(make: "BMW", model: "M8 Competition", category: .supercar),
-    PerformanceCar(make: "BMW", model: "Z4 M40i", category: .sportsCar),
-    PerformanceCar(make: "BMW", model: "XM Label Red", category: .sportsCar),
-    // Mercedes-AMG
-    PerformanceCar(make: "Mercedes-AMG", model: "A45 S", category: .sportsSedan),
-    PerformanceCar(make: "Mercedes-AMG", model: "C63 S E Performance", category: .sportsSedan),
-    PerformanceCar(make: "Mercedes-AMG", model: "E63 S", category: .sportsSedan),
-    PerformanceCar(make: "Mercedes-AMG", model: "GT R", category: .supercar),
-    PerformanceCar(make: "Mercedes-AMG", model: "GT Black Series", category: .supercar),
-    PerformanceCar(make: "Mercedes-AMG", model: "SL63", category: .sportsCar),
-    PerformanceCar(make: "Mercedes-AMG", model: "G63", category: .sportsCar),
-    PerformanceCar(make: "Mercedes-AMG", model: "One", category: .hypercar),
-    // Audi
-    PerformanceCar(make: "Audi", model: "RS3", category: .sportsSedan),
-    PerformanceCar(make: "Audi", model: "RS4 Avant", category: .sportsSedan),
-    PerformanceCar(make: "Audi", model: "RS5", category: .sportsSedan),
-    PerformanceCar(make: "Audi", model: "RS6 Avant", category: .sportsSedan),
-    PerformanceCar(make: "Audi", model: "RS7", category: .sportsSedan),
-    PerformanceCar(make: "Audi", model: "R8 V10 Plus", category: .supercar),
-    PerformanceCar(make: "Audi", model: "TT RS", category: .sportsCar),
-    PerformanceCar(make: "Audi", model: "e-tron GT RS", category: .electricPerformance),
-    // Alfa Romeo
-    PerformanceCar(make: "Alfa Romeo", model: "Giulia Quadrifoglio", category: .sportsSedan),
-    PerformanceCar(make: "Alfa Romeo", model: "Stelvio Quadrifoglio", category: .sportsCar),
-    PerformanceCar(make: "Alfa Romeo", model: "4C Spider", category: .sportsCar),
-    PerformanceCar(make: "Alfa Romeo", model: "33 Stradale", category: .supercar),
-    // Bentley
-    PerformanceCar(make: "Bentley", model: "Continental GT Speed", category: .sportsCar),
-    PerformanceCar(make: "Bentley", model: "Flying Spur Speed", category: .sportsSedan),
-    PerformanceCar(make: "Bentley", model: "Bacalar", category: .hypercar),
-    // Dodge
-    PerformanceCar(make: "Dodge", model: "Challenger SRT Hellcat", category: .muscleCar),
-    PerformanceCar(make: "Dodge", model: "Challenger SRT Demon 170", category: .muscleCar),
-    PerformanceCar(make: "Dodge", model: "Charger SRT Hellcat", category: .muscleCar),
-    PerformanceCar(make: "Dodge", model: "Charger Daytona SRT", category: .electricPerformance),
-    PerformanceCar(make: "Dodge", model: "Viper ACR", category: .supercar),
-    // Chevrolet
-    PerformanceCar(make: "Chevrolet", model: "Corvette Z06", category: .supercar),
-    PerformanceCar(make: "Chevrolet", model: "Corvette C8 Stingray", category: .sportsCar),
-    PerformanceCar(make: "Chevrolet", model: "Corvette ZR1", category: .supercar),
-    PerformanceCar(make: "Chevrolet", model: "Corvette E-Ray", category: .electricPerformance),
-    PerformanceCar(make: "Chevrolet", model: "Camaro ZL1", category: .muscleCar),
-    PerformanceCar(make: "Chevrolet", model: "Camaro ZL1 1LE", category: .muscleCar),
-    // Ford
-    PerformanceCar(make: "Ford", model: "Mustang Shelby GT500", category: .muscleCar),
-    PerformanceCar(make: "Ford", model: "Mustang Dark Horse", category: .muscleCar),
-    PerformanceCar(make: "Ford", model: "Mustang Mach 1", category: .muscleCar),
-    PerformanceCar(make: "Ford", model: "GT", category: .supercar),
-    PerformanceCar(make: "Ford", model: "Focus RS", category: .sportsSedan),
-    // Cadillac
-    PerformanceCar(make: "Cadillac", model: "CT5-V Blackwing", category: .sportsSedan),
-    PerformanceCar(make: "Cadillac", model: "CT4-V Blackwing", category: .sportsSedan),
-    // Tesla
-    PerformanceCar(make: "Tesla", model: "Model S Plaid", category: .electricPerformance),
-    PerformanceCar(make: "Tesla", model: "Model 3 Performance", category: .electricPerformance),
-    PerformanceCar(make: "Tesla", model: "Roadster", category: .electricPerformance),
-    // Lucid
-    PerformanceCar(make: "Lucid", model: "Air Sapphire", category: .electricPerformance),
-    // Rimac
-    PerformanceCar(make: "Rimac", model: "Nevera", category: .hypercar),
-    // Nissan
-    PerformanceCar(make: "Nissan", model: "GT-R Nismo", category: .supercar),
-    PerformanceCar(make: "Nissan", model: "GT-R Premium", category: .supercar),
-    PerformanceCar(make: "Nissan", model: "Z NISMO", category: .sportsCar),
-    PerformanceCar(make: "Nissan", model: "Z Performance", category: .sportsCar),
-    // Toyota
-    PerformanceCar(make: "Toyota", model: "GR Supra", category: .jdm),
-    PerformanceCar(make: "Toyota", model: "GR86", category: .jdm),
-    PerformanceCar(make: "Toyota", model: "GR Corolla Morizo", category: .jdm),
-    PerformanceCar(make: "Toyota", model: "GR Yaris", category: .jdm),
-    // Honda / Acura
-    PerformanceCar(make: "Acura", model: "NSX Type S", category: .supercar),
-    PerformanceCar(make: "Honda", model: "Civic Type R", category: .jdm),
-    PerformanceCar(make: "Acura", model: "Integra Type S", category: .jdm),
-    // Subaru
-    PerformanceCar(make: "Subaru", model: "WRX STI", category: .jdm),
-    PerformanceCar(make: "Subaru", model: "WRX TR", category: .jdm),
-    PerformanceCar(make: "Subaru", model: "BRZ tS", category: .jdm),
-    // Mazda
-    PerformanceCar(make: "Mazda", model: "MX-5 Miata", category: .sportsCar),
-    PerformanceCar(make: "Mazda", model: "MX-5 RF", category: .sportsCar),
-    // Rolls-Royce
-    PerformanceCar(make: "Rolls-Royce", model: "Wraith Black Badge", category: .sportsCar),
-    PerformanceCar(make: "Rolls-Royce", model: "Black Badge Ghost", category: .sportsSedan),
-    // Maserati
-    PerformanceCar(make: "Maserati", model: "MC20", category: .supercar),
-    PerformanceCar(make: "Maserati", model: "MC20 Cielo", category: .supercar),
-    PerformanceCar(make: "Maserati", model: "GranTurismo Trofeo", category: .sportsCar),
+let performanceMakes: [PerformanceMake] = [
+    PerformanceMake(displayName: "Acura",          nhtsa: "Acura",          emoji: "🏎️"),
+    PerformanceMake(displayName: "Alfa Romeo",      nhtsa: "Alfa Romeo",     emoji: "🏎️"),
+    PerformanceMake(displayName: "Aston Martin",    nhtsa: "Aston Martin",   emoji: "🏎️"),
+    PerformanceMake(displayName: "Audi",            nhtsa: "Audi",           emoji: "🏎️"),
+    PerformanceMake(displayName: "Bentley",         nhtsa: "Bentley",        emoji: "🏎️"),
+    PerformanceMake(displayName: "BMW",             nhtsa: "BMW",            emoji: "🏎️"),
+    PerformanceMake(displayName: "Bugatti",         nhtsa: "Bugatti",        emoji: "🏎️"),
+    PerformanceMake(displayName: "Cadillac",        nhtsa: "Cadillac",       emoji: "🏎️"),
+    PerformanceMake(displayName: "Chevrolet",       nhtsa: "Chevrolet",      emoji: "🏎️"),
+    PerformanceMake(displayName: "Dodge",           nhtsa: "Dodge",          emoji: "🏎️"),
+    PerformanceMake(displayName: "Ferrari",         nhtsa: "Ferrari",        emoji: "🐎"),
+    PerformanceMake(displayName: "Ford",            nhtsa: "Ford",           emoji: "🏎️"),
+    PerformanceMake(displayName: "Honda",           nhtsa: "Honda",          emoji: "🏎️"),
+    PerformanceMake(displayName: "Koenigsegg",      nhtsa: "Koenigsegg",     emoji: "🏎️"),
+    PerformanceMake(displayName: "Lamborghini",     nhtsa: "Lamborghini",    emoji: "🐂"),
+    PerformanceMake(displayName: "Lucid",           nhtsa: "Lucid",          emoji: "⚡"),
+    PerformanceMake(displayName: "Maserati",        nhtsa: "Maserati",       emoji: "🏎️"),
+    PerformanceMake(displayName: "Mazda",           nhtsa: "Mazda",          emoji: "🏎️"),
+    PerformanceMake(displayName: "McLaren",         nhtsa: "McLaren",        emoji: "��️"),
+    PerformanceMake(displayName: "Mercedes-Benz",   nhtsa: "Mercedes-Benz",  emoji: "🏎️"),
+    PerformanceMake(displayName: "Nissan",          nhtsa: "Nissan",         emoji: "🏎️"),
+    PerformanceMake(displayName: "Pagani",          nhtsa: "Pagani",         emoji: "🏎️"),
+    PerformanceMake(displayName: "Porsche",         nhtsa: "Porsche",        emoji: "🏎️"),
+    PerformanceMake(displayName: "Rimac",           nhtsa: "Rimac",          emoji: "⚡"),
+    PerformanceMake(displayName: "Rolls-Royce",     nhtsa: "Rolls-Royce",    emoji: "🏎️"),
+    PerformanceMake(displayName: "Subaru",          nhtsa: "Subaru",         emoji: "🏎️"),
+    PerformanceMake(displayName: "Tesla",           nhtsa: "Tesla",          emoji: "⚡"),
+    PerformanceMake(displayName: "Toyota",          nhtsa: "Toyota",         emoji: "🏎️"),
 ]
 
-var carsByMake: [(make: String, models: [PerformanceCar])] {
-    let grouped = Dictionary(grouping: performanceCars, by: \.make)
-    return grouped
-        .map { (make: $0.key, models: $0.value.sorted { $0.model < $1.model }) }
-        .sorted { $0.make < $1.make }
+// MARK: - Static Trim Map
+// For models where we know the trims, list them. Others get a free-text entry.
+// Key format: "Make|Model" (lowercase)
+
+let knownTrims: [String: [String]] = [
+    // Porsche 911
+    "porsche|911": ["Carrera", "Carrera S", "Carrera 4", "Carrera 4S", "Targa 4", "Targa 4S",
+                     "Turbo", "Turbo S", "GT3", "GT3 RS", "GT3 Touring", "GT2 RS",
+                     "Dakar", "Sport Classic", "S/T"],
+    "porsche|cayman": ["Base", "S", "GTS", "GT4", "GT4 RS"],
+    "porsche|718 cayman": ["Base", "S", "GTS 4.0", "GT4", "GT4 RS"],
+    "porsche|boxster": ["Base", "S", "GTS", "Spyder"],
+    "porsche|718 boxster": ["Base", "S", "GTS 4.0", "Spyder"],
+    "porsche|taycan": ["Base", "4S", "GTS", "Turbo", "Turbo S", "Cross Turismo Turbo S"],
+    "porsche|panamera": ["Base", "4S", "GTS", "Turbo", "Turbo S E-Hybrid", "Sport Turismo"],
+    // Ferrari
+    "ferrari|296": ["GTB", "GTS", "GT3", "GT3 Evo"],
+    "ferrari|sf90": ["Stradale", "Spider", "XX"],
+    "ferrari|812": ["Superfast", "GTS", "Competizione", "Competizione A"],
+    "ferrari|f8": ["Tributo", "Spider"],
+    "ferrari|roma": ["Base", "Spider"],
+    "ferrari|portofino": ["Base", "M"],
+    "ferrari|purosangue": ["Base"],
+    // Lamborghini
+    "lamborghini|huracan": ["EVO", "EVO RWD", "EVO Spyder", "EVO RWD Spyder",
+                             "STO", "Tecnica", "Sterrato", "Super Trofeo EVO2"],
+    "lamborghini|aventador": ["S", "S Roadster", "SVJ", "SVJ Roadster", "LP 780-4 Ultimae"],
+    "lamborghini|revuelto": ["Base", "Opera Unica"],
+    "lamborghini|urus": ["Base", "S", "Performante"],
+    // McLaren
+    "mclaren|artura": ["Base", "Spider", "Trophy"],
+    "mclaren|720s": ["Base", "Performance", "Spider"],
+    "mclaren|765lt": ["Base", "Spider"],
+    "mclaren|gt": ["Base"],
+    "mclaren|senna": ["Base", "GTR"],
+    "mclaren|765": ["LT", "LT Spider"],
+    // BMW
+    "bmw|m2": ["Base", "Competition", "CS"],
+    "bmw|m3": ["Base", "Competition", "Competition xDrive", "CS", "Touring"],
+    "bmw|m4": ["Base", "Competition", "Competition xDrive", "CSL", "GTS"],
+    "bmw|m5": ["Base", "Competition", "CS", "Touring"],
+    "bmw|m8": ["Base", "Competition", "Gran Coupe Competition", "CSL"],
+    "bmw|z4": ["sDrive20i", "sDrive30i", "M40i"],
+    // Mercedes-Benz
+    "mercedes-benz|amg gt": ["GT", "GT S", "GT R", "GT Black Series", "GT 63", "GT 63 S"],
+    "mercedes-benz|c-class": ["C 300", "AMG C 43", "AMG C 63", "AMG C 63 S E Performance"],
+    "mercedes-benz|e-class": ["E 350", "E 450", "AMG E 53", "AMG E 63 S"],
+    "mercedes-benz|sl-class": ["SL 43", "AMG SL 55", "AMG SL 63"],
+    // Audi
+    "audi|r8": ["V10", "V10 RWD", "V10 Plus", "V10 Performance"],
+    "audi|rs3": ["Base", "Sportback"],
+    "audi|rs5": ["Base", "Sportback"],
+    "audi|rs6": ["Avant"],
+    "audi|rs7": ["Base"],
+    "audi|tt": ["TTS", "TT RS"],
+    "audi|e-tron gt": ["Base", "RS"],
+    // Dodge
+    "dodge|challenger": ["R/T", "R/T Scat Pack", "SRT 392", "SRT Hellcat",
+                          "SRT Hellcat Widebody", "SRT Hellcat Redeye",
+                          "SRT Hellcat Redeye Jailbreak", "SRT Demon 170"],
+    "dodge|charger": ["R/T", "Scat Pack", "SRT 392", "SRT Hellcat",
+                       "SRT Hellcat Widebody", "SRT Hellcat Redeye", "SRT Hellcat Jailbreak"],
+    "dodge|viper": ["Base", "GTS", "ACR", "ACR Extreme"],
+    // Chevrolet
+    "chevrolet|corvette": ["Stingray", "Stingray Z51", "Grand Sport", "Z06", "Z06 Z07",
+                            "ZR1", "E-Ray", "70th Anniversary"],
+    "chevrolet|camaro": ["LT1", "SS", "SS 1LE", "ZL1", "ZL1 1LE", "COPO"],
+    // Ford
+    "ford|mustang": ["EcoBoost", "EcoBoost Premium", "GT", "GT Premium",
+                      "Mach 1", "Shelby GT500", "Dark Horse", "Dark Horse Premium",
+                      "GTD", "Bullitt"],
+    "ford|gt": ["Base"],
+    // Nissan
+    "nissan|gt-r": ["Premium", "Track Edition", "Nismo", "50th Anniversary"],
+    "nissan|z": ["Sport", "Performance", "Proto Spec", "NISMO"],
+    // Tesla
+    "tesla|model s": ["Long Range", "Plaid"],
+    "tesla|model 3": ["RWD", "Long Range AWD", "Performance"],
+    "tesla|model x": ["Long Range", "Plaid"],
+    "tesla|roadster": ["Base", "Founders Series"],
+    // Toyota
+    "toyota|gr supra": ["2.0", "3.0", "3.0 Premium", "A91-MT", "A91-CF"],
+    "toyota|gr86": ["Base", "Premium"],
+    "toyota|gr corolla": ["Core", "Circuit Edition", "Morizo Edition"],
+    "toyota|gr yaris": ["Base", "Rally"],
+    // Subaru
+    "subaru|wrx": ["Base", "Premium", "Limited", "GT", "TR", "STI"],
+    "subaru|brz": ["Premium", "Limited", "tS"],
+    // Alfa Romeo
+    "alfa romeo|giulia": ["Base", "Sprint", "Ti", "Veloce", "Quadrifoglio"],
+    "alfa romeo|stelvio": ["Base", "Sprint", "Ti", "Veloce", "Quadrifoglio"],
+    "alfa romeo|4c": ["Base", "Spider"],
+    // Maserati
+    "maserati|mc20": ["Base", "Cielo", "Folgore"],
+    "maserati|granturismo": ["Modena", "Trofeo", "Folgore"],
+    "maserati|ghibli": ["Base", "S Q4", "Trofeo"],
+    "maserati|quattroporte": ["Base", "S Q4", "Trofeo"],
+    // Acura
+    "acura|nsx": ["Base", "Type S"],
+    "acura|integra": ["Base", "A-Spec", "Type S"],
+    "acura|tlx": ["Base", "Type S", "Type S PMC Edition"],
+    // Honda
+    "honda|civic": ["Sport", "EX", "Touring", "Type R", "Type R Limited Edition"],
+    "honda|accord": ["Sport", "EX-L", "Touring", "Hybrid Sport"],
+    // Koenigsegg
+    "koenigsegg|agera": ["Base", "R", "RS", "Final"],
+    "koenigsegg|regera": ["Base"],
+    "koenigsegg|jesko": ["Base", "Absolut"],
+    "koenigsegg|cc850": ["Base"],
+    // Pagani
+    "pagani|huayra": ["Base", "BC", "Roadster", "Roadster BC", "R", "Tricolore"],
+    "pagani|utopia": ["Base", "Roadster"],
+    // Bugatti
+    "bugatti|chiron": ["Base", "Sport", "Super Sport", "Super Sport 300+",
+                        "Pur Sport", "Profilee"],
+    "bugatti|tourbillon": ["Base"],
+    // Rimac
+    "rimac|nevera": ["Base", "Time Attack"],
+    // Lucid
+    "lucid|air": ["Pure", "Touring", "Grand Touring", "Grand Touring Performance", "Sapphire"],
+    // Rolls-Royce
+    "rolls-royce|ghost": ["Base", "Extended", "Black Badge", "Series II"],
+    "rolls-royce|wraith": ["Base", "Black Badge"],
+    "rolls-royce|dawn": ["Base", "Black Badge"],
+    "rolls-royce|spectre": ["Base"],
+    "rolls-royce|cullinan": ["Base", "Black Badge"],
+    // Bentley
+    "bentley|continental gt": ["Base", "V8", "Speed", "Mulliner", "Azure", "GT3-R"],
+    "bentley|flying spur": ["Base", "V8", "Speed", "Mulliner"],
+    "bentley|bentayga": ["Base", "V8", "Speed", "EWB", "Azure"],
+]
+
+func trimsFor(make: String, model: String) -> [String]? {
+    let key = "\(make.lowercased())|\(model.lowercased())"
+    return knownTrims[key]
 }

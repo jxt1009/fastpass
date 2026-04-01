@@ -9,8 +9,20 @@ struct UserProfile: Codable {
     var country: String
     var carMake: String
     var carModel: String
+    var carYear: Int?
+    var carTrim: String
 
     var carDisplayString: String {
+        let parts: [String] = [
+            carYear.map { String($0) } ?? "",
+            carMake,
+            carModel,
+            carTrim
+        ].filter { !$0.isEmpty }
+        return parts.isEmpty ? "No car selected" : parts.joined(separator: " ")
+    }
+
+    var carShortDisplay: String {
         let parts = [carMake, carModel].filter { !$0.isEmpty }
         return parts.isEmpty ? "No car selected" : parts.joined(separator: " ")
     }
@@ -19,10 +31,12 @@ struct UserProfile: Codable {
         case username, country
         case carMake = "car_make"
         case carModel = "car_model"
+        case carYear = "car_year"
+        case carTrim = "car_trim"
     }
 
     static var empty: UserProfile {
-        UserProfile(username: "", country: "", carMake: "", carModel: "")
+        UserProfile(username: "", country: "", carMake: "", carModel: "", carYear: nil, carTrim: "")
     }
 }
 
@@ -34,7 +48,7 @@ class ProfileManager: ObservableObject {
     @Published var profile: UserProfile?
     @Published var profileImage: UIImage?
 
-    private let profileKey = "user_profile_v1"
+    private let profileKey = "user_profile_v2"
     private let avatarFilename = "profile_avatar.jpg"
 
     private init() {
