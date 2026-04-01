@@ -290,7 +290,10 @@ struct DriveCarSelectorView: View {
                 }
             } catch {
                 print("Failed to update drive car: \(error)")
-                // TODO: Show error alert
+                if case APIError.serverError(let code) = error {
+                    print("Server returned status code: \(code)")
+                }
+                // TODO: Show error alert with more specific message
                 await MainActor.run {
                     dismiss()
                 }

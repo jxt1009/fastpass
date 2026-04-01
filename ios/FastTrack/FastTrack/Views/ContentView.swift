@@ -51,6 +51,19 @@ struct ContentView: View {
                             Text("MPH")
                                 .font(.title2)
                                 .foregroundStyle(.secondary)
+                            
+                            // GPS status indicator during recording
+                            if driveManager.isRecording {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(gpsStatusColor)
+                                        .frame(width: 8, height: 8)
+                                    Text(gpsStatusText)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.top, 4)
+                            }
                         }
                         .padding()
 
@@ -138,9 +151,11 @@ struct ContentView: View {
                         // Record button
                         Button {
                             if driveManager.isRecording {
+                                print("🛑 Stop recording button pressed")
                                 driveManager.stopRecording()
                                 elapsedTime = 0
                             } else {
+                                print("▶️ Start recording button pressed")
                                 driveManager.startRecording()
                                 elapsedTime = 0
                             }
@@ -168,8 +183,12 @@ struct ContentView: View {
             }
             // Tick the live timer every second
             .onReceive(timer) { _ in
-                guard driveManager.isRecording, let start = driveManager.recordingStartTime else { return }
-                elapsedTime = Date().timeIntervalSince(start)
+                guard driveManager.isRecording, let start = driveManager.recordingStartTime else { 
+                    return 
+                }
+                let newElapsed = Date().timeIntervalSince(start)
+                elapsedTime = newElapsed
+                print("⏰ Timer updated: \(elapsedTime) seconds, recording: \(driveManager.isRecording)")
             }
         }
     }
@@ -186,6 +205,26 @@ struct ContentView: View {
         if mph < 25 { return .green }
         if mph < 65 { return .orange }
         return .red
+    }
+    
+    private var gpsStatusColor: Color {
+        guard let location = locationManager.currentLocation else { return .red }
+        let accuracy = location.horizontalAccuracy
+        
+        if accuracy < 0 { return .red }     // Invalid
+        if accuracy < 5 { return .green }   // Excellent
+        if accuracy < 10 { return .orange } // Good
+        return .red                         // Poor
+    }
+    
+    private var gpsStatusText: String {
+        guard let location = locationManager.currentLocation else { return "Acquiring GPS..." }
+        let accuracy = location.horizontalAccuracy
+        
+        if accuracy < 0 { return "GPS Error" }
+        if accuracy < 5 { return "GPS Excellent" }
+        if accuracy < 10 { return "GPS Good" }
+        return "GPS Poor"
     }
 }
 

@@ -153,7 +153,13 @@ class AchievementManager: ObservableObject {
             return min(1.0, maxSpeed / achievement.requirement.value)
             
         case .driveCount:
-            return min(1.0, Double(drives.count) / achievement.requirement.value)
+            let filteredDrives: [Drive]
+            if let condition = achievement.requirement.condition {
+                filteredDrives = filterDrives(drives, for: condition)
+            } else {
+                filteredDrives = drives
+            }
+            return min(1.0, Double(filteredDrives.count) / achievement.requirement.value)
             
         case .totalDistance:
             let totalDistance = drives.reduce(0) { $0 + $1.distance }
@@ -171,6 +177,25 @@ class AchievementManager: ObservableObject {
         case .consecutiveDays:
             let consecutive = calculateConsecutiveDays(from: drives)
             return min(1.0, Double(consecutive) / achievement.requirement.value)
+        }
+    }
+    
+    private func filterDrives(_ drives: [Drive], for condition: String) -> [Drive] {
+        let calendar = Calendar.current
+        
+        return drives.filter { drive in
+            switch condition {
+            case "weekend":
+                let weekday = calendar.component(.weekday, from: drive.startTime)
+                return weekday == 1 || weekday == 7 // Sunday = 1, Saturday = 7
+                
+            case "after_midnight":
+                let hour = calendar.component(.hour, from: drive.startTime)
+                return hour >= 0 && hour < 6 // 12 AM to 6 AM
+                
+            default:
+                return false
+            }
         }
     }
     
@@ -243,7 +268,7 @@ extension AchievementManager {
                 title: "Half Century",
                 description: "Reach 50 mph",
                 category: .speed,
-                icon: "50.circle.fill",
+                icon: "gauge.with.needle",
                 requirement: AchievementRequirement(type: .maxSpeed, value: 22.352, condition: nil) // 50 mph in m/s
             ),
             
@@ -252,7 +277,7 @@ extension AchievementManager {
                 title: "Century Club",
                 description: "Join the elite 100 mph club",
                 category: .speed,
-                icon: "100.circle.fill",
+                icon: "speedometer",
                 requirement: AchievementRequirement(type: .maxSpeed, value: 44.704, condition: nil) // 100 mph in m/s
             ),
             
@@ -261,7 +286,7 @@ extension AchievementManager {
                 title: "Speed Demon",
                 description: "Hit the legendary 150 mph mark",
                 category: .speed,
-                icon: "bolt.circle.fill",
+                icon: "bolt.fill",
                 requirement: AchievementRequirement(type: .maxSpeed, value: 67.056, condition: nil) // 150 mph in m/s
             ),
             
@@ -271,7 +296,7 @@ extension AchievementManager {
                 title: "Explorer",
                 description: "Drive a total of 10 miles",
                 category: .distance,
-                icon: "map.circle.fill",
+                icon: "map.fill",
                 requirement: AchievementRequirement(type: .totalDistance, value: 16093.4, condition: nil) // 10 miles in meters
             ),
             
@@ -280,7 +305,7 @@ extension AchievementManager {
                 title: "Road Warrior",
                 description: "Drive a total of 100 miles",
                 category: .distance,
-                icon: "road.lanes.curved.right",
+                icon: "road.lanes",
                 requirement: AchievementRequirement(type: .totalDistance, value: 160934, condition: nil) // 100 miles in meters
             ),
             
@@ -289,7 +314,7 @@ extension AchievementManager {
                 title: "Mile Crusher",
                 description: "Drive a total of 1,000 miles",
                 category: .distance,
-                icon: "globe.americas.fill",
+                icon: "globe",
                 requirement: AchievementRequirement(type: .totalDistance, value: 1609344, condition: nil) // 1000 miles in meters
             ),
             
@@ -299,7 +324,7 @@ extension AchievementManager {
                 title: "Getting Started",
                 description: "Complete 10 recorded drives",
                 category: .milestone,
-                icon: "10.circle.fill",
+                icon: "circle.fill",
                 requirement: AchievementRequirement(type: .driveCount, value: 10, condition: nil)
             ),
             
@@ -308,7 +333,7 @@ extension AchievementManager {
                 title: "Experienced Driver",
                 description: "Complete 50 recorded drives",
                 category: .milestone,
-                icon: "50.circle.fill",
+                icon: "award.fill",
                 requirement: AchievementRequirement(type: .driveCount, value: 50, condition: nil)
             ),
             
@@ -317,7 +342,7 @@ extension AchievementManager {
                 title: "Dedicated Tracker",
                 description: "Complete 100 recorded drives",
                 category: .milestone,
-                icon: "100.circle.fill",
+                icon: "checkmark.circle.fill",
                 requirement: AchievementRequirement(type: .driveCount, value: 100, condition: nil)
             ),
             
@@ -327,7 +352,7 @@ extension AchievementManager {
                 title: "Week Warrior",
                 description: "Drive on 7 consecutive days",
                 category: .consistency,
-                icon: "calendar.circle.fill",
+                icon: "calendar",
                 requirement: AchievementRequirement(type: .consecutiveDays, value: 7, condition: nil)
             ),
             
@@ -336,7 +361,7 @@ extension AchievementManager {
                 title: "Monthly Master",
                 description: "Drive on 30 consecutive days",
                 category: .consistency,
-                icon: "star.circle.fill",
+                icon: "star.fill",
                 requirement: AchievementRequirement(type: .consecutiveDays, value: 30, condition: nil)
             ),
             
@@ -374,7 +399,7 @@ extension AchievementManager {
                 title: "Weekend Warrior",
                 description: "Complete 10 drives on weekends",
                 category: .special,
-                icon: "sun.max.fill",
+                icon: "sun.max",
                 requirement: AchievementRequirement(type: .driveCount, value: 10, condition: "weekend")
             )
         ]

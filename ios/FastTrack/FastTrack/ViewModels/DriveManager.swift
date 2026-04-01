@@ -51,11 +51,15 @@ class DriveManager: ObservableObject {
 
     func startRecording() {
         guard !isRecording else { return }
+        print("🚗 Starting drive recording...")
+        
         isRecording = true
         recordingStartTime = Date()
         recordingLocations = []
         routeCoordinates = []
         speedReadings = []
+
+        print("⏰ Recording start time: \(recordingStartTime!)")
 
         // Reset extended stats
         stoppedSince = nil
@@ -70,6 +74,8 @@ class DriveManager: ObservableObject {
         lastBrakeTime = nil; zeroStart = nil
 
         locationManager?.startUpdatingLocation()
+        print("📍 Location manager started")
+        print("🔒 Location authorization: \(locationManager?.authorizationStatus.rawValue ?? -1)")
 
         // Get selected car from profile, with fallbacks
         let profile = ProfileManager.shared.profile
@@ -164,6 +170,15 @@ class DriveManager: ObservableObject {
     // MARK: - Location processing
 
     private func processLocation(_ location: CLLocation) {
+        // Skip very old locations (more than 5 seconds old)
+        let age = abs(location.timestamp.timeIntervalSinceNow)
+        if age > 5.0 {
+            print("⚠️ Skipping old location (age: \(age)s)")
+            return
+        }
+        
+        print("📍 Processing location: speed=\(location.speed), accuracy=\(location.horizontalAccuracy)m, course=\(location.course)")
+        
         // Basic processing on main thread for UI updates
         let speed = max(location.speed, 0)
         let speedMph = speed * 2.23694
@@ -172,9 +187,12 @@ class DriveManager: ObservableObject {
         routeCoordinates.append(location.coordinate)
         speedReadings.append(speed)
         
+        print("📊 Recorded \(recordingLocations.count) locations, current speed: \(speedMph) mph")
+        
         // Update basic stats immediately for UI responsiveness
         if speedMph > currentMaxSpeed {
             currentMaxSpeed = speedMph
+            print("🏁 New max speed: \(currentMaxSpeed) mph")
         }
         
         // Offload heavy calculations to background queue to prevent UI freezing
@@ -225,7 +243,7 @@ class DriveManager: ObservableObject {
             return 
         }
         
-        let (prev, recordingLocs) = await MainActor.run { 
+        let (prev, _) = await MainActor.run { 
             (self.recordingLocations[recordingCount - 2], Array(self.recordingLocations))
         }
         
@@ -248,8 +266,11 @@ class DriveManager: ObservableObject {
         
         // Heavy calculations on background thread
         let accel = (speed - prevSpeed) / dt
-        updates.acceleration = accel > await MainActor.run({ self.maxAcceleration }) ? accel : nil
-        updates.deceleration = -accel > await MainActor.run({ self.maxDeceleration }) ? -accel : nil
+        let currentMaxAccel = await MainActor.run { self.maxAcceleration }
+        let currentMaxDecel = await MainActor.run { self.maxDeceleration }
+        
+        updates.acceleration = accel > currentMaxAccel ? accel : nil
+        updates.deceleration = -accel > currentMaxDecel ? -accel : nil
         
         // Brake event detection
         if accel < -2.5 {
@@ -275,7 +296,8 @@ class DriveManager: ObservableObject {
         let totalG = (lonG * lonG + latG * latG).squareRoot()
         
         updates.gForce = totalG
-        if latG > 0.15 && speed > await MainActor.run({ self.topCornerSpeed }) {
+        let currentTopCornerSpeed = await MainActor.run { self.topCornerSpeed }
+        if latG > 0.15 && speed > currentTopCornerSpeed {
             updates.cornerSpeed = speed
         }
         
@@ -355,6 +377,36 @@ class DriveManager: ObservableObject {
             }
         }
     }
+    
+    private func processHeadingBackground(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
+        let window = await MainActor.run { self.headingWindow }
+        guard let window = window else {
+            await MainActor.run { self.headingWindow = (course, timestamp) }
+            return nil
+        }
+        
+        let windowAge = timestamp.timeIntervalSince(window.time)
+        guard windowAge >= 2.0 else { return nil }
+        
+        var delta = course - window.course
+        if delta > 180 { delta -= 360 }
+        if delta < -180 { delta += 360 }
+        
+        let lastTurnTime = await MainActor.run { self.lastTurnOrLaneTime }
+        let gap = lastTurnTime.map { timestamp.timeIntervalSince($0) } ?? 100
+        
+        var leftTurns = 0, rightTurns = 0, laneChanges = 0
+        
+        if abs(delta) > 35 && gap > 4 {
+            if delta > 0 { rightTurns = 1 } else { leftTurns = 1 }
+        } else if abs(delta) >= 10 && abs(delta) <= 35 && speed > 6.7 && gap > 3 {
+            laneChanges = 1
+        }
+        
+        await MainActor.run { self.headingWindow = (course, timestamp) }
+        
+        return leftTurns + rightTurns + laneChanges > 0 ? (leftTurns, rightTurns, laneChanges) : nil
+    }
 
     private func processHeading(course: Double, speed: Double, timestamp: Date) {
         guard let window = headingWindow else {
@@ -383,7 +435,10 @@ class DriveManager: ObservableObject {
     // MARK: - Drive stats update
 
     private func updateCurrentDrive() {
-        guard var drive = currentDrive, !recordingLocations.isEmpty else { return }
+        guard var drive = currentDrive, !recordingLocations.isEmpty else { 
+            print("⚠️ UpdateCurrentDrive failed: currentDrive=\(currentDrive != nil), locations=\(recordingLocations.count)")
+            return 
+        }
 
         drive.startLatitude  = recordingLocations.first!.coordinate.latitude
         drive.startLongitude = recordingLocations.first!.coordinate.longitude
@@ -395,7 +450,10 @@ class DriveManager: ObservableObject {
             totalDist += recordingLocations[i-1].distance(from: recordingLocations[i])
         }
         drive.distance = totalDist
-        if let start = recordingStartTime { drive.duration = Date().timeIntervalSince(start) }
+        if let start = recordingStartTime { 
+            drive.duration = Date().timeIntervalSince(start) 
+            print("⏱️ Drive duration updated: \(drive.duration) seconds")
+        }
 
         if !speedReadings.isEmpty {
             drive.maxSpeed = speedReadings.max() ?? 0
@@ -411,6 +469,7 @@ class DriveManager: ObservableObject {
         drive.best060Time = best060Time
 
         currentDrive = drive
+        print("✅ Current drive updated: distance=\(totalDist), duration=\(drive.duration), maxSpeed=\(drive.maxSpeed)")
     }
 
     // MARK: - API

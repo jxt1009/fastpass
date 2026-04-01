@@ -7,10 +7,8 @@ struct ProfileSetupView: View {
 
     @State private var username = ""
     @State private var country = ""
-    @State private var carSelection = CarSelection()
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var avatarImage: UIImage?
-    @State private var showCarPicker = false
     @State private var isSaving = false
     @State private var usernameError = ""
 
@@ -78,37 +76,6 @@ struct ProfileSetupView: View {
                         .autocorrectionDisabled()
                 }
                 .onChange(of: username) { _, val in validateUsername(val) }
-
-                // Car
-                Section("Your Car") {
-                    Button {
-                        showCarPicker = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "car.fill")
-                                .foregroundColor(.blue)
-                            if carSelection.isComplete {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(carSelection.displayString)
-                                        .foregroundColor(.primary)
-                                        .fontWeight(.medium)
-                                }
-                            } else {
-                                Text("Select a car")
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    if carSelection.isComplete {
-                        Button("Remove car", role: .destructive) {
-                            carSelection = CarSelection()
-                        }
-                    }
-                }
             }
             .navigationTitle(profileManager.isProfileComplete ? "Edit Profile" : "Set Up Profile")
             .navigationBarTitleDisplayMode(.inline)
@@ -124,9 +91,6 @@ struct ProfileSetupView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showCarPicker) {
-                CarPickerView(selection: $carSelection)
-            }
             .onAppear { loadExisting() }
         }
     }
@@ -135,17 +99,6 @@ struct ProfileSetupView: View {
         if let p = profileManager.profile {
             username = p.username
             country = p.country
-            
-            // Load car from garage or legacy fields
-            if let selectedCar = p.selectedCar {
-                let make = performanceMakes.first { $0.displayName == selectedCar.make }
-                carSelection = CarSelection(
-                    make: make,
-                    model: selectedCar.model,
-                    year: selectedCar.year,
-                    trim: selectedCar.trim
-                )
-            }
         }
         avatarImage = profileManager.profileImage
     }
@@ -162,29 +115,15 @@ struct ProfileSetupView: View {
         guard isValid else { return }
         isSaving = true
         
-        // Create garage with selected car if any
-        var garage: [UserCar] = []
-        var selectedCarId: String? = nil
-        
-        if let make = carSelection.make, !carSelection.model.isEmpty {
-            let car = UserCar(
-                make: make.displayName,
-                model: carSelection.model,
-                year: carSelection.year,
-                trim: carSelection.trim,
-                nickname: ""
-            )
-            garage = [car]
-            selectedCarId = car.id
-        }
-        
-        let p = UserProfile(
+        // Preserve existing garage and car selection
+        var updatedProfile = UserProfile(
             username: username,
             country: country,
-            garage: garage,
-            selectedCarId: selectedCarId
+            garage: profileManager.profile?.garage ?? [],
+            selectedCarId: profileManager.profile?.selectedCarId
         )
-        profileManager.saveProfile(p)
+        
+        profileManager.saveProfile(updatedProfile)
         if let img = avatarImage { profileManager.saveAvatar(img) }
         isSaving = false
         dismiss()

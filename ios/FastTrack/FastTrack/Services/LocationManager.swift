@@ -52,7 +52,17 @@ class LocationManager: NSObject, ObservableObject {
     }
 
     func startUpdatingLocation() {
+        print("📍 Starting location updates...")
+        // Start with good accuracy for faster initial fix
+        clManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         clManager.startUpdatingLocation()
+        
+        // After a few seconds, switch to best accuracy
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.clManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+            print("📍 Switched to high accuracy mode")
+        }
+        
         startIMU()
     }
 
@@ -115,10 +125,15 @@ extension LocationManager: CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
+        print("📍 Location update: lat=\(location.coordinate.latitude), lon=\(location.coordinate.longitude), speed=\(location.speed)")
+        
         currentLocation = location
         currentCourse = location.course  // -1 if invalid
 
-        guard location.speed >= 0 else { return }
+        guard location.speed >= 0 else { 
+            print("⚠️ Negative speed filtered out: \(location.speed)")
+            return 
+        }
 
         rawGPSSpeed = location.speed
         speedAccuracy = location.speedAccuracy  // m/s std dev (iOS 10+)
@@ -126,10 +141,13 @@ extension LocationManager: CLLocationManagerDelegate {
         // Feed GPS into Kalman filter
         fusion.update(gpsSpeed: location.speed, gpsSpeedAccuracy: location.speedAccuracy)
         currentSpeed = fusion.speed
+        
+        print("🔄 Speed updated: GPS=\(location.speed), Fused=\(fusion.speed)")
     }
 
     func locationManager(_ manager: CLLocationManager,
                          didChangeAuthorization status: CLAuthorizationStatus) {
+        print("📱 Location authorization changed to: \(status.rawValue)")
         DispatchQueue.main.async { self.authorizationStatus = status }
     }
 
