@@ -207,6 +207,11 @@ class APIService {
     func unfollowUser(username: String) async throws {
         try await delete(endpoint: "/users/\(username)/follow")
     }
+
+    func searchUsers(query: String) async throws -> [UserSearchResult] {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        return try await get(endpoint: "/users/search?q=\(encoded)")
+    }
 }
 
 private struct _EmptyBody: Encodable {}

@@ -56,6 +56,7 @@ func main() {
 		api.PUT("/drives/:id", updateDrive)
 
 		// Social
+		api.GET("/users/search", searchUsers)
 		api.GET("/leaderboard", getLeaderboard)
 		api.GET("/users/:username", getPublicProfile)
 		api.POST("/users/:username/follow", followUser)

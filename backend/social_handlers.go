@@ -39,6 +39,14 @@ type FollowUserEntry struct {
 	Country  string `json:"country"   gorm:"column:country"`
 }
 
+type UserSearchResult struct {
+	UserID         uint   `json:"user_id"          gorm:"column:user_id"`
+	Username       string `json:"username"         gorm:"column:username"`
+	FullName       string `json:"full_name"        gorm:"column:full_name"`
+	Country        string `json:"country"          gorm:"column:country"`
+	IsFollowedByMe bool   `json:"is_followed_by_me"`
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // startOfCurrentWeek returns 00:00:00 UTC on the most recent Monday.
@@ -256,6 +264,62 @@ func unfollowUser(c *gin.Context) {
 	db.Where("follower_id = ? AND following_id = ?", currentUserID, target.ID).Delete(&Follow{})
 
 	c.JSON(http.StatusOK, gin.H{"message": "unfollowed"})
+}
+
+// ─── User search ─────────────────────────────────────────────────────────────
+
+// searchUsers handles GET /api/v1/users/search?q=...
+// Returns up to 20 public users whose username or full_name contains the query.
+func searchUsers(c *gin.Context) {
+	callerID, _ := c.Get("userID")
+
+	q := strings.TrimSpace(c.Query("q"))
+	if len(q) < 2 {
+		c.JSON(http.StatusOK, []UserSearchResult{})
+		return
+	}
+
+	pattern := "%" + strings.ToLower(q) + "%"
+
+	type rawRow struct {
+		UserID   uint   `gorm:"column:user_id"`
+		Username string `gorm:"column:username"`
+		FullName string `gorm:"column:full_name"`
+		Country  string `gorm:"column:country"`
+	}
+
+	var rows []rawRow
+	db.Raw(`
+		SELECT id AS user_id, username, full_name, country
+		FROM users
+		WHERE is_public = true
+		  AND (LOWER(username) LIKE ? OR LOWER(full_name) LIKE ?)
+		ORDER BY username
+		LIMIT 20`, pattern, pattern).Scan(&rows)
+
+	// Resolve follow status for the caller
+	var followedIDs []uint
+	if callerID != nil {
+		db.Raw(`SELECT following_id FROM follows WHERE follower_id = ?`, callerID).
+			Pluck("following_id", &followedIDs)
+	}
+	followSet := make(map[uint]bool, len(followedIDs))
+	for _, id := range followedIDs {
+		followSet[id] = true
+	}
+
+	results := make([]UserSearchResult, len(rows))
+	for i, r := range rows {
+		results[i] = UserSearchResult{
+			UserID:         r.UserID,
+			Username:       r.Username,
+			FullName:       r.FullName,
+			Country:        r.Country,
+			IsFollowedByMe: followSet[r.UserID],
+		}
+	}
+
+	c.JSON(http.StatusOK, results)
 }
 
 // ─── Follower / Following lists ───────────────────────────────────────────────

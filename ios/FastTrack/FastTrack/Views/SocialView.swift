@@ -24,6 +24,13 @@ struct SocialView: View {
             }
             .navigationTitle("Leaderboard")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: FindPeopleView()) {
+                        Label("Find People", systemImage: "person.badge.plus")
+                    }
+                }
+            }
             .task(id: queryKey) { await loadLeaderboard() }
             .refreshable { await loadLeaderboard() }
         }

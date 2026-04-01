@@ -9,6 +9,8 @@ struct LeaderboardEntry: Identifiable, Decodable {
     let country: String
     let value: Double
 
+    var id: Int { userId }
+
     enum CodingKeys: String, CodingKey {
         case rank
         case userId = "user_id"
@@ -126,5 +128,25 @@ struct FollowUserEntry: Identifiable, Decodable {
         case userId  = "user_id"
         case username
         case country
+    }
+}
+
+// MARK: - User search result
+
+struct UserSearchResult: Identifiable, Decodable {
+    let userId: Int
+    let username: String
+    let fullName: String
+    let country: String
+    var isFollowedByMe: Bool
+
+    var id: Int { userId }
+
+    enum CodingKeys: String, CodingKey {
+        case userId         = "user_id"
+        case username
+        case fullName       = "full_name"
+        case country
+        case isFollowedByMe = "is_followed_by_me"
     }
 }
