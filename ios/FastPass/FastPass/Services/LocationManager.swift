@@ -14,20 +14,20 @@ class LocationManager: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 5  // Update every 5 meters
         
-        // Only enable background updates on device with proper capabilities
-        // Don't enable in previews, simulator, or if capabilities aren't configured
-        #if targetEnvironment(simulator)
-        // Simulator doesn't support background location properly
-        locationManager.allowsBackgroundLocationUpdates = false
-        #else
-        // On device, check if we can enable background updates
-        // This will fail gracefully if Background Modes capability isn't set
-        do {
+        // Background location updates are OPTIONAL
+        // They require "Background Modes" capability with "Location updates" enabled in Xcode
+        // If not configured, the app works fine but only tracks in foreground
+        #if !targetEnvironment(simulator)
+        // Only attempt on real device, and only if INFO.plist has UIBackgroundModes
+        if Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") != nil {
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.pausesLocationUpdatesAutomatically = false
-        } catch {
-            print("Could not enable background location updates: \(error)")
+            print("✅ Background location updates enabled")
+        } else {
+            print("ℹ️ Background location not configured - app will track in foreground only")
         }
+        #else
+        print("ℹ️ Simulator detected - background location disabled")
         #endif
     }
     
