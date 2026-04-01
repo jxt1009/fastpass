@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+
+<dict>
+    <!-- Location permission descriptions -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>FastPass needs your location to track your speed and route during drives.</string>
+
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>FastPass needs background location access to continue tracking your drives even when the app is in the background.</string>
+
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>FastPass tracks your drives in the background to provide accurate statistics.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
+</dict>
+</plist>
