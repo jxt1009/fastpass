@@ -2,7 +2,6 @@ import SwiftUI
 
 struct DriveHistoryView: View {
     @EnvironmentObject var driveManager: DriveManager
-    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         NavigationStack {
@@ -14,12 +13,7 @@ struct DriveHistoryView: View {
                 }
             }
             .navigationTitle("Drive History")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
+            .navigationBarTitleDisplayMode(.large)
             .onAppear { driveManager.startPolling() }
             .onDisappear { driveManager.stopPolling() }
         }

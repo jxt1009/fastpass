@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 // MARK: - NHTSA Response Models
 
@@ -20,17 +21,39 @@ class CarService: ObservableObject {
     @Published var error: String?
 
     private var cache: [String: [String]] = [:]
-    private let cacheKey = "nhtsa_models_cache_v1"
+    private let cacheKey = "nhtsa_models_cache_v2"
+    
+    // Popular makes to preload
+    private let popularMakes = ["BMW", "Mercedes-Benz", "Audi", "Porsche", "Tesla", "Ferrari", "Lamborghini"]
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
            let decoded = try? JSONDecoder().decode([String: [String]].self, from: data) {
             cache = decoded
         }
+        
+        // Preload popular makes in background
+        Task {
+            await preloadPopularMakes()
+        }
+    }
+    
+    private func preloadPopularMakes() async {
+        for make in popularMakes {
+            if cache[make] == nil {
+                await fetchModelsInternal(for: make)
+                // Small delay to avoid overwhelming the API
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+            }
+        }
     }
 
     func fetchModels(for make: PerformanceMake) async {
-        let key = make.nhtsa
+        await fetchModelsInternal(for: make.nhtsa)
+    }
+    
+    private func fetchModelsInternal(for nhtsa: String) async {
+        let key = nhtsa
 
         // Return from cache immediately
         if let cached = cache[key] {
@@ -43,7 +66,7 @@ class CarService: ObservableObject {
 
         await MainActor.run { self.isLoading = true; self.error = nil }
 
-        let urlString = "https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/\(make.urlEncoded)?format=json"
+        let urlString = "https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/\(nhtsa.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? nhtsa)?format=json"
         guard let url = URL(string: urlString) else { return }
 
         do {

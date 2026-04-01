@@ -43,8 +43,6 @@ struct CarPickerView: View {
             List(filteredMakes) { make in
                 NavigationLink(value: make) {
                     HStack(spacing: 12) {
-                        Text(make.emoji)
-                            .font(.title3)
                         Text(make.displayName)
                             .fontWeight(.medium)
                         Spacer()
@@ -82,7 +80,7 @@ struct ModelDestination: Hashable {
     static func == (l: ModelDestination, r: ModelDestination) -> Bool { l.make.displayName == r.make.displayName && l.model == r.model }
 }
 
-extension PerformanceMake: Hashable {
+extension PerformanceMake {
     public func hash(into hasher: inout Hasher) { hasher.combine(nhtsa) }
     public static func == (l: PerformanceMake, r: PerformanceMake) -> Bool { l.nhtsa == r.nhtsa }
 }

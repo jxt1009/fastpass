@@ -7,45 +7,41 @@ struct PerformanceMake: Identifiable, Hashable {
     let id = UUID()
     let displayName: String   // shown in UI
     let nhtsa: String         // exact name to use in NHTSA API URL (URL-encoded internally)
-    let emoji: String
 
     var urlEncoded: String {
         nhtsa.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? nhtsa
     }
-    
-    public func hash(into hasher: inout Hasher) { hasher.combine(nhtsa) }
-    public static func == (l: PerformanceMake, r: PerformanceMake) -> Bool { l.nhtsa == r.nhtsa }
 }
 
 let performanceMakes: [PerformanceMake] = [
-    PerformanceMake(displayName: "Acura",          nhtsa: "Acura",          emoji: "🏎️"),
-    PerformanceMake(displayName: "Alfa Romeo",      nhtsa: "Alfa Romeo",     emoji: "🏎️"),
-    PerformanceMake(displayName: "Aston Martin",    nhtsa: "Aston Martin",   emoji: "🏎️"),
-    PerformanceMake(displayName: "Audi",            nhtsa: "Audi",           emoji: "🏎️"),
-    PerformanceMake(displayName: "Bentley",         nhtsa: "Bentley",        emoji: "🏎️"),
-    PerformanceMake(displayName: "BMW",             nhtsa: "BMW",            emoji: "🏎️"),
-    PerformanceMake(displayName: "Bugatti",         nhtsa: "Bugatti",        emoji: "🏎️"),
-    PerformanceMake(displayName: "Cadillac",        nhtsa: "Cadillac",       emoji: "🏎️"),
-    PerformanceMake(displayName: "Chevrolet",       nhtsa: "Chevrolet",      emoji: "🏎️"),
-    PerformanceMake(displayName: "Dodge",           nhtsa: "Dodge",          emoji: "🏎️"),
-    PerformanceMake(displayName: "Ferrari",         nhtsa: "Ferrari",        emoji: "🐎"),
-    PerformanceMake(displayName: "Ford",            nhtsa: "Ford",           emoji: "🏎️"),
-    PerformanceMake(displayName: "Honda",           nhtsa: "Honda",          emoji: "🏎️"),
-    PerformanceMake(displayName: "Koenigsegg",      nhtsa: "Koenigsegg",     emoji: "🏎️"),
-    PerformanceMake(displayName: "Lamborghini",     nhtsa: "Lamborghini",    emoji: "🐂"),
-    PerformanceMake(displayName: "Lucid",           nhtsa: "Lucid",          emoji: "⚡"),
-    PerformanceMake(displayName: "Maserati",        nhtsa: "Maserati",       emoji: "🏎️"),
-    PerformanceMake(displayName: "Mazda",           nhtsa: "Mazda",          emoji: "🏎️"),
-    PerformanceMake(displayName: "McLaren",         nhtsa: "McLaren",        emoji: "��️"),
-    PerformanceMake(displayName: "Mercedes-Benz",   nhtsa: "Mercedes-Benz",  emoji: "🏎️"),
-    PerformanceMake(displayName: "Nissan",          nhtsa: "Nissan",         emoji: "🏎️"),
-    PerformanceMake(displayName: "Pagani",          nhtsa: "Pagani",         emoji: "🏎️"),
-    PerformanceMake(displayName: "Porsche",         nhtsa: "Porsche",        emoji: "🏎️"),
-    PerformanceMake(displayName: "Rimac",           nhtsa: "Rimac",          emoji: "⚡"),
-    PerformanceMake(displayName: "Rolls-Royce",     nhtsa: "Rolls-Royce",    emoji: "🏎️"),
-    PerformanceMake(displayName: "Subaru",          nhtsa: "Subaru",         emoji: "🏎️"),
-    PerformanceMake(displayName: "Tesla",           nhtsa: "Tesla",          emoji: "⚡"),
-    PerformanceMake(displayName: "Toyota",          nhtsa: "Toyota",         emoji: "🏎️"),
+    PerformanceMake(displayName: "Acura",          nhtsa: "Acura"),
+    PerformanceMake(displayName: "Alfa Romeo",      nhtsa: "Alfa Romeo"),
+    PerformanceMake(displayName: "Aston Martin",    nhtsa: "Aston Martin"),
+    PerformanceMake(displayName: "Audi",            nhtsa: "Audi"),
+    PerformanceMake(displayName: "Bentley",         nhtsa: "Bentley"),
+    PerformanceMake(displayName: "BMW",             nhtsa: "BMW"),
+    PerformanceMake(displayName: "Bugatti",         nhtsa: "Bugatti"),
+    PerformanceMake(displayName: "Cadillac",        nhtsa: "Cadillac"),
+    PerformanceMake(displayName: "Chevrolet",       nhtsa: "Chevrolet"),
+    PerformanceMake(displayName: "Dodge",           nhtsa: "Dodge"),
+    PerformanceMake(displayName: "Ferrari",         nhtsa: "Ferrari"),
+    PerformanceMake(displayName: "Ford",            nhtsa: "Ford"),
+    PerformanceMake(displayName: "Honda",           nhtsa: "Honda"),
+    PerformanceMake(displayName: "Koenigsegg",      nhtsa: "Koenigsegg"),
+    PerformanceMake(displayName: "Lamborghini",     nhtsa: "Lamborghini"),
+    PerformanceMake(displayName: "Lucid",           nhtsa: "Lucid"),
+    PerformanceMake(displayName: "Maserati",        nhtsa: "Maserati"),
+    PerformanceMake(displayName: "Mazda",           nhtsa: "Mazda"),
+    PerformanceMake(displayName: "McLaren",         nhtsa: "McLaren"),
+    PerformanceMake(displayName: "Mercedes-Benz",   nhtsa: "Mercedes-Benz"),
+    PerformanceMake(displayName: "Nissan",          nhtsa: "Nissan"),
+    PerformanceMake(displayName: "Pagani",          nhtsa: "Pagani"),
+    PerformanceMake(displayName: "Porsche",         nhtsa: "Porsche"),
+    PerformanceMake(displayName: "Rimac",           nhtsa: "Rimac"),
+    PerformanceMake(displayName: "Rolls-Royce",     nhtsa: "Rolls-Royce"),
+    PerformanceMake(displayName: "Subaru",          nhtsa: "Subaru"),
+    PerformanceMake(displayName: "Tesla",           nhtsa: "Tesla"),
+    PerformanceMake(displayName: "Toyota",          nhtsa: "Toyota"),
 ]
 
 // MARK: - Static Trim Map

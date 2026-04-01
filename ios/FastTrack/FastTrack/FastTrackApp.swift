@@ -40,6 +40,8 @@ struct RootView: View {
                 TabView {
                     ContentView()
                         .tabItem { Label("Track", systemImage: "location.fill") }
+                    DriveHistoryView()
+                        .tabItem { Label("History", systemImage: "clock.fill") }
                     ProfileView()
                         .tabItem { Label("Profile", systemImage: "person.fill") }
                 }
