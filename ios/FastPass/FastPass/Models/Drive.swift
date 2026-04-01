@@ -13,6 +13,7 @@ struct Drive: Identifiable, Codable {
     var duration: Double  // seconds
     var maxSpeed: Double  // meters per second
     var avgSpeed: Double  // meters per second
+    var minSpeed: Double  // meters per second
     var routeData: String?
     
     var durationString: String {
@@ -40,6 +41,7 @@ struct Drive: Identifiable, Codable {
         case duration
         case maxSpeed = "max_speed"
         case avgSpeed = "avg_speed"
+        case minSpeed = "min_speed"
         case routeData = "route_data"
     }
     
@@ -57,6 +59,7 @@ struct Drive: Identifiable, Codable {
             duration: 1800,
             maxSpeed: 35.7632,  // ~80 mph
             avgSpeed: 22.352,   // ~50 mph
+            minSpeed: 4.4704,   // ~10 mph
             routeData: nil
         )
     }

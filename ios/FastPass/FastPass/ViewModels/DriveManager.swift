@@ -12,6 +12,7 @@ class DriveManager: ObservableObject {
     private var recordingStartTime: Date?
     private var recordingLocations: [CLLocation] = []
     private var speedReadings: [Double] = []
+    private var updateTimer: Timer?
     
     func setLocationManager(_ manager: LocationManager) {
         self.locationManager = manager
@@ -51,19 +52,34 @@ class DriveManager: ObservableObject {
             duration: 0,
             maxSpeed: 0,
             avgSpeed: 0,
+            minSpeed: 0,
             routeData: nil
         )
+        
+        // Update duration every second
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.updateCurrentDrive()
+        }
     }
     
     func stopRecording() {
         guard isRecording else { return }
         
         isRecording = false
+        updateTimer?.invalidate()
+        updateTimer = nil
         locationManager?.stopUpdatingLocation()
         
         // Finalize drive
         if var drive = currentDrive, !recordingLocations.isEmpty {
             drive.endTime = Date()
+            
+            // Convert route to JSON
+            let coordinates = recordingLocations.map { ["lat": $0.coordinate.latitude, "lng": $0.coordinate.longitude] }
+            if let jsonData = try? JSONSerialization.data(withJSONObject: coordinates),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                drive.routeData = jsonString
+            }
             
             // Save drive to backend
             Task {
@@ -106,9 +122,10 @@ class DriveManager: ObservableObject {
             drive.duration = Date().timeIntervalSince(startTime)
         }
         
-        // Calculate max and avg speed
+        // Calculate max, min, and avg speed
         if !speedReadings.isEmpty {
             drive.maxSpeed = speedReadings.max() ?? 0
+            drive.minSpeed = speedReadings.min() ?? 0
             drive.avgSpeed = speedReadings.reduce(0, +) / Double(speedReadings.count)
         }
         
@@ -126,6 +143,11 @@ class DriveManager: ObservableObject {
                 print("Failed to fetch drives: \(error.localizedDescription)")
             }
         }
+    }
+    
+    // Get route coordinates for map display
+    var routeCoordinates: [CLLocationCoordinate2D] {
+        return recordingLocations.map { $0.coordinate }
     }
 }
 

@@ -17,6 +17,7 @@ type Drive struct {
 	Distance       float64   `json:"distance"`                          // meters
 	Duration       float64   `json:"duration"`                          // seconds
 	MaxSpeed       float64   `json:"max_speed"`                         // meters per second
+	MinSpeed       float64   `json:"min_speed"`                         // meters per second
 	AvgSpeed       float64   `json:"avg_speed"`                         // meters per second
 	RouteData      string    `gorm:"type:text" json:"route_data"`       // JSON array of coordinates
 	CreatedAt      time.Time `json:"created_at"`
