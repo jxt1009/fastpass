@@ -1,6 +1,16 @@
 import Foundation
 import Combine
 
+// MARK: - Array Extension
+
+extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
+    }
+}
+
 // MARK: - NHTSA Response Models
 
 private struct NHTSAResponse: Decodable {
@@ -39,12 +49,21 @@ class CarService: ObservableObject {
     }
     
     private func preloadPopularMakes() async {
-        for make in popularMakes {
-            if cache[make] == nil {
-                await fetchModelsInternal(for: make)
-                // Small delay to avoid overwhelming the API
-                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+        // Preload in smaller batches to improve initial app load
+        let batches = popularMakes.chunked(into: 3)
+        
+        for batch in batches {
+            await withTaskGroup(of: Void.self) { group in
+                for make in batch {
+                    if cache[make] == nil {
+                        group.addTask {
+                            await self.fetchModelsInternal(for: make)
+                        }
+                    }
+                }
             }
+            // Shorter delay between batches
+            try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 second
         }
     }
 

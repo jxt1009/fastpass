@@ -182,7 +182,20 @@ class ProfileManager: ObservableObject {
         if let data = try? JSONEncoder().encode(p) {
             UserDefaults.standard.set(data, forKey: profileKey)
         }
-        Task { try? await APIService.shared.updateProfile(p) }
+        
+        // Update on server with error handling
+        Task {
+            do {
+                try await APIService.shared.updateProfile(p)
+                print("✅ Profile saved to server successfully")
+            } catch {
+                print("❌ Failed to save profile to server: \(error)")
+                // For now, just log the error. In a production app, you might want to:
+                // - Show an error alert
+                // - Queue for retry
+                // - Mark as dirty for later sync
+            }
+        }
     }
 
     func saveAvatar(_ image: UIImage) {

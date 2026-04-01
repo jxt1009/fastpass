@@ -42,6 +42,10 @@ struct RootView: View {
                         .tabItem { Label("Track", systemImage: "location.fill") }
                     DriveHistoryView()
                         .tabItem { Label("History", systemImage: "clock.fill") }
+                    AnalyticsView()
+                        .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }
+                    AchievementsView()
+                        .tabItem { Label("Achievements", systemImage: "trophy.fill") }
                     ProfileView()
                         .tabItem { Label("Profile", systemImage: "person.fill") }
                 }

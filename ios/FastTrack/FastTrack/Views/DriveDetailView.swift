@@ -5,6 +5,9 @@ struct DriveDetailView: View {
     let drive: Drive
     
     @State private var routeCoordinates: [CLLocationCoordinate2D] = []
+    @State private var showingCarPicker = false
+    @ObservedObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var driveManager: DriveManager
     
     var body: some View {
         ScrollView {
@@ -91,7 +94,25 @@ struct DriveDetailView: View {
                     
                     DetailRow(label: "Start Time", value: drive.startTime.formatted(date: .long, time: .shortened))
                     DetailRow(label: "End Time", value: drive.endTime.formatted(date: .long, time: .shortened))
-                    DetailRow(label: "Car", value: drive.carDisplayString)
+                    
+                    // Editable car row
+                    HStack {
+                        Text("Car")
+                            .fontWeight(.medium)
+                        Spacer()
+                        Button {
+                            showingCarPicker = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(drive.carDisplayString)
+                                    .foregroundColor(.primary)
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    
                     DetailRow(label: "Start Location", value: String(format: "%.4f, %.4f", drive.startLatitude, drive.startLongitude))
                     DetailRow(label: "End Location", value: String(format: "%.4f, %.4f", drive.endLatitude, drive.endLongitude))
                     if drive.stoppedTime > 0 {
@@ -107,6 +128,9 @@ struct DriveDetailView: View {
         .navigationTitle("Drive Details")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { parseRouteData() }
+        .sheet(isPresented: $showingCarPicker) {
+            DriveCarSelectorView(drive: drive)
+        }
     }
     
     // MARK: - Map Data
@@ -167,6 +191,111 @@ struct DriveDetailView: View {
         let m = (Int(seconds) % 3600) / 60
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
+    }
+}
+
+// MARK: - Drive Car Selector
+
+struct DriveCarSelectorView: View {
+    let drive: Drive
+    @ObservedObject private var profileManager = ProfileManager.shared
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var driveManager: DriveManager
+    
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let profile = profileManager.profile, !profile.garage.isEmpty {
+                    List {
+                        // Current car section
+                        Section("Current Car") {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(drive.carDisplayString)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                }
+                                Spacer()
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        
+                        // Available cars section
+                        Section("Change to") {
+                            ForEach(profile.garage) { car in
+                                Button {
+                                    updateDriveCar(to: car)
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(car.shortDisplay)
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                            Text(car.displayString)
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        if drive.carId == car.id {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                }
+                                .disabled(drive.carId == car.id)
+                            }
+                        }
+                    }
+                } else {
+                    ContentUnavailableView(
+                        "No Cars Available",
+                        systemImage: "car",
+                        description: Text("Add cars to your garage to change drive car")
+                    )
+                }
+            }
+            .navigationTitle("Change Car")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+    
+    private func updateDriveCar(to car: UserCar) {
+        Task {
+            do {
+                // Create updated drive object
+                var updatedDrive = drive
+                updatedDrive.carId = car.id
+                updatedDrive.carMake = car.make
+                updatedDrive.carModel = car.model
+                updatedDrive.carYear = car.year
+                updatedDrive.carTrim = car.trim
+                updatedDrive.carNickname = car.nickname
+                
+                // Update on server
+                let _ = try await APIService.shared.updateDrive(updatedDrive)
+                
+                // Update local drives list
+                if let index = driveManager.drives.firstIndex(where: { $0.id == drive.id }) {
+                    driveManager.drives[index] = updatedDrive
+                }
+                
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                print("Failed to update drive car: \(error)")
+                // TODO: Show error alert
+                await MainActor.run {
+                    dismiss()
+                }
+            }
+        }
     }
 }
 

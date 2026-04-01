@@ -86,6 +86,10 @@ class APIService {
     func fetchDrive(id: Int) async throws -> Drive {
         return try await get(endpoint: "/drives/\(id)")
     }
+    
+    func updateDrive(_ drive: Drive) async throws -> Drive {
+        return try await put(endpoint: "/drives/\(drive.id)", body: drive)
+    }
 
     func put<T: Encodable, R: Decodable>(endpoint: String, body: T) async throws -> R {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else { throw APIError.invalidURL }

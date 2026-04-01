@@ -239,31 +239,10 @@ struct ProfileView: View {
             if let profile = profileManager.profile, !profile.garage.isEmpty {
                 LazyVGrid(columns: [GridItem(.flexible())], spacing: 8) {
                     ForEach(profile.garage) { car in
-                        DarkCard {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(car.shortDisplay)
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                    Text(car.displayString)
-                                        .font(.subheadline)
-                                        .foregroundColor(Color(white: 0.7))
-                                }
-                                Spacer()
-                                if profile.selectedCarId == car.id {
-                                    Text("SELECTED")
-                                        .font(.caption2)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.blue)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.blue.opacity(0.2))
-                                        .cornerRadius(8)
-                                }
-                            }
-                        }
-                        .onTapGesture {
+                        CarGarageCard(
+                            car: car,
+                            isSelected: profile.selectedCarId == car.id
+                        ) {
                             selectCar(car.id)
                         }
                     }
@@ -490,5 +469,111 @@ struct ProfileView: View {
         guard var profile = profileManager.profile else { return }
         profile.selectCar(id: carId)
         profileManager.saveProfile(profile)
+    }
+}
+
+// MARK: - Car Garage Card with Stats
+
+struct CarGarageCard: View {
+    let car: UserCar
+    let isSelected: Bool
+    let onSelect: () -> Void
+    
+    @StateObject private var carStatsManager = CarStatsManager.shared
+    @State private var showingStats = false
+    
+    private var carStats: CarStats? {
+        carStatsManager.getStats(for: car.id)
+    }
+    
+    var body: some View {
+        DarkCard {
+            VStack(spacing: 8) {
+                // Main car info
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(car.shortDisplay)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        Text(car.displayString)
+                            .font(.subheadline)
+                            .foregroundColor(Color(white: 0.7))
+                    }
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if isSelected {
+                            Text("SELECTED")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.blue.opacity(0.2))
+                                .cornerRadius(8)
+                        }
+                        
+                        Button {
+                            showingStats.toggle()
+                        } label: {
+                            Image(systemName: showingStats ? "chevron.up" : "chart.bar")
+                                .foregroundColor(.gray)
+                        }
+                    }
+                }
+                
+                // Stats section (collapsible)
+                if showingStats {
+                    Divider()
+                        .background(Color(white: 0.3))
+                    
+                    if let stats = carStats {
+                        CarStatsRow(stats: stats)
+                    } else {
+                        Text("No driving data yet")
+                            .font(.caption)
+                            .foregroundColor(Color(white: 0.5))
+                            .padding(.vertical, 4)
+                    }
+                }
+            }
+            .padding(.vertical, showingStats ? 8 : 4)
+        }
+        .onTapGesture {
+            if !showingStats {
+                onSelect()
+            }
+        }
+    }
+}
+
+struct CarStatsRow: View {
+    let stats: CarStats
+    
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            StatMini(title: "Drives", value: "\(stats.totalDrives)")
+            StatMini(title: "Miles", value: String(format: "%.0f", stats.totalDistanceMiles))
+            StatMini(title: "Top Speed", value: String(format: "%.0f mph", stats.bestTopSpeedMph))
+            StatMini(title: "Category", value: stats.performanceCategory)
+        }
+    }
+}
+
+struct StatMini: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(Color(white: 0.6))
+        }
     }
 }

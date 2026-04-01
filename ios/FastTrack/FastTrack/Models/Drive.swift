@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-struct Drive: Identifiable, Codable {
+struct Drive: Identifiable, Codable, Equatable {
     var id: Int?
     var userID: Int
     var startTime: Date
