@@ -11,7 +11,6 @@ import SwiftUI
 struct FastPassApp: App {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var driveManager: DriveManager
-    @State private var isAuthenticated = false
     
     init() {
         let locMgr = LocationManager()
@@ -24,20 +23,26 @@ struct FastPassApp: App {
     
     var body: some Scene {
         WindowGroup {
+            RootView()
+                .environmentObject(locationManager)
+                .environmentObject(driveManager)
+        }
+    }
+}
+
+struct RootView: View {
+    @EnvironmentObject var locationManager: LocationManager
+    @State private var isAuthenticated = false
+    
+    var body: some View {
+        Group {
             if isAuthenticated {
                 ContentView()
-                    .environmentObject(locationManager)
-                    .environmentObject(driveManager)
                     .onAppear {
                         locationManager.requestPermission()
                     }
             } else {
                 SignInView()
-            }
-        }
-        .onChange(of: isAuthenticated) { _, newValue in
-            if newValue {
-                locationManager.requestPermission()
             }
         }
         .task {
@@ -52,6 +57,9 @@ struct FastPassApp: App {
                     isAuthenticated = false
                 }
             }
+        }
+        .onChange(of: AuthManager.shared.isAuthenticated()) { _, newValue in
+            isAuthenticated = newValue
         }
     }
 }

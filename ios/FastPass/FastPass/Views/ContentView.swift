@@ -96,7 +96,7 @@ struct ContentView: View {
                 }
             }
             .padding()
-            .navigationTitle("TripRank")
+            .navigationTitle("FastPass")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingHistory) {
                 DriveHistoryView()
