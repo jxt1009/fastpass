@@ -17,14 +17,11 @@ struct DriveHistoryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
-            .onAppear {
-                driveManager.fetchDrives()
-            }
+            .onAppear { driveManager.startPolling() }
+            .onDisappear { driveManager.stopPolling() }
         }
     }
 }

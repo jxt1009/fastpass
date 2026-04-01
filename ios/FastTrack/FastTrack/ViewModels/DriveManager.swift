@@ -13,9 +13,7 @@ class DriveManager: ObservableObject {
     private var recordingStartTime: Date?
     private var recordingLocations: [CLLocation] = []
     private var speedReadings: [Double] = []
-    
-    // Simple user ID for now - in production, this should come from authentication
-    private let userID = UUID().uuidString
+    private var pollTimer: Timer?
     
     func setLocationManager(_ manager: LocationManager) {
         self.locationManager = manager
@@ -46,7 +44,7 @@ class DriveManager: ObservableObject {
         // Initialize current drive
         currentDrive = Drive(
             id: nil,
-            userID: userID,
+            userID: AuthManager.shared.getUser()?.id ?? 0,
             startTime: Date(),
             endTime: Date(),
             startLatitude: 0,
@@ -126,7 +124,7 @@ class DriveManager: ObservableObject {
     func fetchDrives() {
         Task {
             do {
-                let fetchedDrives = try await APIService.shared.fetchDrives(userID: userID)
+                let fetchedDrives = try await APIService.shared.fetchDrives()
                 await MainActor.run {
                     self.drives = fetchedDrives
                 }
@@ -134,6 +132,20 @@ class DriveManager: ObservableObject {
                 print("Failed to fetch drives: \(error.localizedDescription)")
             }
         }
+    }
+
+    // MARK: - Live Polling
+
+    func startPolling() {
+        fetchDrives()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+            self?.fetchDrives()
+        }
+    }
+
+    func stopPolling() {
+        pollTimer?.invalidate()
+        pollTimer = nil
     }
 }
 

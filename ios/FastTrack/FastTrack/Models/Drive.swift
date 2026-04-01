@@ -3,7 +3,7 @@ import CoreLocation
 
 struct Drive: Identifiable, Codable {
     var id: Int?
-    var userID: String
+    var userID: Int
     var startTime: Date
     var endTime: Date
     var startLatitude: Double
@@ -49,7 +49,7 @@ struct Drive: Identifiable, Codable {
     static var example: Drive {
         Drive(
             id: 1,
-            userID: "user123",
+            userID: 1,
             startTime: Date().addingTimeInterval(-3600),
             endTime: Date(),
             startLatitude: 37.7749,

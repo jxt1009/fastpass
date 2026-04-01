@@ -21,7 +21,25 @@ class APIService {
     }
     
     // MARK: - Generic Methods
-    
+
+    private func authorizedRequest(url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        if let token = AuthManager.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        return request
+    }
+
+    func get<R: Decodable>(endpoint: String) async throws -> R {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            throw APIError.invalidURL
+        }
+        let (data, response) = try await session.data(for: authorizedRequest(url: url))
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else { throw APIError.serverError(httpResponse.statusCode) }
+        return try decoder.decode(R.self, from: data)
+    }
+
     func post<T: Encodable, R: Decodable>(
         endpoint: String,
         body: T,
@@ -56,51 +74,17 @@ class APIService {
     }
     
     // MARK: - Drive Methods
-    
+
     func createDrive(_ drive: Drive) async throws -> Drive {
         return try await post(endpoint: "/drives", body: drive, requiresAuth: true)
     }
-    
-    func fetchDrives(userID: String) async throws -> [Drive] {
-        guard var urlComponents = URLComponents(string: "\(baseURL)/drives") else {
-            throw APIError.invalidURL
-        }
-        
-        urlComponents.queryItems = [URLQueryItem(name: "user_id", value: userID)]
-        
-        guard let url = urlComponents.url else {
-            throw APIError.invalidURL
-        }
-        
-        let (data, response) = try await session.data(from: url)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-        
-        return try decoder.decode([Drive].self, from: data)
+
+    func fetchDrives() async throws -> [Drive] {
+        return try await get(endpoint: "/drives")
     }
-    
+
     func fetchDrive(id: Int) async throws -> Drive {
-        guard let url = URL(string: "\(baseURL)/drives/\(id)") else {
-            throw APIError.invalidURL
-        }
-        
-        let (data, response) = try await session.data(from: url)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-        
-        return try decoder.decode(Drive.self, from: data)
+        return try await get(endpoint: "/drives/\(id)")
     }
 }
 
