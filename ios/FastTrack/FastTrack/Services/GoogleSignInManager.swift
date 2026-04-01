@@ -6,9 +6,7 @@ import Combine
 class GoogleSignInManager: NSObject, ObservableObject {
     @Published var error: String?
 
-    // Replace with your Google OAuth Client ID from https://console.cloud.google.com/
-    // Application type: iOS, Bundle ID: com.toper.FastTrack
-    static let clientID = "761710305317-v7fqdoiqqveva29pc2461qm5ku7dadmp.apps.googleusercontent.com"
+    static let clientID = Secrets.googleClientID
     static let redirectURI = "com.toper.fasttrack:/oauth2callback"
 
     private var codeVerifier: String = ""

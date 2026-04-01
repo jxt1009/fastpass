@@ -41,6 +41,7 @@ ios/**/.swiftpm/
 *.pem
 *.key
 backend/k8s/secret.yaml
+ios/**/Secrets.swift
 
 # IDE
 .vscode/
