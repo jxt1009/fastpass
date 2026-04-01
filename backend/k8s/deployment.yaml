@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fasttrack-api
+  name: fastpass-api
   namespace: default
   labels:
-    app: fasttrack-api
+    app: fastpass-api
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: fasttrack-api
+      app: fastpass-api
   template:
     metadata:
       labels:
-        app: fasttrack-api
+        app: fastpass-api
     spec:
       containers:
-      - name: fasttrack-api
-        image: fasttrack-api:latest
+      - name: fastpass-api
+        image: fastpass-api:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -27,23 +27,23 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: fasttrack-secrets
+              name: fastpass-secrets
               key: database-url
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: fasttrack-secrets
+              name: fastpass-secrets
               key: jwt-secret
         - name: GOOGLE_CLIENT_ID
           valueFrom:
             secretKeyRef:
-              name: fasttrack-secrets
+              name: fastpass-secrets
               key: google-client-id
               optional: true
         - name: GOOGLE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: fasttrack-secrets
+              name: fastpass-secrets
               key: google-client-secret
               optional: true
         resources:
