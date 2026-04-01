@@ -1,24 +1,27 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: triprank-api
+  name: fastpass-api
+  namespace: default
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - api.triprank.yourdomain.com
-    secretName: triprank-api-tls
+    - fast.toper.dev
+    secretName: fastpass-api-tls
   rules:
-  - host: api.triprank.yourdomain.com
+  - host: fast.toper.dev
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: triprank-api
+            name: fastpass-api
             port:
               number: 80
