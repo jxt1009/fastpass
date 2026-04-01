@@ -34,6 +34,18 @@ spec:
             secretKeyRef:
               name: fastpass-secrets
               key: jwt-secret
+        - name: GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: fastpass-secrets
+              key: google-client-id
+              optional: true
+        - name: GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: fastpass-secrets
+              key: google-client-secret
+              optional: true
         resources:
           requests:
             memory: "128Mi"
