@@ -5,7 +5,6 @@ import Combine
 struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
-    @State private var showingHistory = false
     @State private var elapsedTime: TimeInterval = 0
 
     // 1-second ticker for live timer
@@ -129,29 +128,12 @@ struct ContentView: View {
                             .background(driveManager.isRecording ? Color.red : Color.blue)
                             .cornerRadius(12)
                         }
-
-                        // History button
-                        Button { showingHistory = true } label: {
-                            HStack {
-                                Image(systemName: "clock.arrow.circlepath")
-                                Text("View History").fontWeight(.medium)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.blue)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
-                        }
                     }
                     .padding()
                 }
             }
             .navigationTitle("FastTrack")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showingHistory) { DriveHistoryView() }
             // Tick the live timer every second
             .onReceive(timer) { _ in
                 guard driveManager.isRecording, let start = driveManager.recordingStartTime else { return }
