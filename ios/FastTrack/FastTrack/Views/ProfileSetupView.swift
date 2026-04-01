@@ -135,13 +135,15 @@ struct ProfileSetupView: View {
         if let p = profileManager.profile {
             username = p.username
             country = p.country
-            if !p.carMake.isEmpty {
-                let make = performanceMakes.first { $0.displayName == p.carMake }
+            
+            // Load car from garage or legacy fields
+            if let selectedCar = p.selectedCar {
+                let make = performanceMakes.first { $0.displayName == selectedCar.make }
                 carSelection = CarSelection(
                     make: make,
-                    model: p.carModel,
-                    year: p.carYear,
-                    trim: p.carTrim
+                    model: selectedCar.model,
+                    year: selectedCar.year,
+                    trim: selectedCar.trim
                 )
             }
         }
@@ -159,13 +161,28 @@ struct ProfileSetupView: View {
     private func save() {
         guard isValid else { return }
         isSaving = true
+        
+        // Create garage with selected car if any
+        var garage: [UserCar] = []
+        var selectedCarId: String? = nil
+        
+        if let make = carSelection.make, !carSelection.model.isEmpty {
+            let car = UserCar(
+                make: make.displayName,
+                model: carSelection.model,
+                year: carSelection.year,
+                trim: carSelection.trim,
+                nickname: ""
+            )
+            garage = [car]
+            selectedCarId = car.id
+        }
+        
         let p = UserProfile(
             username: username,
             country: country,
-            carMake: carSelection.make?.displayName ?? "",
-            carModel: carSelection.model,
-            carYear: carSelection.year,
-            carTrim: carSelection.trim
+            garage: garage,
+            selectedCarId: selectedCarId
         )
         profileManager.saveProfile(p)
         if let img = avatarImage { profileManager.saveAvatar(img) }
