@@ -4,18 +4,49 @@ import MapKit
 struct DriveDetailView: View {
     let drive: Drive
     
+    @State private var region = MKCoordinateRegion()
+    @State private var routeCoordinates: [CLLocationCoordinate2D] = []
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Map placeholder
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(height: 200)
-                    .overlay(
-                        Text("Map View\n(Coming Soon)")
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
-                    )
+                // Map with route
+                Group {
+                    if !routeCoordinates.isEmpty {
+                        Map(coordinateRegion: $region, annotationItems: mapAnnotations) { annotation in
+                            MapAnnotation(coordinate: annotation.coordinate) {
+                                Circle()
+                                    .fill(annotation.isStart ? Color.green : Color.red)
+                                    .frame(width: 12, height: 12)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.white, lineWidth: 2)
+                                    )
+                            }
+                        }
+                        .overlay(
+                            MapPolyline(coordinates: routeCoordinates)
+                                .stroke(Color.blue, lineWidth: 3)
+                        )
+                        .frame(height: 200)
+                        .cornerRadius(12)
+                        .onAppear { setupMap() }
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                            .frame(height: 200)
+                            .overlay(
+                                VStack(spacing: 8) {
+                                    Image(systemName: "map")
+                                        .font(.title2)
+                                        .foregroundColor(.secondary)
+                                    Text("No route data available")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            )
+                    }
+                }
                 
                 // Stats Grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
@@ -23,6 +54,40 @@ struct DriveDetailView: View {
                     StatCard(title: "Duration", value: drive.durationString, icon: "clock")
                     StatCard(title: "Max Speed", value: "\(Int(drive.maxSpeed * 2.23694)) mph", icon: "speedometer")
                     StatCard(title: "Avg Speed", value: "\(Int(drive.avgSpeed * 2.23694)) mph", icon: "gauge")
+                }
+                
+                // Extended Stats Grid (if available)
+                if drive.leftTurns > 0 || drive.rightTurns > 0 || drive.brakeEvents > 0 {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Driving Stats")
+                            .font(.headline)
+                        
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                            StatCard(title: "Left Turns", value: "\(drive.leftTurns)", icon: "arrow.turn.up.left")
+                            StatCard(title: "Right Turns", value: "\(drive.rightTurns)", icon: "arrow.turn.up.right")
+                            StatCard(title: "Brake Events", value: "\(drive.brakeEvents)", icon: "hand.raised.fill")
+                            StatCard(title: "Lane Changes", value: "\(drive.laneChanges)", icon: "arrow.left.arrow.right")
+                        }
+                        
+                        if drive.maxAcceleration > 0 {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                StatCard(title: "Max Accel", value: String(format: "%.1f m/s²", drive.maxAcceleration), icon: "arrow.up.circle")
+                                StatCard(title: "Max Decel", value: String(format: "%.1f m/s²", drive.maxDeceleration), icon: "arrow.down.circle")
+                            }
+                        }
+                        
+                        if drive.peakGForce > 0 {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                StatCard(title: "Peak G-Force", value: String(format: "%.2f G", drive.peakGForce), icon: "circle.circle")
+                                if let best060 = drive.best060Time {
+                                    StatCard(title: "0-60 Time", value: String(format: "%.1f sec", best060), icon: "timer")
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
                 }
                 
                 // Trip Details
@@ -34,6 +99,9 @@ struct DriveDetailView: View {
                     DetailRow(label: "End Time", value: drive.endTime.formatted(date: .long, time: .shortened))
                     DetailRow(label: "Start Location", value: String(format: "%.4f, %.4f", drive.startLatitude, drive.startLongitude))
                     DetailRow(label: "End Location", value: String(format: "%.4f, %.4f", drive.endLatitude, drive.endLongitude))
+                    if drive.stoppedTime > 0 {
+                        DetailRow(label: "Stopped Time", value: formatDuration(drive.stoppedTime))
+                    }
                 }
                 .padding()
                 .background(Color(.systemGray6))
@@ -43,7 +111,72 @@ struct DriveDetailView: View {
         }
         .navigationTitle("Drive Details")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { parseRouteData() }
     }
+    
+    // MARK: - Map Data
+    
+    private var mapAnnotations: [MapAnnotation] {
+        guard !routeCoordinates.isEmpty else { return [] }
+        return [
+            MapAnnotation(coordinate: routeCoordinates.first!, isStart: true),
+            MapAnnotation(coordinate: routeCoordinates.last!, isStart: false)
+        ]
+    }
+    
+    private func parseRouteData() {
+        guard let routeData = drive.routeData,
+              let data = routeData.data(using: .utf8),
+              let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Double]] else {
+            routeCoordinates = []
+            return
+        }
+        
+        routeCoordinates = jsonArray.compactMap { point in
+            guard let lat = point["lat"], let lng = point["lng"] else { return nil }
+            return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        }
+    }
+    
+    private func setupMap() {
+        guard !routeCoordinates.isEmpty else { return }
+        
+        // Calculate bounding region for all coordinates
+        let latitudes = routeCoordinates.map(\.latitude)
+        let longitudes = routeCoordinates.map(\.longitude)
+        
+        let minLat = latitudes.min()!
+        let maxLat = latitudes.max()!
+        let minLng = longitudes.min()!
+        let maxLng = longitudes.max()!
+        
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLng + maxLng) / 2
+        )
+        
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.001, (maxLat - minLat) * 1.3), // 30% padding
+            longitudeDelta: max(0.001, (maxLng - minLng) * 1.3)
+        )
+        
+        region = MKCoordinateRegion(center: center, span: span)
+    }
+    
+    private func formatDuration(_ seconds: Double) -> String {
+        let h = Int(seconds) / 3600
+        let m = (Int(seconds) % 3600) / 60
+        if h > 0 { return "\(h)h \(m)m" }
+        return "\(m)m"
+    }
+}
+
+// MARK: - Map Annotation
+
+private struct MapAnnotation: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
+    let isStart: Bool
 }
 
 #Preview {
