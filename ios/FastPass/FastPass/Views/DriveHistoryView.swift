@@ -52,5 +52,5 @@ struct DriveRowView: View {
 
 #Preview {
     DriveHistoryView()
-        .environmentObject(DriveManager())
+        .environmentObject(DriveManager.preview())
 }

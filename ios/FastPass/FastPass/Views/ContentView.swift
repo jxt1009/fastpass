@@ -107,6 +107,6 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(LocationManager())
-        .environmentObject(DriveManager())
+        .environmentObject(LocationManager.preview())
+        .environmentObject(DriveManager.preview())
 }

@@ -128,3 +128,21 @@ class DriveManager: ObservableObject {
         }
     }
 }
+
+// MARK: - Preview Helpers
+
+extension LocationManager {
+    static func preview() -> LocationManager {
+        let manager = LocationManager()
+        manager.currentSpeed = 25.0 // ~56 mph for preview
+        return manager
+    }
+}
+
+extension DriveManager {
+    static func preview() -> DriveManager {
+        let manager = DriveManager()
+        manager.drives = [Drive.example]
+        return manager
+    }
+}
