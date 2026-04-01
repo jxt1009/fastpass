@@ -8,6 +8,36 @@ class AppleSignInManager: NSObject, ObservableObject {
     
     private let authManager = AuthManager.shared
     
+    func handleSignInResult(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let auth):
+            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let identityToken = String(data: tokenData, encoding: .utf8) else {
+                error = "Failed to get identity token"
+                return
+            }
+            let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+                .compactMap { $0 }.joined(separator: " ")
+            Task {
+                do {
+                    try await authManager.signInWithApple(
+                        identityToken: identityToken,
+                        authCode: credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) },
+                        fullName: fullName.isEmpty ? nil : fullName,
+                        email: credential.email
+                    )
+                    await MainActor.run { self.error = nil }
+                } catch {
+                    await MainActor.run { self.error = error.localizedDescription }
+                }
+            }
+        case .failure(let err):
+            if (err as? ASAuthorizationError)?.code == .canceled { return }
+            error = err.localizedDescription
+        }
+    }
+
     func signInWithApple(presentationAnchor: ASPresentationAnchor) {
         let request = ASAuthorizationAppleIDProvider().createRequest()
         request.requestedScopes = [.fullName, .email]

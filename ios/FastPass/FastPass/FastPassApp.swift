@@ -32,34 +32,25 @@ struct FastPassApp: App {
 
 struct RootView: View {
     @EnvironmentObject var locationManager: LocationManager
-    @State private var isAuthenticated = false
-    
+    @ObservedObject private var authManager = AuthManager.shared
+
     var body: some View {
         Group {
-            if isAuthenticated {
+            if authManager.isAuthenticated {
                 ContentView()
-                    .onAppear {
-                        locationManager.requestPermission()
-                    }
+                    .onAppear { locationManager.requestPermission() }
             } else {
                 SignInView()
+                    .environmentObject(authManager)
             }
         }
         .task {
-            // Check if user is already authenticated
-            isAuthenticated = AuthManager.shared.isAuthenticated()
-            
-            // Try to refresh token if needed
-            if isAuthenticated {
-                do {
-                    try await AuthManager.shared.refreshTokenIfNeeded()
-                } catch {
-                    isAuthenticated = false
-                }
+            guard authManager.isAuthenticated else { return }
+            do {
+                try await AuthManager.shared.refreshTokenIfNeeded()
+            } catch {
+                AuthManager.shared.clearTokens()
             }
-        }
-        .onChange(of: AuthManager.shared.isAuthenticated()) { _, newValue in
-            isAuthenticated = newValue
         }
     }
 }

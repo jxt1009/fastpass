@@ -6,7 +6,7 @@ class APIService {
     // Production API endpoint - Change this before deployment
     // Development: "http://localhost:8080/api/v1"
     // Production: "https://fast.toper.dev/api/v1"
-    private let baseURL = "https://fast.toper.dev/api/v1"
+    let baseURL = "https://fast.toper.dev/api/v1"
     
     private let session: URLSession
     private let decoder: JSONDecoder

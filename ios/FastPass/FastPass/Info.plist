@@ -16,5 +16,18 @@
 	<array>
 		<string>location</string>
 	</array>
+
+	<!-- OAuth 2.0 callback URL scheme -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.toper.fastpass.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.toper.fastpass</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

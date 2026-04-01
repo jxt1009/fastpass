@@ -1,14 +1,18 @@
 import Foundation
 import Security
 
-class AuthManager {
+class AuthManager: ObservableObject {
     static let shared = AuthManager()
-    
+
+    @Published var isAuthenticated: Bool = false
+
     private let tokenKey = "auth_token"
     private let refreshTokenKey = "refresh_token"
     private let userKey = "current_user"
-    
-    private init() {}
+
+    private init() {
+        isAuthenticated = getToken() != nil
+    }
     
     // MARK: - Token Management
     
@@ -32,6 +36,7 @@ class AuthManager {
         UserDefaults.standard.removeObject(forKey: tokenKey)
         UserDefaults.standard.removeObject(forKey: refreshTokenKey)
         UserDefaults.standard.removeObject(forKey: userKey)
+        isAuthenticated = false
     }
     
     // MARK: - User Management
@@ -66,6 +71,7 @@ class AuthManager {
         saveToken(response.token)
         saveRefreshToken(response.refreshToken)
         saveUser(response.user)
+        isAuthenticated = true
     }
     
     func refreshTokenIfNeeded() async throws {
@@ -84,11 +90,9 @@ class AuthManager {
         saveToken(response.token)
         saveRefreshToken(response.refreshToken)
         saveUser(response.user)
+        isAuthenticated = true
     }
     
-    func isAuthenticated() -> Bool {
-        return getToken() != nil
-    }
 }
 
 // MARK: - Models
@@ -129,19 +133,23 @@ struct AuthResponse: Codable {
 
 struct User: Codable, Identifiable {
     let id: Int
-    let appleUserID: String
+    let appleUserID: String?
+    let googleUserID: String?
     let email: String?
     let fullName: String?
+    let authProvider: String?
     let createdAt: Date
     let updatedAt: Date
-    
+
     enum CodingKeys: String, CodingKey {
         case id
-        case appleUserID = "apple_user_id"
+        case appleUserID  = "apple_user_id"
+        case googleUserID = "google_user_id"
         case email
-        case fullName = "full_name"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
+        case fullName     = "full_name"
+        case authProvider = "auth_provider"
+        case createdAt    = "created_at"
+        case updatedAt    = "updated_at"
     }
 }
 

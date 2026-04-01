@@ -2,104 +2,78 @@ import SwiftUI
 import AuthenticationServices
 
 struct SignInView: View {
-    @StateObject private var appleSignInManager = AppleSignInManager()
-    @Environment(\.colorScheme) var colorScheme
-    
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var googleSignInManager = GoogleSignInManager()
+    @StateObject private var appleSignInManager  = AppleSignInManager()
+
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: 0) {
             Spacer()
-            
-            // App Logo/Icon
-            Image(systemName: "car.fill")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 100, height: 100)
-                .foregroundColor(.blue)
-            
-            // App Name
-            Text("FastPass")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-            
-            Text("Track Your Speed")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-            
+
+            // Logo
+            VStack(spacing: 12) {
+                Image(systemName: "speedometer")
+                    .font(.system(size: 80))
+                    .foregroundColor(.blue)
+                Text("FastPass")
+                    .font(.largeTitle).fontWeight(.bold)
+                Text("Track Your Speed")
+                    .font(.title3).foregroundColor(.secondary)
+            }
+
             Spacer()
-            
-            // Sign in with Apple Button
-            SignInWithAppleButton(
-                .signIn,
-                onRequest: { request in
-                    request.requestedScopes = [.fullName, .email]
-                },
-                onCompletion: { result in
-                    switch result {
-                    case .success(let authorization):
-                        handleAuthorization(authorization)
-                    case .failure(let error):
-                        appleSignInManager.error = error.localizedDescription
-                    }
+
+            VStack(spacing: 14) {
+                // Google
+                Button {
+                    googleSignInManager.signInWithGoogle()
+                } label: {
+                    Label("Sign in with Google", systemImage: "globe")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.white)
+                        .foregroundColor(.black)
+                        .cornerRadius(10)
+                        .overlay(RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.gray.opacity(0.4), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
                 }
-            )
-            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-            .frame(height: 50)
+
+                // Apple
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    appleSignInManager.handleSignInResult(result)
+                }
+                .frame(height: 50)
+                .cornerRadius(10)
+            }
             .padding(.horizontal, 40)
-            
-            if let error = appleSignInManager.error {
-                Text(error)
+
+            // Error
+            if let err = googleSignInManager.error ?? appleSignInManager.error {
+                Text(err)
                     .foregroundColor(.red)
                     .font(.caption)
-                    .padding()
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 12)
+                    .padding(.horizontal, 40)
             }
-            
+
             Spacer()
-            
-            // Privacy Text
-            Text("We use Sign in with Apple to protect your privacy. Your personal information is never shared.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+
+            Text("By signing in you agree to our Terms of Service and Privacy Policy")
+                .font(.caption2)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-                .padding(.bottom, 20)
+                .padding(.bottom, 24)
         }
-    }
-    
-    private func handleAuthorization(_ authorization: ASAuthorization) {
-        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-            return
-        }
-        
-        guard let identityToken = appleIDCredential.identityToken,
-              let identityTokenString = String(data: identityToken, encoding: .utf8) else {
-            appleSignInManager.error = "Failed to get identity token"
-            return
-        }
-        
-        let fullName = [appleIDCredential.fullName?.givenName, appleIDCredential.fullName?.familyName]
-            .compactMap { $0 }
-            .joined(separator: " ")
-        
-        Task {
-            do {
-                try await AuthManager.shared.signInWithApple(
-                    identityToken: identityTokenString,
-                    authCode: appleIDCredential.authorizationCode.map { String(data: $0, encoding: .utf8) } ?? nil,
-                    fullName: fullName.isEmpty ? nil : fullName,
-                    email: appleIDCredential.email
-                )
-                
-                await MainActor.run {
-                    appleSignInManager.isSignedIn = true
-                }
-            } catch {
-                await MainActor.run {
-                    appleSignInManager.error = error.localizedDescription
-                }
-            }
-        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
     }
 }
 
 #Preview {
-    SignInView()
+    SignInView().environmentObject(AuthManager.shared)
 }

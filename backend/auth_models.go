@@ -6,9 +6,11 @@ import (
 
 type User struct {
 	ID            uint      `gorm:"primaryKey" json:"id"`
-	AppleUserID   string    `gorm:"uniqueIndex" json:"apple_user_id"`
+	AppleUserID   string    `gorm:"uniqueIndex" json:"apple_user_id,omitempty"`
+	GoogleUserID  string    `gorm:"uniqueIndex" json:"google_user_id,omitempty"`
 	Email         string    `json:"email"`
 	FullName      string    `json:"full_name"`
+	AuthProvider  string    `json:"auth_provider"` // "apple", "google"
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
@@ -28,4 +30,16 @@ type AppleSignInRequest struct {
 
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type GoogleSignInRequest struct {
+	Code         string `json:"code" binding:"required"`
+	CodeVerifier string `json:"code_verifier" binding:"required"`
+	RedirectURI  string `json:"redirect_uri" binding:"required"`
+}
+
+type UserInfo struct {
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	FullName string `json:"full_name"`
 }
