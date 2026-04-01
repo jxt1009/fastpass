@@ -4,6 +4,13 @@ import (
 	"time"
 )
 
+type Follow struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	FollowerID  uint      `gorm:"uniqueIndex:idx_follow_pair;not null" json:"follower_id"`
+	FollowingID uint      `gorm:"uniqueIndex:idx_follow_pair;not null" json:"following_id"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Drive struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
 	UserID          uint      `json:"user_id"`

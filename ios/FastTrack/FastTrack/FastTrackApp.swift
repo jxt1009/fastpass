@@ -44,6 +44,8 @@ struct RootView: View {
                         .tabItem { Label("History", systemImage: "clock.fill") }
                     AnalyticsView()
                         .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }
+                    SocialView()
+                        .tabItem { Label("Social", systemImage: "person.2.fill") }
                     AchievementsView()
                         .tabItem { Label("Achievements", systemImage: "trophy.fill") }
                     ProfileView()

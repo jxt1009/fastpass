@@ -266,25 +266,15 @@ struct DriveCarSelectorView: View {
     }
     
     private func updateDriveCar(to car: UserCar) {
+        guard let driveId = drive.id else { return }
         Task {
             do {
-                // Create updated drive object
-                var updatedDrive = drive
-                updatedDrive.carId = car.id
-                updatedDrive.carMake = car.make
-                updatedDrive.carModel = car.model
-                updatedDrive.carYear = car.year
-                updatedDrive.carTrim = car.trim
-                updatedDrive.carNickname = car.nickname
-                
-                // Update on server
-                let _ = try await APIService.shared.updateDrive(updatedDrive)
-                
-                // Update local drives list
+                let updatedDrive = try await APIService.shared.updateDriveCarAssignment(driveId: driveId, car: car)
+
                 if let index = driveManager.drives.firstIndex(where: { $0.id == drive.id }) {
                     driveManager.drives[index] = updatedDrive
                 }
-                
+
                 await MainActor.run {
                     dismiss()
                 }
@@ -293,7 +283,6 @@ struct DriveCarSelectorView: View {
                 if case APIError.serverError(let code) = error {
                     print("Server returned status code: \(code)")
                 }
-                // TODO: Show error alert with more specific message
                 await MainActor.run {
                     dismiss()
                 }

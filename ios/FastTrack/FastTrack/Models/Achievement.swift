@@ -56,7 +56,7 @@ struct Achievement: Identifiable, Codable {
     }
     
     var badgeIcon: String {
-        return isUnlocked ? icon : "\(icon).slash"
+        return isUnlocked ? icon : "lock.fill"
     }
     
     var badgeColor: Color {
@@ -83,7 +83,7 @@ struct AchievementRequirement: Codable {
         case .totalDistance:
             return String(format: "%.0f/%.0f miles", progress * value * 0.000621371, value * 0.000621371)
         case .zeroToSixty:
-            return String(format: "%.1f/%.1fs", progress > 0 ? value / progress : 0, value)
+            return String(format: "%.1f/%.1fs", progress > 0 ? value / progress : 0.0, value)
         case .smoothness:
             return String(format: "%.0f/%.0f%%", progress * 100, value)
         case .consecutiveDays:

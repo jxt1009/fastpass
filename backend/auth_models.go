@@ -22,7 +22,9 @@ type User struct {
 	// New garage support
 	Garage       string `gorm:"type:text" json:"garage"`           // JSON array of cars
 	SelectedCarID *string `gorm:"size:100" json:"selected_car_id"`  // ID of selected car
-	
+
+	IsPublic     bool   `gorm:"default:true" json:"is_public"`
+
 	AuthProvider string    `json:"auth_provider"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -39,8 +41,9 @@ type UpdateProfileRequest struct {
 	CarTrim       string `json:"car_trim"`
 	
 	// New garage fields
-	Garage        string `json:"garage"`         // JSON array of cars
+	Garage        string  `json:"garage"`          // JSON array of cars
 	SelectedCarID *string `json:"selected_car_id"` // ID of selected car
+	IsPublic      *bool   `json:"is_public"`        // nil = don't change
 }
 
 type AuthResponse struct {

@@ -110,7 +110,6 @@ struct ProfileView: View {
     @EnvironmentObject var locationManager: LocationManager
     @State private var showingSetup = false
     @State private var showingAddCar = false
-
     private var stats: UserStats {
         UserStats.from(drives: driveManager.drives)
     }
@@ -133,6 +132,7 @@ struct ProfileView: View {
                         performanceGrid
                         DarkSectionHeader(title: "More Stats")
                         moreStatsGrid
+                        privacyToggleCard
                         signOutButton
                     }
                     .padding()
@@ -435,6 +435,33 @@ struct ProfileView: View {
                 value: formatDuration(stats.totalDuration),
                 unit: ""
             )
+        }
+    }
+
+    // MARK: Privacy Toggle
+
+    private var privacyToggleCard: some View {
+        DarkCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(isOn: Binding(
+                    get: { profileManager.profile?.isPublic ?? true },
+                    set: { newValue in
+                        guard var p = profileManager.profile else { return }
+                        p.isPublic = newValue
+                        profileManager.saveProfile(p)
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Public Profile")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        Text("Appear on leaderboards and let others view your stats")
+                            .font(.caption)
+                            .foregroundColor(Color(white: 0.55))
+                    }
+                }
+                .tint(.blue)
+            }
         }
     }
 

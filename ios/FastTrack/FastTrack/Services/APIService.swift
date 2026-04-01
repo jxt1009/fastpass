@@ -2,16 +2,16 @@ import Foundation
 
 class APIService {
     static let shared = APIService()
-    
+
     // Production API endpoint - Change this before deployment
     // Development: "http://localhost:8080/api/v1"
     // Production: "https://fast.toper.dev/api/v1"
     let baseURL = "https://fast.toper.dev/api/v1"
-    
+
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
-    
+
     private init() {
         self.session = URLSession.shared
         self.decoder = JSONDecoder()
@@ -19,7 +19,7 @@ class APIService {
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
     }
-    
+
     // MARK: - Generic Methods
 
     private func authorizedRequest(url: URL) -> URLRequest {
@@ -48,47 +48,22 @@ class APIService {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else {
             throw APIError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(body)
-        
+
         if requiresAuth {
             if let token = AuthManager.shared.getToken() {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
         }
-        
+
         let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-        
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else { throw APIError.serverError(httpResponse.statusCode) }
         return try decoder.decode(R.self, from: data)
-    }
-    
-    // MARK: - Drive Methods
-
-    func createDrive(_ drive: Drive) async throws -> Drive {
-        return try await post(endpoint: "/drives", body: drive, requiresAuth: true)
-    }
-
-    func fetchDrives() async throws -> [Drive] {
-        return try await get(endpoint: "/drives")
-    }
-
-    func fetchDrive(id: Int) async throws -> Drive {
-        return try await get(endpoint: "/drives/\(id)")
-    }
-    
-    func updateDrive(_ drive: Drive) async throws -> Drive {
-        return try await put(endpoint: "/drives/\(drive.id)", body: drive)
     }
 
     func put<T: Encodable, R: Decodable>(endpoint: String, body: T) async throws -> R {
@@ -106,10 +81,72 @@ class APIService {
         return try decoder.decode(R.self, from: data)
     }
 
+    func delete(endpoint: String) async throws {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        if let token = AuthManager.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
+    }
+
+    // MARK: - Drive Methods
+
+    func createDrive(_ drive: Drive) async throws -> Drive {
+        return try await post(endpoint: "/drives", body: drive, requiresAuth: true)
+    }
+
+    func fetchDrives() async throws -> [Drive] {
+        return try await get(endpoint: "/drives")
+    }
+
+    func fetchDrive(id: Int) async throws -> Drive {
+        return try await get(endpoint: "/drives/\(id)")
+    }
+
+    func updateDrive(_ drive: Drive) async throws -> Drive {
+        return try await put(endpoint: "/drives/\(drive.id)", body: drive)
+    }
+
+    func updateDriveCarAssignment(driveId: Int, car: UserCar) async throws -> Drive {
+        struct UpdateCarRequest: Encodable {
+            let carId: String?
+            let carMake: String?
+            let carModel: String?
+            let carYear: Int?
+            let carTrim: String?
+            let carNickname: String?
+
+            enum CodingKeys: String, CodingKey {
+                case carId       = "car_id"
+                case carMake     = "car_make"
+                case carModel    = "car_model"
+                case carYear     = "car_year"
+                case carTrim     = "car_trim"
+                case carNickname = "car_nickname"
+            }
+        }
+        let req = UpdateCarRequest(
+            carId: car.id,
+            carMake: car.make,
+            carModel: car.model,
+            carYear: car.year,
+            carTrim: car.trim,
+            carNickname: car.nickname
+        )
+        return try await put(endpoint: "/drives/\(driveId)", body: req)
+    }
+
+    // MARK: - Profile Methods
+
     func updateProfile(_ profile: UserProfile) async throws {
         struct UpdateProfileRequest: Encodable {
             let username: String
             let country: String
+            let isPublic: Bool
             // Legacy fields for backward compatibility
             let carMake: String
             let carModel: String
@@ -118,25 +155,26 @@ class APIService {
             // New garage fields
             let garage: String
             let selectedCarID: String?
-            
+
             enum CodingKeys: String, CodingKey {
                 case username, country
-                case carMake = "car_make"
-                case carModel = "car_model"
-                case carYear = "car_year"
-                case carTrim = "car_trim"
+                case isPublic      = "is_public"
+                case carMake       = "car_make"
+                case carModel      = "car_model"
+                case carYear       = "car_year"
+                case carTrim       = "car_trim"
                 case garage
                 case selectedCarID = "selected_car_id"
             }
         }
-        
-        // Encode garage as JSON
+
         let garageData = try JSONEncoder().encode(profile.garage)
         let garageString = String(data: garageData, encoding: .utf8) ?? "[]"
-        
+
         let req = UpdateProfileRequest(
             username: profile.username,
             country: profile.country,
+            isPublic: profile.isPublic,
             carMake: profile.carMake,
             carModel: profile.carModel,
             carYear: profile.carYear,
@@ -146,14 +184,39 @@ class APIService {
         )
         let _: User = try await put(endpoint: "/profile", body: req)
     }
+
+    // MARK: - Social Methods
+
+    func fetchLeaderboard(
+        category: LeaderboardCategory,
+        scope: LeaderboardScope = .global,
+        period: LeaderboardPeriod = .allTime
+    ) async throws -> [LeaderboardEntry] {
+        return try await get(endpoint: "/leaderboard?category=\(category.rawValue)&scope=\(scope.rawValue)&period=\(period.rawValue)")
+    }
+
+    func fetchPublicProfile(username: String) async throws -> PublicProfile {
+        return try await get(endpoint: "/users/\(username)")
+    }
+
+    func followUser(username: String) async throws {
+        struct Empty: Decodable {}
+        let _: Empty = try await post(endpoint: "/users/\(username)/follow", body: _EmptyBody())
+    }
+
+    func unfollowUser(username: String) async throws {
+        try await delete(endpoint: "/users/\(username)/follow")
+    }
 }
+
+private struct _EmptyBody: Encodable {}
 
 enum APIError: Error, LocalizedError {
     case invalidURL
     case invalidResponse
     case serverError(Int)
     case decodingError
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:

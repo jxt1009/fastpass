@@ -26,7 +26,7 @@ func main() {
 	}
 	
 	// Auto-migrate models
-	db.AutoMigrate(&User{}, &Drive{})
+	db.AutoMigrate(&User{}, &Drive{}, &Follow{})
 	
 	// Setup router
 	r := gin.Default()
@@ -54,6 +54,14 @@ func main() {
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)
 		api.PUT("/drives/:id", updateDrive)
+
+		// Social
+		api.GET("/leaderboard", getLeaderboard)
+		api.GET("/users/:username", getPublicProfile)
+		api.POST("/users/:username/follow", followUser)
+		api.DELETE("/users/:username/follow", unfollowUser)
+		api.GET("/users/:username/followers", getFollowers)
+		api.GET("/users/:username/following", getFollowing)
 	}
 	
 	port := os.Getenv("PORT")

@@ -47,6 +47,7 @@ struct UserProfile: Codable {
     var country: String
     var garage: [UserCar]  // User's collection of cars
     var selectedCarId: String?
+    var isPublic: Bool = true
     
     var selectedCar: UserCar? {
         guard let selectedCarId = selectedCarId else { return garage.first }
@@ -70,6 +71,7 @@ struct UserProfile: Codable {
     enum CodingKeys: String, CodingKey {
         case username, country, garage
         case selectedCarId = "selected_car_id"
+        case isPublic      = "is_public"
     }
 
     static var empty: UserProfile {
