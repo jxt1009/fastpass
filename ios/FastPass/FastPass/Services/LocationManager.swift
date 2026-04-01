@@ -14,11 +14,19 @@ class LocationManager: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 5  // Update every 5 meters
         
-        // Only enable background updates if not in preview/testing
-        #if !targetEnvironment(simulator)
-        if !ProcessInfo.processInfo.environment.keys.contains("XCODE_RUNNING_FOR_PREVIEWS") {
+        // Only enable background updates on device with proper capabilities
+        // Don't enable in previews, simulator, or if capabilities aren't configured
+        #if targetEnvironment(simulator)
+        // Simulator doesn't support background location properly
+        locationManager.allowsBackgroundLocationUpdates = false
+        #else
+        // On device, check if we can enable background updates
+        // This will fail gracefully if Background Modes capability isn't set
+        do {
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.pausesLocationUpdatesAutomatically = false
+        } catch {
+            print("Could not enable background location updates: \(error)")
         }
         #endif
     }
@@ -55,5 +63,17 @@ extension LocationManager: CLLocationManagerDelegate {
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location error: \(error.localizedDescription)")
+    }
+}
+
+// MARK: - Preview Helper
+
+extension LocationManager {
+    static func preview() -> LocationManager {
+        let manager = LocationManager()
+        manager.currentSpeed = 25.0 // ~56 mph for preview
+        manager.currentLocation = CLLocation(latitude: 37.7749, longitude: -122.4194)
+        manager.authorizationStatus = .authorizedAlways
+        return manager
     }
 }

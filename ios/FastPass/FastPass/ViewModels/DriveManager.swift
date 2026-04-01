@@ -6,6 +6,7 @@ class DriveManager: ObservableObject {
     @Published var isRecording = false
     @Published var currentDrive: Drive?
     @Published var drives: [Drive] = []
+    @Published var routeCoordinates: [CLLocationCoordinate2D] = []
     
     private var locationManager: LocationManager?
     private var cancellables = Set<AnyCancellable>()
@@ -24,6 +25,7 @@ class DriveManager: ObservableObject {
             .sink { [weak self] location in
                 guard let self = self, self.isRecording, let location = location else { return }
                 self.recordingLocations.append(location)
+                self.routeCoordinates.append(location.coordinate)
                 self.speedReadings.append(location.speed >= 0 ? location.speed : 0)
                 self.updateCurrentDrive()
             }
@@ -36,6 +38,7 @@ class DriveManager: ObservableObject {
         isRecording = true
         recordingStartTime = Date()
         recordingLocations = []
+        routeCoordinates = []
         speedReadings = []
         
         locationManager?.startUpdatingLocation()
@@ -53,6 +56,7 @@ class DriveManager: ObservableObject {
             distance: 0,
             duration: 0,
             maxSpeed: 0,
+            minSpeed: 0,
             avgSpeed: 0,
             routeData: nil
         )
@@ -109,9 +113,10 @@ class DriveManager: ObservableObject {
             drive.duration = Date().timeIntervalSince(startTime)
         }
         
-        // Calculate max and avg speed
+        // Calculate max, min and avg speed
         if !speedReadings.isEmpty {
             drive.maxSpeed = speedReadings.max() ?? 0
+            drive.minSpeed = speedReadings.min() ?? 0
             drive.avgSpeed = speedReadings.reduce(0, +) / Double(speedReadings.count)
         }
         
@@ -129,5 +134,15 @@ class DriveManager: ObservableObject {
                 print("Failed to fetch drives: \(error.localizedDescription)")
             }
         }
+    }
+}
+
+// MARK: - Preview Helper
+
+extension DriveManager {
+    static func preview() -> DriveManager {
+        let manager = DriveManager()
+        manager.drives = [Drive.example]
+        return manager
     }
 }

@@ -13,6 +13,7 @@ struct Drive: Identifiable, Codable {
     var distance: Double  // meters
     var duration: Double  // seconds
     var maxSpeed: Double  // meters per second
+    var minSpeed: Double  // meters per second
     var avgSpeed: Double  // meters per second
     var routeData: String?
     
@@ -40,6 +41,7 @@ struct Drive: Identifiable, Codable {
         case distance
         case duration
         case maxSpeed = "max_speed"
+        case minSpeed = "min_speed"
         case avgSpeed = "avg_speed"
         case routeData = "route_data"
     }
@@ -57,6 +59,7 @@ struct Drive: Identifiable, Codable {
             distance: 15000,
             duration: 1800,
             maxSpeed: 35.7632,  // ~80 mph
+            minSpeed: 0,        // ~0 mph
             avgSpeed: 22.352,   // ~50 mph
             routeData: nil
         )
@@ -65,7 +68,7 @@ struct Drive: Identifiable, Codable {
 
 // MARK: - Extensions
 
-extension CLLocationCoordinate2D: Equatable {
+extension CLLocationCoordinate2D: @retroactive Equatable {
     public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
         return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
     }
