@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import Combine
 
 class AuthManager: ObservableObject {
     static let shared = AuthManager()
