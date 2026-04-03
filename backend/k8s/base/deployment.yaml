@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fasttrack-api
+  labels:
+    app: fasttrack-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fasttrack-api
+  template:
+    metadata:
+      labels:
+        app: fasttrack-api
+    spec:
+      containers:
+        - name: fasttrack-api
+          image: fasttrack-api  # overridden by kustomization.yaml images block
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fasttrack-secrets
+                  key: database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fasttrack-secrets
+                  key: jwt-secret
+            - name: APPLE_APP_BUNDLE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: fasttrack-secrets
+                  key: apple-app-bundle-id
+                  optional: true
+            - name: BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fasttrack-secrets
+                  key: base-url
+                  optional: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3

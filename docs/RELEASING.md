@@ -35,7 +35,16 @@ git commit -m "chore(release): bump version to 1.2.0"
 
 ## Backend Release
 
-The backend deploys **automatically on every push to `main`** via the [backend-deploy](.github/workflows/backend-deploy.yml) workflow. No manual steps needed for rolling deployments.
+The backend deploy pipeline has **two stages** that run automatically on every push to `main`:
+
+1. **Build** — Docker image is built and pushed to GHCR
+2. **Deploy → Staging** — auto-deploys to the `fasttrack-staging` k8s namespace (no approval needed)
+3. **Deploy → Production** — waits for manual approval in the `production` GitHub environment, then deploys to `fasttrack-production`
+
+| Environment | URL | Namespace | Approvals |
+|-------------|-----|-----------|-----------|
+| Staging | `https://staging.fast.toper.dev` | `fasttrack-staging` | Auto |
+| Production | `https://fast.toper.dev` | `fasttrack-production` | Manual gate |
 
 For a named release:
 1. Update `VERSION`
@@ -95,6 +104,19 @@ Add these at: **GitHub repo → Settings → Secrets and variables → Actions �
 
 ### ✅ Available Now (Backend — set these first)
 
+> **Where to add them:** In GitHub, go to **Settings → Environments**.
+> - Create two environments: `staging` and `production`
+> - Add `production` protection rules: restrict to `main` branch + add yourself as a required reviewer
+> - Add the secrets below to **both** environments (each environment needs its own copy — staging can point to a staging DB, production to the real one)
+
+**`KUBECONFIG`**
+Base64-encoded kubeconfig giving kubectl access to your cluster. Generate:
+```sh
+# On your server / wherever kubectl is configured:
+cat ~/.kube/config | base64 -w 0
+```
+Paste the output as the secret value. This replaces `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_PORT`, and `SSH_PRIVATE_KEY` — the workflow now deploys via kubectl directly.
+
 **`JWT_SECRET`**
 A random 64-character hex string used to sign JWTs. Generate one:
 ```sh
@@ -102,36 +124,20 @@ openssl rand -hex 32
 ```
 
 **`DATABASE_URL`**
-Postgres connection string for the production database:
+Postgres connection string. For staging and production you'll want separate databases:
 ```
-postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
+# staging
+postgres://fasttrack:PASSWORD@localhost:5432/fasttrack_staging?sslmode=disable
+# production
+postgres://fasttrack:PASSWORD@localhost:5432/fasttrack?sslmode=disable
 ```
-
-**`SERVER_HOST`**
-The IP address or hostname of your server, e.g. `fast.toper.dev`
-
-**`SERVER_USER`**
-The SSH username on the server, e.g. `root` or `ubuntu`
-
-**`SSH_PRIVATE_KEY`**
-A dedicated SSH keypair for deployments. Generate and install it:
-```sh
-# On your local machine:
-ssh-keygen -t ed25519 -C "fasttrack-deploy" -f ~/.ssh/fasttrack_deploy
-
-# Authorize it on the server:
-ssh-copy-id -i ~/.ssh/fasttrack_deploy.pub USER@SERVER_HOST
-
-# Paste the contents of the PRIVATE key into the secret:
-cat ~/.ssh/fasttrack_deploy
-```
-The value should include the full `-----BEGIN OPENSSH PRIVATE KEY-----` block.
 
 **`APPLE_APP_BUNDLE_ID`**
 Value: `dev.toper.FastTrack`
 
 **`BASE_URL`**
-Value: `https://fast.toper.dev`
+- Staging: `https://staging.fast.toper.dev`
+- Production: `https://fast.toper.dev`
 
 ---
 
@@ -174,20 +180,18 @@ Paste the base64 output as the secret value.
 
 ### Summary Table
 
-| Secret | Workflow | Status |
-|--------|----------|--------|
-| `JWT_SECRET` | backend-deploy | ✅ Set now |
-| `DATABASE_URL` | backend-deploy | ✅ Set now |
-| `SERVER_HOST` | backend-deploy | ✅ Set now |
-| `SERVER_USER` | backend-deploy | ✅ Set now |
-| `SSH_PRIVATE_KEY` | backend-deploy | ✅ Set now |
-| `APPLE_APP_BUNDLE_ID` | backend-deploy | ✅ Set now (`dev.toper.FastTrack`) |
-| `BASE_URL` | backend-deploy | ✅ Set now (`https://fast.toper.dev`) |
-| `APP_STORE_CONNECT_KEY_ID` | ios-release | ⏳ After Developer approval |
-| `APP_STORE_CONNECT_ISSUER_ID` | ios-release | ⏳ After Developer approval |
-| `APP_STORE_CONNECT_API_KEY` | ios-release | ⏳ After Developer approval |
-| `MATCH_PASSWORD` | ios-release | ⏳ Choose now, set later |
-| `MATCH_GIT_BASIC_AUTHORIZATION` | ios-release | ⏳ After Developer approval |
+| Secret | Environment | Workflow | Status |
+|--------|-------------|----------|--------|
+| `KUBECONFIG` | staging + production | backend-deploy | ✅ Set now |
+| `JWT_SECRET` | staging + production | backend-deploy | ✅ Set now |
+| `DATABASE_URL` | staging + production | backend-deploy | ✅ Set now (different DB per env) |
+| `APPLE_APP_BUNDLE_ID` | staging + production | backend-deploy | ✅ Set now (`dev.toper.FastTrack`) |
+| `BASE_URL` | staging + production | backend-deploy | ✅ Set now (different URL per env) |
+| `APP_STORE_CONNECT_KEY_ID` | — | ios-release | ⏳ After Developer approval |
+| `APP_STORE_CONNECT_ISSUER_ID` | — | ios-release | ⏳ After Developer approval |
+| `APP_STORE_CONNECT_API_KEY` | — | ios-release | ⏳ After Developer approval |
+| `MATCH_PASSWORD` | — | ios-release | ⏳ Choose now, set later |
+| `MATCH_GIT_BASIC_AUTHORIZATION` | — | ios-release | ⏳ After Developer approval |
 
 ---
 
