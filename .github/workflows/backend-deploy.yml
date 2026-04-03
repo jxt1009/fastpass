@@ -11,6 +11,9 @@ jobs:
   build:
     name: Build & Push Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     outputs:
       sha: ${{ steps.version.outputs.sha }}
