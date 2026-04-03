@@ -5,6 +5,7 @@ import Combine
 struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
+    @ObservedObject private var settings = AppSettings.shared
     @State private var elapsedTime: TimeInterval = 0
     @State private var showingCarPicker = false
     @ObservedObject private var profileManager = ProfileManager.shared
@@ -43,12 +44,12 @@ struct ContentView: View {
                     VStack(spacing: 20) {
                         // Speed
                         VStack {
-                            Text("\(Int(locationManager.currentSpeed * 2.23694))")
+                            Text("\(Int(settings.speedValue(locationManager.currentSpeed)))")
                                 .font(.system(size: 80, weight: .bold, design: .rounded))
                                 .foregroundColor(speedColor(for: locationManager.currentSpeed))
                                 .contentTransition(.numericText())
-                                .animation(.easeInOut(duration: 0.2), value: Int(locationManager.currentSpeed * 2.23694))
-                            Text("MPH")
+                                .animation(.easeInOut(duration: 0.2), value: Int(settings.speedValue(locationManager.currentSpeed)))
+                            Text(settings.speedUnit.uppercased())
                                 .font(.title2)
                                 .foregroundStyle(.secondary)
                             
@@ -84,25 +85,25 @@ struct ContentView: View {
                                     )
                                     StatCard(
                                         title: "Distance",
-                                        value: String(format: "%.2f mi", drive.distance * 0.000621371),
+                                        value: settings.distanceDisplay(drive.distance, decimals: 2),
                                         icon: "road.lanes",
                                         color: .green
                                     )
                                     StatCard(
                                         title: "Max",
-                                        value: String(format: "%.0f mph", drive.maxSpeed * 2.23694),
+                                        value: settings.speedDisplay(drive.maxSpeed),
                                         icon: "speedometer",
                                         color: .red
                                     )
                                     StatCard(
                                         title: "Min",
-                                        value: String(format: "%.0f mph", drive.minSpeed * 2.23694),
+                                        value: settings.speedDisplay(drive.minSpeed),
                                         icon: "gauge.with.dots.needle.bottom.50percent",
                                         color: .orange
                                     )
                                     StatCard(
                                         title: "Avg",
-                                        value: String(format: "%.0f mph", drive.avgSpeed * 2.23694),
+                                        value: settings.speedDisplay(drive.avgSpeed),
                                         icon: "chart.line.uptrend.xyaxis",
                                         color: .purple
                                     )
@@ -208,9 +209,9 @@ struct ContentView: View {
     }
 
     private func speedColor(for speed: Double) -> Color {
-        let mph = speed * 2.23694
-        if mph < 25 { return .green }
-        if mph < 65 { return .orange }
+        // Thresholds in m/s: green < 11.2 (25 mph), orange < 29.1 (65 mph), red above
+        if speed < 11.2 { return .green }
+        if speed < 29.1 { return .orange }
         return .red
     }
     

@@ -3,6 +3,7 @@ import Charts
 
 struct AnalyticsView: View {
     @EnvironmentObject var driveManager: DriveManager
+    @ObservedObject private var settings = AppSettings.shared
     @State private var selectedTimeFrame: TimeFrame = .month
     @State private var selectedMetric: AnalyticsMetric = .speed
     @State private var showingDetailSheet = false
@@ -71,7 +72,7 @@ struct AnalyticsView: View {
             
             AnalyticsCard(
                 title: "Total Distance",
-                value: String(format: "%.0f mi", analyticsData.totalDistance * 0.000621371),
+                value: settings.distanceDisplay(analyticsData.totalDistance, decimals: 0),
                 icon: "map.fill",
                 iconColor: .green,
                 trend: nil
@@ -79,7 +80,7 @@ struct AnalyticsView: View {
             
             AnalyticsCard(
                 title: "Avg Max Speed",
-                value: String(format: "%.0f mph", analyticsData.avgMaxSpeed * 2.23694),
+                value: settings.speedDisplay(analyticsData.avgMaxSpeed),
                 icon: "speedometer",
                 iconColor: .orange,
                 trend: analyticsData.speedTrend
@@ -316,7 +317,7 @@ struct RecentBestCard: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Spacer()
-                    Text(String(format: "%.0f mph", drive.maxSpeed * 2.23694))
+                    Text(AppSettings.shared.speedDisplay(drive.maxSpeed))
                         .font(.headline)
                         .fontWeight(.bold)
                 }
@@ -390,9 +391,10 @@ enum AnalyticsMetric: CaseIterable {
     }
     
     var unit: String {
+        let s = AppSettings.shared
         switch self {
-        case .speed: return "mph"
-        case .distance: return "miles"
+        case .speed: return s.speedUnit
+        case .distance: return s.distanceUnit
         case .smoothness: return "score"
         case .acceleration: return "G"
         }
@@ -408,11 +410,12 @@ enum AnalyticsMetric: CaseIterable {
     }
     
     func getValue(from drive: Drive) -> Double {
+        let s = AppSettings.shared
         switch self {
-        case .speed: return drive.maxSpeed * 2.23694 // Convert to mph
-        case .distance: return drive.distance * 0.000621371 // Convert to miles
-        case .smoothness: return 75 // Placeholder - would use performance metrics
-        case .acceleration: return 0.5 // Placeholder - would use performance metrics
+        case .speed: return drive.maxSpeed * s.speedFactor
+        case .distance: return drive.distance * s.distanceFactor
+        case .smoothness: return 75
+        case .acceleration: return 0.5
         }
     }
 }
@@ -555,9 +558,9 @@ struct DrivePerformanceDetailView: View {
                             .font(.headline)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                            PerformanceStatCard(title: "Max Speed", value: String(format: "%.0f mph", drive.maxSpeed * 2.23694), icon: "speedometer")
-                            PerformanceStatCard(title: "Avg Speed", value: String(format: "%.0f mph", drive.avgSpeed * 2.23694), icon: "gauge.medium")
-                            PerformanceStatCard(title: "Distance", value: String(format: "%.1f mi", drive.distance * 0.000621371), icon: "map")
+                            PerformanceStatCard(title: "Max Speed", value: AppSettings.shared.speedDisplay(drive.maxSpeed), icon: "speedometer")
+                            PerformanceStatCard(title: "Avg Speed", value: AppSettings.shared.speedDisplay(drive.avgSpeed), icon: "gauge.medium")
+                            PerformanceStatCard(title: "Distance", value: AppSettings.shared.distanceDisplay(drive.distance), icon: "map")
                             PerformanceStatCard(title: "Duration", value: formatDuration(drive.duration), icon: "clock")
                         }
                     }

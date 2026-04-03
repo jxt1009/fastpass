@@ -22,7 +22,8 @@ struct DriveHistoryView: View {
 
 struct DriveRowView: View {
     let drive: Drive
-    
+    @ObservedObject private var settings = AppSettings.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -40,9 +41,9 @@ struct DriveRowView: View {
                 }
             }
             HStack {
-                Label("\(Int(drive.maxSpeed * 2.23694)) mph", systemImage: "speedometer")
+                Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
                 Spacer()
-                Label(String(format: "%.2f mi", drive.distance * 0.000621371), systemImage: "map")
+                Label(settings.distanceDisplay(drive.distance, decimals: 2), systemImage: "map")
                 Spacer()
                 Label(drive.durationString, systemImage: "clock")
             }

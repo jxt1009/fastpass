@@ -266,3 +266,31 @@ func putCarStats(c *gin.Context) {
 	db.Model(&User{}).Where("id = ?", userID).Update("car_stats_data", req.StatsData)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
+// putDisplaySettings saves unit_system and color_scheme for the authenticated user.
+func putDisplaySettings(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		UnitSystem  string `json:"unit_system"`
+		ColorScheme string `json:"color_scheme"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	updates := map[string]interface{}{}
+	if req.UnitSystem != "" {
+		updates["unit_system"] = req.UnitSystem
+	}
+	if req.ColorScheme != "" {
+		updates["color_scheme"] = req.ColorScheme
+	}
+	if len(updates) > 0 {
+		db.Model(&User{}).Where("id = ?", userID).Updates(updates)
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}

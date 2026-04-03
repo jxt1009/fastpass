@@ -48,11 +48,12 @@ enum LeaderboardCategory: String, CaseIterable {
     var isAscending: Bool { self == .best060 }
 
     func formattedValue(_ value: Double) -> String {
+        let s = AppSettings.shared
         switch self {
         case .topSpeed:
-            return String(format: "%.0f mph", value * 2.23694)
+            return s.speedDisplay(value)
         case .totalDistance:
-            return String(format: "%.1f mi", value * 0.000621371)
+            return s.distanceDisplay(value)
         case .best060:
             return String(format: "%.2fs", value)
         case .driveCount:

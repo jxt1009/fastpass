@@ -117,12 +117,12 @@ struct PublicProfileView: View {
                 statRow(
                     icon: "speedometer", color: .red,
                     label: "Top Speed",
-                    value: String(format: "%.0f mph", profile.topSpeed * 2.23694)
+                    value: AppSettings.shared.speedDisplay(profile.topSpeed)
                 )
                 statRow(
                     icon: "map.fill", color: .blue,
                     label: "Total Distance",
-                    value: String(format: "%.1f mi", profile.totalDistance * 0.000621371)
+                    value: AppSettings.shared.distanceDisplay(profile.totalDistance)
                 )
                 statRow(
                     icon: "flag.fill", color: .green,

@@ -28,6 +28,9 @@ type User struct {
 	// CarStatsData stores a JSON blob of per-car aggregated stats so they
 	// survive reinstall and device switches.
 	CarStatsData string `gorm:"type:text" json:"car_stats_data"`
+	// User display preferences — synced from the app so they restore on new devices.
+	UnitSystem   string `gorm:"size:20;default:'imperial'" json:"unit_system"`
+	ColorScheme  string `gorm:"size:20;default:'system'" json:"color_scheme"`
 
 	AuthProvider string    `json:"auth_provider"`
 	CreatedAt    time.Time `json:"created_at"`

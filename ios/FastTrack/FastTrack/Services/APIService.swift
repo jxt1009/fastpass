@@ -207,6 +207,20 @@ class APIService {
         let _: Res = try await put(endpoint: "/stats", body: Req(statsData: statsJSON))
     }
 
+    func uploadDisplaySettings(unitSystem: String, colorScheme: String) async throws {
+        struct Req: Encodable {
+            let unitSystem: String
+            let colorScheme: String
+            enum CodingKeys: String, CodingKey {
+                case unitSystem  = "unit_system"
+                case colorScheme = "color_scheme"
+            }
+        }
+        struct Res: Decodable { let ok: Bool }
+        let _: Res = try await put(endpoint: "/display-settings",
+                                   body: Req(unitSystem: unitSystem, colorScheme: colorScheme))
+    }
+
     // MARK: - Social Methods
 
     func fetchLeaderboard(

@@ -108,6 +108,7 @@ struct ProfileView: View {
     @StateObject private var profileManager = ProfileManager.shared
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var locationManager: LocationManager
+    @ObservedObject private var settings = AppSettings.shared
     @State private var showingSetup = false
     @State private var showingAddCar = false
     @State private var showingSettings = false
@@ -134,21 +135,6 @@ struct ProfileView: View {
                         DarkSectionHeader(title: "More Stats")
                         moreStatsGrid
                         privacyToggleCard
-                        NavigationLink(destination: SettingsView()) {
-                            HStack {
-                                Image(systemName: "gearshape.fill")
-                                    .foregroundStyle(.secondary)
-                                Text("Settings")
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .padding()
-                            .background(Color(red: 0.17, green: 0.17, blue: 0.18))
-                            .cornerRadius(12)
-                        }
                         signOutButton
                     }
                     .padding()
@@ -222,10 +208,10 @@ struct ProfileView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(Int(locationManager.currentSpeed * 2.23694))")
+                    Text("\(Int(settings.speedValue(locationManager.currentSpeed)))")
                         .font(.title2).fontWeight(.bold)
                         .foregroundColor(.white)
-                    Text("mph")
+                    Text(settings.speedUnit)
                         .font(.caption2)
                         .foregroundColor(Color(white: 0.5))
                 }
@@ -291,8 +277,8 @@ struct ProfileView: View {
             ProfileStatCell(
                 icon: "location.fill", iconColor: .cyan,
                 label: "Total Distance",
-                value: String(format: "%.1f", stats.totalDistance * 0.000621371),
-                unit: "mi"
+                value: String(format: "%.1f", settings.distanceValue(stats.totalDistance)),
+                unit: settings.distanceUnit
             )
             ProfileStatCell(
                 icon: "clock.fill", iconColor: .orange,
@@ -328,10 +314,10 @@ struct ProfileView: View {
                         .font(.caption)
                         .foregroundColor(Color(white: 0.55))
                     HStack(alignment: .lastTextBaseline, spacing: 4) {
-                        Text(String(format: "%.0f", stats.topSpeed * 2.23694))
+                        Text(String(format: "%.0f", settings.speedValue(stats.topSpeed)))
                             .font(.largeTitle).fontWeight(.bold)
                             .foregroundColor(.white)
-                        Text("mph")
+                        Text(settings.speedUnit)
                             .font(.subheadline)
                             .foregroundColor(Color(white: 0.5))
                     }
@@ -350,7 +336,7 @@ struct ProfileView: View {
                     .foregroundColor(Color.orange)
                     .font(.title2)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Best 0-60 mph time")
+                    Text("Best 0-60 \(settings.speedUnit) time")
                         .font(.caption)
                         .foregroundColor(Color(white: 0.55))
                     if let t = stats.best060Time {
@@ -421,8 +407,8 @@ struct ProfileView: View {
             ProfileStatCell(
                 icon: "arrow.triangle.2.circlepath", iconColor: .cyan,
                 label: "Top Corner Speed",
-                value: String(format: "%.0f", stats.overallTopCornerSpeed * 2.23694),
-                unit: "mph"
+                value: String(format: "%.0f", settings.speedValue(stats.overallTopCornerSpeed)),
+                unit: settings.speedUnit
             )
         }
     }
@@ -442,8 +428,8 @@ struct ProfileView: View {
             ProfileStatCell(
                 icon: "road.lanes", iconColor: .green,
                 label: "Avg Trip Length",
-                value: String(format: "%.1f", stats.avgTripLengthMeters * 0.000621371),
-                unit: "mi"
+                value: String(format: "%.1f", settings.distanceValue(stats.avgTripLengthMeters)),
+                unit: settings.distanceUnit
             )
             ProfileStatCell(
                 icon: "clock.arrow.circlepath", iconColor: .orange,
@@ -593,12 +579,15 @@ struct CarGarageCard: View {
 
 struct CarStatsRow: View {
     let stats: CarStats
-    
+    @ObservedObject private var settings = AppSettings.shared
+
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
             StatMini(title: "Drives", value: "\(stats.totalDrives)")
-            StatMini(title: "Miles", value: String(format: "%.0f", stats.totalDistanceMiles))
-            StatMini(title: "Top Speed", value: String(format: "%.0f mph", stats.bestTopSpeedMph))
+            StatMini(title: settings.distanceUnit == "mi" ? "Miles" : "KM",
+                     value: String(format: "%.0f", settings.distanceValue(stats.totalDistance)))
+            StatMini(title: "Top Speed",
+                     value: String(format: "%.0f \(settings.speedUnit)", settings.speedValue(stats.bestTopSpeed)))
             StatMini(title: "Category", value: stats.performanceCategory)
         }
     }

@@ -38,7 +38,7 @@ struct RootView: View {
     @State private var selectedTab = 0
     /// Per-tab UUIDs. Changing a UUID causes that tab's content to be recreated (nav reset).
     /// Index 0 (Track) is intentionally never reset so active recordings survive tab switches.
-    @State private var tabResetIDs = (0..<6).map { _ in UUID() }
+    @State private var tabResetIDs = (0..<5).map { _ in UUID() }
 
     var body: some View {
         ZStack {
@@ -82,12 +82,9 @@ struct RootView: View {
                 SocialView()
                     .id(tabResetIDs[3])
                     .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(3)
-                AchievementsView()
+                MoreView()
                     .id(tabResetIDs[4])
-                    .tabItem { Label("Achievements", systemImage: "trophy.fill") }.tag(4)
-                ProfileView()
-                    .id(tabResetIDs[5])
-                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(5)
+                    .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }.tag(4)
             }
             .onChange(of: selectedTab) { oldTab, _ in
                 // Reset the tab being left (but never the Track tab)

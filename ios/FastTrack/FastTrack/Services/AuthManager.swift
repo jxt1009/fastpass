@@ -96,14 +96,14 @@ class AuthManager: ObservableObject {
         await restoreUserDataFromServer(serverUser: response.user)
     }
 
-    /// Syncs profile, garage, and car stats from the server into local storage.
-    /// Safe to call after every sign-in or token refresh — local data takes precedence
-    /// only if no server data is available (empty username, empty garage, etc.).
+    /// Syncs profile, garage, car stats, and display settings from the server into local storage.
     func restoreUserDataFromServer(serverUser: User) async {
-        // Restore profile + garage
         await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
-        // Restore car stats
         await CarStatsManager.shared.restoreFromServer()
+        await AppSettings.shared.restoreFromServer(
+            unitSystem: serverUser.unitSystem,
+            colorScheme: serverUser.colorScheme
+        )
     }
     
 }
@@ -164,7 +164,9 @@ struct User: Codable, Identifiable {
     let garage: String?
     let selectedCarID: String?
     let carStatsData: String?
-    
+    let unitSystem: String?
+    let colorScheme: String?
+
     let authProvider: String?
     let createdAt: Date
     let updatedAt: Date
@@ -185,6 +187,8 @@ struct User: Codable, Identifiable {
         case garage
         case selectedCarID = "selected_car_id"
         case carStatsData = "car_stats_data"
+        case unitSystem   = "unit_system"
+        case colorScheme  = "color_scheme"
         case authProvider = "auth_provider"
         case createdAt    = "created_at"
         case updatedAt    = "updated_at"

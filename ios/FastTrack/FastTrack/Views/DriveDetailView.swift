@@ -7,6 +7,7 @@ struct DriveDetailView: View {
     @State private var routeCoordinates: [CLLocationCoordinate2D] = []
     @State private var showingCarPicker = false
     @ObservedObject private var profileManager = ProfileManager.shared
+    @ObservedObject private var settings = AppSettings.shared
     @EnvironmentObject var driveManager: DriveManager
     
     var body: some View {
@@ -58,10 +59,10 @@ struct DriveDetailView: View {
                 
                 // Stats Grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                    StatCard(title: "Distance", value: String(format: "%.2f mi", drive.distance * 0.000621371), icon: "map")
+                    StatCard(title: "Distance", value: settings.distanceDisplay(drive.distance, decimals: 2), icon: "map")
                     StatCard(title: "Duration", value: drive.durationString, icon: "clock")
-                    StatCard(title: "Max Speed", value: "\(Int(drive.maxSpeed * 2.23694)) mph", icon: "speedometer")
-                    StatCard(title: "Avg Speed", value: "\(Int(drive.avgSpeed * 2.23694)) mph", icon: "gauge")
+                    StatCard(title: "Max Speed", value: settings.speedDisplay(drive.maxSpeed), icon: "speedometer")
+                    StatCard(title: "Avg Speed", value: settings.speedDisplay(drive.avgSpeed), icon: "gauge")
                 }
                 
                 // Extended Stats Grid (if available)

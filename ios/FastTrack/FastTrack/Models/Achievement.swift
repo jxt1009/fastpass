@@ -74,14 +74,15 @@ struct AchievementRequirement: Codable {
     func progressDescription(_ progress: Double) -> String {
         let current = Int(progress * value)
         let target = Int(value)
-        
+        let s = AppSettings.shared
+
         switch type {
         case .maxSpeed:
-            return "\(Int(progress * value * 2.23694))/\(Int(value * 2.23694)) mph"
+            return "\(Int(progress * value * s.speedFactor))/\(Int(value * s.speedFactor)) \(s.speedUnit)"
         case .driveCount:
             return "\(current)/\(target) drives"
         case .totalDistance:
-            return String(format: "%.0f/%.0f miles", progress * value * 0.000621371, value * 0.000621371)
+            return String(format: "%.0f/%.0f %@", progress * value * s.distanceFactor, value * s.distanceFactor, s.distanceUnit)
         case .zeroToSixty:
             return String(format: "%.1f/%.1fs", progress > 0 ? value / progress : 0.0, value)
         case .smoothness:
