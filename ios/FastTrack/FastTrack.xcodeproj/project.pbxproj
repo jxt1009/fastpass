@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		B6CDB23D2F7F6D330013FCA5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B6B2AAA02F7CBF1700AA4AA0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B6B2AAA72F7CBF1700AA4AA0;
+			remoteInfo = FastTrack;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6CDB2392F7F6D330013FCA5 /* FastTrackTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FastTrackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -29,10 +40,22 @@
 			path = FastTrack;
 			sourceTree = "<group>";
 		};
+		B6CDB23A2F7F6D330013FCA5 /* FastTrackTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FastTrackTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		B6B2AAA52F7CBF1700AA4AA0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6CDB2362F7F6D330013FCA5 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				B6B2AAAA2F7CBF1700AA4AA0 /* FastTrack */,
+				B6CDB23A2F7F6D330013FCA5 /* FastTrackTests */,
 				B6B2AAA92F7CBF1700AA4AA0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */,
+				B6CDB2392F7F6D330013FCA5 /* FastTrackTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,6 +108,29 @@
 			productReference = B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B6CDB2382F7F6D330013FCA5 /* FastTrackTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B6CDB23F2F7F6D330013FCA5 /* Build configuration list for PBXNativeTarget "FastTrackTests" */;
+			buildPhases = (
+				B6CDB2352F7F6D330013FCA5 /* Sources */,
+				B6CDB2362F7F6D330013FCA5 /* Frameworks */,
+				B6CDB2372F7F6D330013FCA5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B6CDB23E2F7F6D330013FCA5 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B6CDB23A2F7F6D330013FCA5 /* FastTrackTests */,
+			);
+			name = FastTrackTests;
+			packageProductDependencies = (
+			);
+			productName = FastTrackTests;
+			productReference = B6CDB2392F7F6D330013FCA5 /* FastTrackTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -95,6 +143,10 @@
 				TargetAttributes = {
 					B6B2AAA72F7CBF1700AA4AA0 = {
 						CreatedOnToolsVersion = 26.4;
+					};
+					B6CDB2382F7F6D330013FCA5 = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = B6B2AAA72F7CBF1700AA4AA0;
 					};
 				};
 			};
@@ -113,12 +165,20 @@
 			projectRoot = "";
 			targets = (
 				B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */,
+				B6CDB2382F7F6D330013FCA5 /* FastTrackTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		B6B2AAA62F7CBF1700AA4AA0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6CDB2372F7F6D330013FCA5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -135,7 +195,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B6CDB2352F7F6D330013FCA5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B6CDB23E2F7F6D330013FCA5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */;
+			targetProxy = B6CDB23D2F7F6D330013FCA5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B6B2AAB12F7CBF1900AA4AA0 /* Debug */ = {
@@ -323,6 +398,46 @@
 			};
 			name = Release;
 		};
+		B6CDB2402F7F6D330013FCA5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastTrackTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FastTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FastTrack";
+			};
+			name = Debug;
+		};
+		B6CDB2412F7F6D330013FCA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastTrackTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FastTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FastTrack";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -340,6 +455,15 @@
 			buildConfigurations = (
 				B6B2AAB42F7CBF1900AA4AA0 /* Debug */,
 				B6B2AAB52F7CBF1900AA4AA0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B6CDB23F2F7F6D330013FCA5 /* Build configuration list for PBXNativeTarget "FastTrackTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6CDB2402F7F6D330013FCA5 /* Debug */,
+				B6CDB2412F7F6D330013FCA5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
