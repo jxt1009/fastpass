@@ -52,6 +52,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
             docker pull ghcr.io/${{ github.repository_owner }}/fasttrack-backend:latest
             docker stop fasttrack-backend || true
