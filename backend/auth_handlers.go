@@ -46,6 +46,9 @@ func appleSignIn(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 			return
 		}
+		// Business metric: new Apple Sign-In signup
+		userSignupsTotal.WithLabelValues("apple").Inc()
+		logWithRequestID(c).Info("user signed up", "provider", "apple", "user_id", user.ID)
 	}
 
 	// Generate JWT tokens

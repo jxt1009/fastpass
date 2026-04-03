@@ -1,10 +1,11 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -20,6 +21,10 @@ var (
 func main() {
 	var err error
 
+	// Structured JSON logging for Loki ingestion
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	slog.SetDefault(logger)
+
 	initJWTSecret()
 
 	// Database connection
@@ -30,7 +35,8 @@ func main() {
 	
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	
 	// Auto-migrate models
@@ -40,10 +46,17 @@ func main() {
 	db.Exec("UPDATE users SET is_public = true WHERE NOT is_public")
 	
 	// Setup router
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(requestIDMiddleware())
+	r.Use(requestLoggerMiddleware())
+	r.Use(metricsMiddleware())
 	// Limit request bodies to 12 MB (avatar upload is the largest expected payload)
 	r.MaxMultipartMemory = 12 << 20
-	
+
+	// Prometheus metrics scrape endpoint (internal only — not exposed via Ingress)
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "version": buildVersion, "commit": buildCommit})
@@ -89,7 +102,7 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	
-	log.Printf("Server starting on port %s", port)
+
+	slog.Info("server starting", "port", port, "version", buildVersion, "commit", buildCommit)
 	r.Run(":" + port)
 }

@@ -46,13 +46,14 @@ jobs:
           cache-dependency-path: backend/go.sum
 
       - name: Build
-        run: go build ./...
+        run: CGO_ENABLED=1 go build ./...
 
       - name: Vet
-        run: go vet ./...
+        run: CGO_ENABLED=1 go vet ./...
 
       - name: Test
         env:
+          CGO_ENABLED: "1"
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/fasttrack_test?sslmode=disable
           JWT_SECRET: test-secret-not-used-in-production-at-least-64-chars-long-here
           APPLE_APP_BUNDLE_ID: dev.toper.FastTrack

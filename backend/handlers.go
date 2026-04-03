@@ -24,10 +24,14 @@ func createDrive(c *gin.Context) {
 	drive.UserID = userID
 	
 	if err := db.Create(&drive).Error; err != nil {
+		dbQueryErrorsTotal.WithLabelValues("create_drive").Inc()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create drive"})
 		return
 	}
-	
+
+	driveRecordingsTotal.Inc()
+	logWithRequestID(c).Info("drive recorded", "user_id", userID, "drive_id", drive.ID, "distance_m", drive.Distance)
+
 	c.JSON(http.StatusCreated, drive)
 }
 

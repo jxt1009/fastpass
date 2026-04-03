@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"os"
@@ -21,7 +21,8 @@ var jwtSecret []byte
 func initJWTSecret() {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		log.Fatal("JWT_SECRET environment variable is not set — refusing to start")
+		slog.Error("JWT_SECRET environment variable is not set — refusing to start")
+		os.Exit(1)
 	}
 	jwtSecret = []byte(secret)
 }

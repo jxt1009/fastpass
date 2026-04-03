@@ -1,0 +1,185 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ["alertmanager:9093"]
+
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    scrape_configs:
+      # FastTrack API
+      - job_name: fasttrack-api
+        static_configs:
+          - targets: ["fastpass-api.default.svc.cluster.local:8080"]
+        metrics_path: /metrics
+
+      # Node Exporter (server hardware metrics)
+      - job_name: node-exporter
+        static_configs:
+          - targets: ["node-exporter.monitoring.svc.cluster.local:9100"]
+
+      # kube-state-metrics (pod/deployment health)
+      - job_name: kube-state-metrics
+        static_configs:
+          - targets: ["kube-state-metrics.monitoring.svc.cluster.local:8080"]
+
+      # Prometheus self-monitoring
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]
+
+  alert-rules.yml: |
+    groups:
+      - name: fasttrack-api
+        rules:
+          - alert: APIDown
+            expr: up{job="fasttrack-api"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "FastTrack API is down"
+              description: "No metrics received from fasttrack-api for more than 2 minutes."
+
+          - alert: HighErrorRate
+            expr: |
+              rate(http_requests_total{job="fasttrack-api",status=~"5.."}[5m])
+              /
+              rate(http_requests_total{job="fasttrack-api"}[5m]) > 0.05
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High HTTP 5xx error rate"
+              description: "More than 5% of requests are returning 5xx errors over the last 5 minutes."
+
+          - alert: HighLatency
+            expr: |
+              histogram_quantile(0.95,
+                rate(http_request_duration_seconds_bucket{job="fasttrack-api"}[5m])
+              ) > 2
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High API latency"
+              description: "p95 response time is above 2 seconds over the last 5 minutes."
+
+      - name: infrastructure
+        rules:
+          - alert: DiskAlmostFull
+            expr: |
+              (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Disk space running low"
+              description: "Less than 15% disk space remaining on root filesystem."
+
+          - alert: PodCrashLooping
+            expr: |
+              rate(kube_pod_container_status_restarts_total{namespace="default"}[10m]) * 60 > 3
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Pod is crash looping"
+              description: "Pod {{ $labels.pod }} has restarted more than 3 times in 10 minutes."
+
+          - alert: HighMemoryUsage
+            expr: |
+              (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)
+              / node_memory_MemTotal_bytes > 0.90
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory usage"
+              description: "Server memory usage is above 90%."
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: monitoring
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.51.0
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--storage.tsdb.retention.time=30d"
+            - "--web.enable-lifecycle"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: config
+              mountPath: /etc/prometheus/rules/alert-rules.yml
+              subPath: alert-rules.yml
+            - name: data
+              mountPath: /prometheus
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: prometheus-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
