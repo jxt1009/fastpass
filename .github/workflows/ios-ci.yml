@@ -1,0 +1,63 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: macos-14  # Apple Silicon runner, Xcode 15+
+
+    defaults:
+      run:
+        working-directory: ios/FastTrack
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Create Secrets.swift from template
+        run: |
+          cp FastTrack/Secrets.swift.template FastTrack/Secrets.swift
+          # Replace placeholder values for CI build (no real keys needed for compile check)
+          sed -i '' 's/YOUR_GOOGLE_CLIENT_ID/com.ci.placeholder/g' FastTrack/Secrets.swift || true
+
+      - name: Build for testing (no signing)
+        run: |
+          xcodebuild build-for-testing \
+            -project FastTrack.xcodeproj \
+            -scheme FastTrack \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color || xcodebuild build-for-testing \
+              -project FastTrack.xcodeproj \
+              -scheme FastTrack \
+              -destination "generic/platform=iOS Simulator" \
+              -configuration Debug \
+              CODE_SIGNING_ALLOWED=NO
+
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project FastTrack.xcodeproj \
+            -scheme FastTrackTests \
+            -destination "platform=iOS Simulator,name=iPhone 16" \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color || xcodebuild test \
+              -project FastTrack.xcodeproj \
+              -scheme FastTrackTests \
+              -destination "platform=iOS Simulator,name=iPhone 16" \
+              CODE_SIGNING_ALLOWED=NO
+        continue-on-error: false

@@ -6,8 +6,8 @@ import (
 
 type User struct {
 	ID           uint      `gorm:"primaryKey" json:"id"`
-	AppleUserID  string    `gorm:"uniqueIndex" json:"apple_user_id,omitempty"`
-	GoogleUserID string    `gorm:"uniqueIndex" json:"google_user_id,omitempty"`
+	AppleUserID  string  `gorm:"uniqueIndex" json:"apple_user_id,omitempty"`
+	GoogleUserID *string `gorm:"uniqueIndex" json:"google_user_id,omitempty"`
 	Email        string    `json:"email"`
 	FullName     string    `json:"full_name"`
 	Username     string    `gorm:"uniqueIndex;size:50" json:"username"`

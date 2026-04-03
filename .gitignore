@@ -1,5 +1,7 @@
-# Go backend
+# Go backend compiled binaries
 backend/triprank-api
+backend/triprank-backend
+backend/fasttrack
 backend/*.exe
 backend/*.dll
 backend/*.so
@@ -50,7 +52,17 @@ ios/**/Secrets.swift
 *.swo
 *~
 
-# Logs
+# Fastlane
+ios/FastTrack/fastlane/builds/
+ios/FastTrack/fastlane/test_output/
+ios/FastTrack/.env.fastlane
+ios/FastTrack/Gemfile.lock
+ios/FastTrack/fastlane/report.xml
+ios/FastTrack/fastlane/*.ipa
+
+# git-cliff / release
+RELEASE_NOTES.md
+
 *.log
 npm-debug.log*
 yarn-debug.log*

@@ -11,6 +11,12 @@ import (
 
 var db *gorm.DB
 
+// Injected at build time via -ldflags
+var (
+	buildVersion = "dev"
+	buildCommit  = "unknown"
+)
+
 func main() {
 	var err error
 
@@ -40,7 +46,7 @@ func main() {
 	
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		c.JSON(200, gin.H{"status": "ok", "version": buildVersion, "commit": buildCommit})
 	})
 	
 	// Serve uploaded avatars as static files

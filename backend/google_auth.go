@@ -95,7 +95,7 @@ if result.Error != nil {
 db.Where("email = ?", userInfo.Email).First(&user)
 if user.ID == 0 {
 user = User{
-GoogleUserID: userInfo.Sub,
+GoogleUserID: &userInfo.Sub,
 Email:        userInfo.Email,
 FullName:     userInfo.Name,
 AuthProvider: "google",
@@ -105,7 +105,7 @@ c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 return
 }
 } else {
-user.GoogleUserID = userInfo.Sub
+sub := userInfo.Sub; user.GoogleUserID = &sub
 db.Save(&user)
 }
 } else {

@@ -3,6 +3,10 @@
 <plist version="1.0">
 
 <dict>
+    <!-- Photo library access for profile picture upload -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>FastTrack accesses your photo library so you can set a profile picture.</string>
+
     <!-- Location permission descriptions -->
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>FastTrack needs your location to track your speed and route during drives.</string>
@@ -33,6 +37,17 @@
 				<string>com.toper.fasttrack</string>
 			</array>
 		</dict>
+	</array>
+
+	<!-- Export compliance: app uses HTTPS only, no custom encryption -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<!-- Required hardware capabilities -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>gps</string>
+		<string>location-services</string>
 	</array>
 </dict>
 </plist>

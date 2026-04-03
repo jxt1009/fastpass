@@ -1,0 +1,88 @@
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    # Load App Store Connect API key if available (CI)
+    if ENV["APP_STORE_CONNECT_API_KEY_PATH"]
+      app_store_connect_api_key(
+        key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+        issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+        key_filepath: ENV["APP_STORE_CONNECT_API_KEY_PATH"],
+        duration: 1200,
+        in_house: false
+      )
+    end
+  end
+
+  desc "Run unit tests"
+  lane :test do
+    run_tests(
+      project: "FastTrack.xcodeproj",
+      scheme: "FastTrackTests",
+      devices: ["iPhone 16"],
+      code_coverage: true,
+      output_directory: "fastlane/test_output"
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Sync distribution certificates and provisioning profiles
+    match(type: "appstore", readonly: is_ci)
+
+    # Bump build number to current timestamp
+    increment_build_number(
+      build_number: Time.now.strftime("%Y%m%d%H%M"),
+      xcodeproj: "FastTrack.xcodeproj"
+    )
+
+    # Set version from environment (injected by release workflow)
+    if ENV["FL_VERSION_NUMBER"]
+      increment_version_number(
+        version_number: ENV["FL_VERSION_NUMBER"],
+        xcodeproj: "FastTrack.xcodeproj"
+      )
+    end
+
+    # Build the app
+    build_app(
+      project: "FastTrack.xcodeproj",
+      scheme: "FastTrack",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "fastlane/builds",
+      output_name: "FastTrack.ipa"
+    )
+
+    # Upload to TestFlight (no submit for review)
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      notify_external_testers: false
+    )
+  end
+
+  desc "Submit to App Store for review"
+  lane :release do
+    match(type: "appstore", readonly: is_ci)
+
+    build_app(
+      project: "FastTrack.xcodeproj",
+      scheme: "FastTrack",
+      configuration: "Release",
+      export_method: "app-store"
+    )
+
+    upload_to_app_store(
+      submit_for_review: true,
+      automatic_release: false,
+      force: true,
+      submission_information: {
+        add_id_info_uses_idfa: false
+      }
+    )
+  end
+
+  error do |lane, exception|
+    UI.error("Lane #{lane} failed with #{exception.message}")
+  end
+end

@@ -24,7 +24,6 @@ struct ContentView: View {
                         routeCoordinates: driveManager.routeCoordinates
                     )
                     .frame(height: 300)
-                    .ignoresSafeArea(edges: .top)
                 } else {
                     ZStack {
                         Color.gray.opacity(0.2)

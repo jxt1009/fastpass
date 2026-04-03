@@ -1,0 +1,4 @@
+app_identifier "dev.toper.FastTrack"
+apple_id "YOUR_APPLE_ID@example.com"  # Replace with your Apple ID
+itc_team_id "YOUR_ITC_TEAM_ID"        # Replace with App Store Connect team ID
+team_id "YOUR_TEAM_ID"                 # Replace with Developer Portal team ID

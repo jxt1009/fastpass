@@ -1,0 +1,9 @@
+git_url "YOUR_MATCH_REPO_URL"   # Replace with private git repo URL for certs
+                                 # e.g. "https://github.com/yourorg/fasttrack-certs"
+
+storage_mode "git"
+
+type "appstore"
+
+app_identifier "dev.toper.FastTrack"
+username "YOUR_APPLE_ID@example.com"  # Replace with your Apple ID
