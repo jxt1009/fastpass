@@ -6,15 +6,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("CHANGE_THIS_TO_A_SECURE_SECRET_KEY") // TODO: Move to environment variable
+var jwtSecret []byte
+
+func initJWTSecret() {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		log.Fatal("JWT_SECRET environment variable is not set — refusing to start")
+	}
+	jwtSecret = []byte(secret)
+}
 
 type JWTClaims struct {
 	UserID      uint   `json:"user_id"`
@@ -132,6 +142,15 @@ func verifyAppleIdentityToken(identityToken string) (*AppleIDTokenClaims, error)
 		// Verify issuer
 		if claims.Iss != "https://appleid.apple.com" {
 			return nil, errors.New("invalid issuer")
+		}
+
+		// Verify audience matches the app bundle ID
+		expectedAud := os.Getenv("APPLE_APP_BUNDLE_ID")
+		if expectedAud == "" {
+			expectedAud = "dev.toper.FastTrack"
+		}
+		if claims.Aud != expectedAud {
+			return nil, fmt.Errorf("invalid audience: got %q, expected %q", claims.Aud, expectedAud)
 		}
 
 		// Verify expiration

@@ -13,7 +13,9 @@ var db *gorm.DB
 
 func main() {
 	var err error
-	
+
+	initJWTSecret()
+
 	// Database connection
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
@@ -27,13 +29,14 @@ func main() {
 	
 	// Auto-migrate models
 	db.AutoMigrate(&User{}, &Drive{}, &Follow{})
-
 	// Backfill: any user created before is_public column was added gets false (Go zero value).
 	// Since privacy is a new feature, safely default all existing accounts to public.
 	db.Exec("UPDATE users SET is_public = true WHERE NOT is_public")
 	
 	// Setup router
 	r := gin.Default()
+	// Limit request bodies to 12 MB (avatar upload is the largest expected payload)
+	r.MaxMultipartMemory = 12 << 20
 	
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
@@ -58,6 +61,8 @@ func main() {
 		api.GET("/me", getCurrentUser)
 		api.PUT("/profile", updateProfile)
 		api.PUT("/profile/avatar", uploadAvatar)
+		api.GET("/stats", getCarStats)
+		api.PUT("/stats", putCarStats)
 		api.POST("/drives", createDrive)
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)

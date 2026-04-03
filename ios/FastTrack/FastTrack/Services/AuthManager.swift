@@ -73,6 +73,7 @@ class AuthManager: ObservableObject {
         saveRefreshToken(response.refreshToken)
         saveUser(response.user)
         isAuthenticated = true
+        await restoreUserDataFromServer(serverUser: response.user)
     }
     
     func refreshTokenIfNeeded() async throws {
@@ -92,6 +93,17 @@ class AuthManager: ObservableObject {
         saveRefreshToken(response.refreshToken)
         saveUser(response.user)
         isAuthenticated = true
+        await restoreUserDataFromServer(serverUser: response.user)
+    }
+
+    /// Syncs profile, garage, and car stats from the server into local storage.
+    /// Safe to call after every sign-in or token refresh — local data takes precedence
+    /// only if no server data is available (empty username, empty garage, etc.).
+    func restoreUserDataFromServer(serverUser: User) async {
+        // Restore profile + garage
+        await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
+        // Restore car stats
+        await CarStatsManager.shared.restoreFromServer()
     }
     
 }
@@ -140,6 +152,7 @@ struct User: Codable, Identifiable {
     let fullName: String?
     let username: String?
     let country: String?
+    let avatarURL: String?
     
     // Legacy car fields
     let carMake: String?
@@ -150,6 +163,7 @@ struct User: Codable, Identifiable {
     // New garage fields
     let garage: String?
     let selectedCarID: String?
+    let carStatsData: String?
     
     let authProvider: String?
     let createdAt: Date
@@ -163,12 +177,14 @@ struct User: Codable, Identifiable {
         case fullName     = "full_name"
         case username
         case country
+        case avatarURL    = "avatar_url"
         case carMake      = "car_make"
         case carModel     = "car_model"
         case carYear      = "car_year"
         case carTrim      = "car_trim"
         case garage
         case selectedCarID = "selected_car_id"
+        case carStatsData = "car_stats_data"
         case authProvider = "auth_provider"
         case createdAt    = "created_at"
         case updatedAt    = "updated_at"

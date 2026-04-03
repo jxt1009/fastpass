@@ -443,15 +443,17 @@ class DriveManager: ObservableObject {
     // MARK: - Drive stats update
 
     private func updateCurrentDrive() {
-        guard var drive = currentDrive, !recordingLocations.isEmpty else { 
+        guard var drive = currentDrive,
+              let firstLoc = recordingLocations.first,
+              let lastLoc  = recordingLocations.last else {
             print("⚠️ UpdateCurrentDrive failed: currentDrive=\(currentDrive != nil), locations=\(recordingLocations.count)")
-            return 
+            return
         }
 
-        drive.startLatitude  = recordingLocations.first!.coordinate.latitude
-        drive.startLongitude = recordingLocations.first!.coordinate.longitude
-        drive.endLatitude    = recordingLocations.last!.coordinate.latitude
-        drive.endLongitude   = recordingLocations.last!.coordinate.longitude
+        drive.startLatitude  = firstLoc.coordinate.latitude
+        drive.startLongitude = firstLoc.coordinate.longitude
+        drive.endLatitude    = lastLoc.coordinate.latitude
+        drive.endLongitude   = lastLoc.coordinate.longitude
 
         var totalDist: Double = 0
         for i in 1..<recordingLocations.count {

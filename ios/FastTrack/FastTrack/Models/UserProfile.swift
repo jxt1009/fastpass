@@ -200,8 +200,54 @@ class ProfileManager: ObservableObject {
         }
     }
 
-    func saveAvatar(_ image: UIImage) {
-        profileImage = image
+    /// Restores the local profile from server data returned at sign-in or token refresh.
+    /// Only overwrites local data when the server has non-empty values.
+    @MainActor
+    func restoreFromServer(serverUser: User) async {
+        // If local profile is missing or has no username, prefer server data
+        let localIsEmpty = profile == nil || (profile?.username.isEmpty ?? true)
+
+        guard let serverUsername = serverUser.username, !serverUsername.isEmpty else {
+            // Server user hasn't completed profile setup yet — nothing to restore
+            return
+        }
+
+        // Parse garage from server JSON
+        var serverGarage: [UserCar] = []
+        if let garageJSON = serverUser.garage,
+           let data = garageJSON.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([UserCar].self, from: data) {
+            serverGarage = decoded
+        }
+
+        // Restore only if local is empty or server has a more complete garage
+        if localIsEmpty || serverGarage.count > (profile?.garage.count ?? 0) {
+            let restored = UserProfile(
+                username: serverUsername,
+                country: serverUser.country ?? profile?.country ?? "",
+                garage: serverGarage.isEmpty ? (profile?.garage ?? []) : serverGarage,
+                selectedCarId: serverUser.selectedCarID ?? profile?.selectedCarId
+            )
+            profile = restored
+            if let data = try? JSONEncoder().encode(restored) {
+                UserDefaults.standard.set(data, forKey: profileKey)
+            }
+            print("✅ Profile restored from server: \(serverUsername)")
+        }
+
+        // Restore avatar from server URL if we don't have one locally
+        if profileImage == nil, let avatarURLStr = serverUser.avatarURL,
+           !avatarURLStr.isEmpty, let url = URL(string: avatarURLStr) {
+            if let (data, _) = try? await URLSession.shared.data(from: url),
+               let image = UIImage(data: data) {
+                profileImage = image
+                try? data.write(to: avatarURL())
+                print("✅ Avatar restored from server")
+            }
+        }
+    }
+
+    func saveAvatar(_ image: UIImage) {        profileImage = image
         if let data = image.jpegData(compressionQuality: 0.8) {
             try? data.write(to: avatarURL())
             // Upload to server so it's visible on public profile

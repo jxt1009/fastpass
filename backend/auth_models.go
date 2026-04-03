@@ -25,6 +25,9 @@ type User struct {
 
 	IsPublic     bool   `gorm:"default:true" json:"is_public"`
 	AvatarURL    string `gorm:"size:500" json:"avatar_url"`
+	// CarStatsData stores a JSON blob of per-car aggregated stats so they
+	// survive reinstall and device switches.
+	CarStatsData string `gorm:"type:text" json:"car_stats_data"`
 
 	AuthProvider string    `json:"auth_provider"`
 	CreatedAt    time.Time `json:"created_at"`

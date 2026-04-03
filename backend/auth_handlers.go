@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -162,6 +163,11 @@ func updateProfile(c *gin.Context) {
 	}
 
 	if err := db.Save(&user).Error; err != nil {
+		// Detect unique constraint violation on username
+		if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "23505") {
+			c.JSON(http.StatusConflict, gin.H{"error": "Username already taken"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
 		return
 	}
@@ -192,6 +198,12 @@ func uploadAvatar(c *gin.Context) {
 		return
 	}
 
+	// Reject payloads larger than 8 MB decoded
+	if len(data) > 8*1024*1024 {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "image too large (max 8 MB)"})
+		return
+	}
+
 	dir := filepath.Join("uploads", "avatars")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage error"})
@@ -214,4 +226,43 @@ func uploadAvatar(c *gin.Context) {
 	db.Model(&User{}).Where("id = ?", userID).Update("avatar_url", avatarURL)
 
 	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL})
+}
+
+// getCarStats returns the stored car stats JSON blob for the authenticated user.
+func getCarStats(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	var user User
+	if err := db.Select("car_stats_data").First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	// Return as raw JSON so the iOS client can decode directly
+	c.Header("Content-Type", "application/json")
+	if user.CarStatsData == "" {
+		c.String(http.StatusOK, "{}")
+		return
+	}
+	c.String(http.StatusOK, user.CarStatsData)
+}
+
+// putCarStats stores the car stats JSON blob for the authenticated user.
+func putCarStats(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		StatsData string `json:"stats_data" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "stats_data required"})
+		return
+	}
+	db.Model(&User{}).Where("id = ?", userID).Update("car_stats_data", req.StatsData)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

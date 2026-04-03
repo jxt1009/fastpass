@@ -185,6 +185,28 @@ class APIService {
         let _: User = try await put(endpoint: "/profile", body: req)
     }
 
+    func fetchMe() async throws -> User {
+        return try await get(endpoint: "/me")
+    }
+
+    func fetchCarStats() async throws -> String {
+        // Returns raw JSON string of the stats blob
+        let url = URL(string: baseURL + "/api/v1/stats")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let token = AuthManager.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    func uploadCarStats(_ statsJSON: String) async throws {
+        struct Req: Encodable { let statsData: String; enum CodingKeys: String, CodingKey { case statsData = "stats_data" } }
+        struct Res: Decodable { let ok: Bool }
+        let _: Res = try await put(endpoint: "/stats", body: Req(statsData: statsJSON))
+    }
+
     // MARK: - Social Methods
 
     func fetchLeaderboard(

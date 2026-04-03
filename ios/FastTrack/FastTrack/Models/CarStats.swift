@@ -166,10 +166,41 @@ class CarStatsManager: ObservableObject {
             carStats = decoded
         }
     }
-    
+
     private func saveCarStats() {
         if let encoded = try? JSONEncoder().encode(carStats) {
             UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
+            // Sync to server in background so data survives reinstall/device switch
+            if let json = String(data: encoded, encoding: .utf8) {
+                Task {
+                    try? await APIService.shared.uploadCarStats(json)
+                }
+            }
+        }
+    }
+
+    /// Restores car stats from the server. Call after sign-in or token refresh.
+    func restoreFromServer() async {
+        do {
+            let json = try await APIService.shared.fetchCarStats()
+            guard let data = json.data(using: .utf8),
+                  let decoded = try? JSONDecoder().decode([String: CarStats].self, from: data),
+                  !decoded.isEmpty else { return }
+            await MainActor.run {
+                // Merge: server wins only for cars not yet present locally
+                for (carId, stats) in decoded where carStats[carId] == nil {
+                    carStats[carId] = stats
+                }
+                // If local is empty, take everything from server
+                if carStats.isEmpty { carStats = decoded }
+            }
+            // Persist merged result locally
+            if let encoded = try? JSONEncoder().encode(carStats) {
+                UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
+            }
+            print("✅ Car stats restored from server")
+        } catch {
+            print("⚠️ Could not restore car stats from server: \(error)")
         }
     }
 }
