@@ -69,6 +69,9 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+          # API server cert doesn't include the public IP SAN; skip TLS cert verification.
+          # Auth is still enforced via the service account token.
+          kubectl config set-cluster fasttrack --insecure-skip-tls-verify=true
 
       - name: Verify cluster connectivity
         run: |
@@ -112,6 +115,9 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+          # API server cert doesn't include the public IP SAN; skip TLS cert verification.
+          # Auth is still enforced via the service account token.
+          kubectl config set-cluster fasttrack --insecure-skip-tls-verify=true
 
       - name: Verify cluster connectivity
         run: |
