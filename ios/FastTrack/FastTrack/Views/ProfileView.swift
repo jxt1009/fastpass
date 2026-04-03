@@ -110,6 +110,7 @@ struct ProfileView: View {
     @EnvironmentObject var locationManager: LocationManager
     @State private var showingSetup = false
     @State private var showingAddCar = false
+    @State private var showingSettings = false
     private var stats: UserStats {
         UserStats.from(drives: driveManager.drives)
     }
@@ -133,6 +134,21 @@ struct ProfileView: View {
                         DarkSectionHeader(title: "More Stats")
                         moreStatsGrid
                         privacyToggleCard
+                        NavigationLink(destination: SettingsView()) {
+                            HStack {
+                                Image(systemName: "gearshape.fill")
+                                    .foregroundStyle(.secondary)
+                                Text("Settings")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding()
+                            .background(Color(red: 0.17, green: 0.17, blue: 0.18))
+                            .cornerRadius(12)
+                        }
                         signOutButton
                     }
                     .padding()

@@ -18,8 +18,8 @@ class SpeedFusion {
     private var P: Double = 4.0                  // variance (m/s)²
 
     // Noise tuning
-    private let Q: Double = 0.3   // process noise variance per second (IMU drift ~0.55 m/s per √s)
-    private let R_min: Double = 0.16  // min GPS measurement noise (0.4 m/s std dev)
+    private let Q: Double = 0.5   // process noise variance per second — higher = more responsive to IMU changes
+    private let R_min: Double = 0.09  // min GPS measurement noise (0.3 m/s std dev)
 
     // Course tracking for longitudinal projection
     private var lastCourse: Double = -1   // degrees, -1 = invalid

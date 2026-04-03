@@ -133,6 +133,15 @@ class CarStatsManager: ObservableObject {
         carStats.removeAll()
         saveCarStats()
     }
+
+    /// Rebuilds all per-car stats from scratch using the provided drive list.
+    /// Call this after a drive's car assignment changes so counts stay accurate.
+    func rebuildStats(from drives: [Drive]) {
+        carStats.removeAll()
+        for drive in drives {
+            updateStats(for: drive)
+        }
+    }
     
     private func calculateSmoothnessScore(_ stats: CarStats) -> Double {
         // Simplified smoothness calculation based on brake events per mile

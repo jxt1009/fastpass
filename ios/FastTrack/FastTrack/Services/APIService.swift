@@ -212,6 +212,12 @@ class APIService {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
         return try await get(endpoint: "/users/search?q=\(encoded)")
     }
+
+    func uploadAvatar(imageData: Data) async throws {
+        struct Req: Encodable { let imageData: String; enum CodingKeys: String, CodingKey { case imageData = "image_data" } }
+        struct Res: Decodable { let avatarURL: String; enum CodingKeys: String, CodingKey { case avatarURL = "avatar_url" } }
+        let _: Res = try await put(endpoint: "/profile/avatar", body: Req(imageData: imageData.base64EncodedString()))
+    }
 }
 
 private struct _EmptyBody: Encodable {}

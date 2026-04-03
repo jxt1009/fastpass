@@ -204,6 +204,15 @@ class ProfileManager: ObservableObject {
         profileImage = image
         if let data = image.jpegData(compressionQuality: 0.8) {
             try? data.write(to: avatarURL())
+            // Upload to server so it's visible on public profile
+            Task {
+                do {
+                    try await APIService.shared.uploadAvatar(imageData: data)
+                    print("✅ Avatar uploaded to server")
+                } catch {
+                    print("❌ Failed to upload avatar: \(error)")
+                }
+            }
         }
     }
 

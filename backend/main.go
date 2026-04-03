@@ -27,6 +27,10 @@ func main() {
 	
 	// Auto-migrate models
 	db.AutoMigrate(&User{}, &Drive{}, &Follow{})
+
+	// Backfill: any user created before is_public column was added gets false (Go zero value).
+	// Since privacy is a new feature, safely default all existing accounts to public.
+	db.Exec("UPDATE users SET is_public = true WHERE NOT is_public")
 	
 	// Setup router
 	r := gin.Default()
@@ -36,6 +40,9 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 	
+	// Serve uploaded avatars as static files
+	r.Static("/uploads", "./uploads")
+
 	// Auth routes (no auth required)
 	auth := r.Group("/api/v1/auth")
 	{
@@ -50,6 +57,7 @@ func main() {
 	{
 		api.GET("/me", getCurrentUser)
 		api.PUT("/profile", updateProfile)
+		api.PUT("/profile/avatar", uploadAvatar)
 		api.POST("/drives", createDrive)
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)

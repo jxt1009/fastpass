@@ -81,16 +81,39 @@ private struct UserSearchRow: View {
     @Binding var result: UserSearchResult
     let currentUsername: String?
 
+    private func avatarCircle(initial: String) -> some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .frame(width: 42, height: 42)
+            Text(initial)
+                .font(.headline)
+                .foregroundStyle(.white)
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            ZStack {
-                Circle()
-                    .fill(Color.blue.opacity(0.15))
-                    .frame(width: 42, height: 42)
-                Text(result.username.prefix(1).uppercased())
-                    .font(.headline)
-                    .foregroundStyle(.blue)
+            Group {
+                if !result.avatarURL.isEmpty, let url = URL(string: result.avatarURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                                .frame(width: 42, height: 42)
+                                .clipShape(Circle())
+                        default:
+                            avatarCircle(initial: result.username.prefix(1).uppercased())
+                        }
+                    }
+                } else {
+                    avatarCircle(initial: result.username.prefix(1).uppercased())
+                }
             }
 
             VStack(alignment: .leading, spacing: 2) {

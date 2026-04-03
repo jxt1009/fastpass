@@ -1,7 +1,11 @@
 package main
 
 import (
+	"encoding/base64"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
@@ -163,4 +167,51 @@ func updateProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+// uploadAvatar handles PUT /api/v1/profile/avatar
+// Accepts {"image_data": "<base64 JPEG>"} and saves to disk.
+func uploadAvatar(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var req struct {
+		ImageData string `json:"image_data" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "image_data required"})
+		return
+	}
+
+	data, err := base64.StdEncoding.DecodeString(req.ImageData)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid base64"})
+		return
+	}
+
+	dir := filepath.Join("uploads", "avatars")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage error"})
+		return
+	}
+
+	filename := fmt.Sprintf("%d.jpg", userID)
+	dst := filepath.Join(dir, filename)
+	if err := os.WriteFile(dst, data, 0o644); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "write error"})
+		return
+	}
+
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://fast.toper.dev"
+	}
+	avatarURL := fmt.Sprintf("%s/uploads/avatars/%s", baseURL, filename)
+
+	db.Model(&User{}).Where("id = ?", userID).Update("avatar_url", avatarURL)
+
+	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL})
 }

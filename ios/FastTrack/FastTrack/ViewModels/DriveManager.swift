@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import Combine
+import UIKit
 
 class DriveManager: ObservableObject {
     @Published var isRecording = false
@@ -77,6 +78,11 @@ class DriveManager: ObservableObject {
         print("📍 Location manager started")
         print("🔒 Location authorization: \(locationManager?.authorizationStatus.rawValue ?? -1)")
 
+        // Keep screen on while recording if the setting is enabled
+        if AppSettings.shared.keepScreenOn {
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
+
         // Get selected car from profile, with fallbacks
         let profile = ProfileManager.shared.profile
         var selectedCar = profile?.selectedCar
@@ -125,6 +131,8 @@ class DriveManager: ObservableObject {
         guard isRecording else { return }
         isRecording = false
         locationManager?.stopUpdatingLocation()
+        // Re-enable normal screen sleep
+        UIApplication.shared.isIdleTimerDisabled = false
 
         // Finalize stopped time
         if let stopStart = stoppedSince {

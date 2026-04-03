@@ -33,7 +33,12 @@ struct FastTrackApp: App {
 struct RootView: View {
     @EnvironmentObject var locationManager: LocationManager
     @ObservedObject private var authManager = AuthManager.shared
+    @ObservedObject private var settings = AppSettings.shared
     @State private var isInitializing = true
+    @State private var selectedTab = 0
+    /// Per-tab UUIDs. Changing a UUID causes that tab's content to be recreated (nav reset).
+    /// Index 0 (Track) is intentionally never reset so active recordings survive tab switches.
+    @State private var tabResetIDs = (0..<6).map { _ in UUID() }
 
     var body: some View {
         ZStack {
@@ -46,6 +51,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.4), value: isInitializing)
+        .preferredColorScheme(settings.preferredColorScheme.colorScheme)
         .task {
             if authManager.isAuthenticated {
                 do {
@@ -63,19 +69,31 @@ struct RootView: View {
     @ViewBuilder
     private var mainContent: some View {
         if authManager.isAuthenticated {
-            TabView {
+            TabView(selection: $selectedTab) {
                 ContentView()
-                    .tabItem { Label("Track", systemImage: "location.fill") }
+                    // Tab 0 (Track) is NOT reset — preserves active recordings across tab switches
+                    .tabItem { Label("Track", systemImage: "location.fill") }.tag(0)
                 DriveHistoryView()
-                    .tabItem { Label("History", systemImage: "clock.fill") }
+                    .id(tabResetIDs[1])
+                    .tabItem { Label("History", systemImage: "clock.fill") }.tag(1)
                 AnalyticsView()
-                    .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }
+                    .id(tabResetIDs[2])
+                    .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }.tag(2)
                 SocialView()
-                    .tabItem { Label("Social", systemImage: "person.2.fill") }
+                    .id(tabResetIDs[3])
+                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(3)
                 AchievementsView()
-                    .tabItem { Label("Achievements", systemImage: "trophy.fill") }
+                    .id(tabResetIDs[4])
+                    .tabItem { Label("Achievements", systemImage: "trophy.fill") }.tag(4)
                 ProfileView()
-                    .tabItem { Label("Profile", systemImage: "person.fill") }
+                    .id(tabResetIDs[5])
+                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(5)
+            }
+            .onChange(of: selectedTab) { oldTab, _ in
+                // Reset the tab being left (but never the Track tab)
+                if oldTab > 0 {
+                    tabResetIDs[oldTab] = UUID()
+                }
             }
             .onAppear { locationManager.requestPermission() }
         } else {

@@ -24,6 +24,7 @@ type User struct {
 	SelectedCarID *string `gorm:"size:100" json:"selected_car_id"`  // ID of selected car
 
 	IsPublic     bool   `gorm:"default:true" json:"is_public"`
+	AvatarURL    string `gorm:"size:500" json:"avatar_url"`
 
 	AuthProvider string    `json:"auth_provider"`
 	CreatedAt    time.Time `json:"created_at"`

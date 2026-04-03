@@ -188,7 +188,14 @@ struct ContentView: View {
                 }
                 let newElapsed = Date().timeIntervalSince(start)
                 elapsedTime = newElapsed
-                print("⏰ Timer updated: \(elapsedTime) seconds, recording: \(driveManager.isRecording)")
+            }
+            // Snap elapsed immediately on recording state change (avoids first-tick delay)
+            .onChange(of: driveManager.isRecording) { _, isRecording in
+                if isRecording, let start = driveManager.recordingStartTime {
+                    elapsedTime = Date().timeIntervalSince(start)
+                } else {
+                    elapsedTime = 0
+                }
             }
         }
     }

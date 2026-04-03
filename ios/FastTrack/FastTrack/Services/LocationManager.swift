@@ -111,9 +111,9 @@ class LocationManager: NSObject, ObservableObject {
 
         fusion.predict(longAccelG: longG, dt: dt)
 
-        // Publish fused speed
+        // Publish fused speed — threshold 0.1 m/s (~0.2 mph) avoids rapid flicker
         let fused = fusion.speed
-        if abs(fused - currentSpeed) > 0.01 {
+        if abs(fused - currentSpeed) > 0.1 {
             currentSpeed = fused
         }
     }

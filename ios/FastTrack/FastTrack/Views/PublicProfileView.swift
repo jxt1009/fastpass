@@ -42,22 +42,33 @@ struct PublicProfileView: View {
             // Header section
             Section {
                 VStack(spacing: 16) {
-                    // Avatar placeholder
-                    ZStack {
-                        Circle()
-                            .fill(Color(.systemGray5))
-                            .frame(width: 80, height: 80)
-                        Text(String(profile.username.prefix(1)).uppercased())
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.secondary)
+                    // Avatar
+                    Group {
+                        if !profile.avatarURL.isEmpty, let url = URL(string: profile.avatarURL) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image.resizable().scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(Circle())
+                                default:
+                                    avatarFallback(initial: String(profile.username.prefix(1)))
+                                }
+                            }
+                        } else {
+                            avatarFallback(initial: String(profile.username.prefix(1)))
+                        }
                     }
 
                     VStack(spacing: 4) {
+                        // Username is the primary identity
+                        Text("@\(profile.username)")
+                            .font(.title3)
+                            .fontWeight(.semibold)
                         if !profile.fullName.isEmpty {
                             Text(profile.fullName)
-                                .font(.title3)
-                                .fontWeight(.semibold)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
                         if !profile.country.isEmpty {
                             Text(profile.country)
@@ -163,6 +174,22 @@ struct PublicProfileView: View {
         }
     }
 
+    private func avatarFallback(initial: String) -> some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .frame(width: 80, height: 80)
+            Text(initial.uppercased())
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundStyle(.white)
+        }
+    }
+
     // MARK: - Data Loading
 
     private func loadProfile() async {
@@ -189,6 +216,7 @@ struct PublicProfileView: View {
                 profile = profile.map {
                     PublicProfile(
                         username: $0.username, fullName: $0.fullName, country: $0.country,
+                        avatarURL: $0.avatarURL,
                         memberSince: $0.memberSince, topSpeed: $0.topSpeed,
                         totalDistance: $0.totalDistance, driveCount: $0.driveCount,
                         best060Time: $0.best060Time,
@@ -203,6 +231,7 @@ struct PublicProfileView: View {
                 profile = profile.map {
                     PublicProfile(
                         username: $0.username, fullName: $0.fullName, country: $0.country,
+                        avatarURL: $0.avatarURL,
                         memberSince: $0.memberSince, topSpeed: $0.topSpeed,
                         totalDistance: $0.totalDistance, driveCount: $0.driveCount,
                         best060Time: $0.best060Time,

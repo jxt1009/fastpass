@@ -23,6 +23,7 @@ type PublicProfileResponse struct {
 	Username       string    `json:"username"`
 	FullName       string    `json:"full_name"`
 	Country        string    `json:"country"`
+	AvatarURL      string    `json:"avatar_url"`
 	MemberSince    time.Time `json:"member_since"`
 	TopSpeed       float64   `json:"top_speed"`       // m/s
 	TotalDistance  float64   `json:"total_distance"`  // meters
@@ -44,6 +45,7 @@ type UserSearchResult struct {
 	Username       string `json:"username"         gorm:"column:username"`
 	FullName       string `json:"full_name"        gorm:"column:full_name"`
 	Country        string `json:"country"          gorm:"column:country"`
+	AvatarURL      string `json:"avatar_url"       gorm:"column:avatar_url"`
 	IsFollowedByMe bool   `json:"is_followed_by_me"`
 }
 
@@ -205,6 +207,7 @@ func getPublicProfile(c *gin.Context) {
 		Username:       user.Username,
 		FullName:       user.FullName,
 		Country:        user.Country,
+		AvatarURL:      user.AvatarURL,
 		MemberSince:    user.CreatedAt,
 		TopSpeed:       stats.TopSpeed,
 		TotalDistance:  stats.TotalDistance,
@@ -282,15 +285,16 @@ func searchUsers(c *gin.Context) {
 	pattern := "%" + strings.ToLower(q) + "%"
 
 	type rawRow struct {
-		UserID   uint   `gorm:"column:user_id"`
-		Username string `gorm:"column:username"`
-		FullName string `gorm:"column:full_name"`
-		Country  string `gorm:"column:country"`
+		UserID    uint   `gorm:"column:user_id"`
+		Username  string `gorm:"column:username"`
+		FullName  string `gorm:"column:full_name"`
+		Country   string `gorm:"column:country"`
+		AvatarURL string `gorm:"column:avatar_url"`
 	}
 
 	var rows []rawRow
 	db.Raw(`
-		SELECT id AS user_id, username, full_name, country
+		SELECT id AS user_id, username, full_name, country, avatar_url
 		FROM users
 		WHERE is_public = true
 		  AND (LOWER(username) LIKE ? OR LOWER(full_name) LIKE ?)
@@ -315,6 +319,7 @@ func searchUsers(c *gin.Context) {
 			Username:       r.Username,
 			FullName:       r.FullName,
 			Country:        r.Country,
+			AvatarURL:      r.AvatarURL,
 			IsFollowedByMe: followSet[r.UserID],
 		}
 	}

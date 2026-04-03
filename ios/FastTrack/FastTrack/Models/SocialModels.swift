@@ -91,11 +91,12 @@ struct PublicProfile: Decodable {
     let username: String
     let fullName: String
     let country: String
+    let avatarURL: String
     let memberSince: Date
-    let topSpeed: Double       // m/s
-    let totalDistance: Double  // meters
+    let topSpeed: Double
+    let totalDistance: Double
     let driveCount: Int
-    let best060Time: Double?   // seconds; nil if never reached 60 mph
+    let best060Time: Double?
     let followerCount: Int
     let followingCount: Int
     let isFollowedByMe: Bool
@@ -104,6 +105,7 @@ struct PublicProfile: Decodable {
         case username
         case fullName       = "full_name"
         case country
+        case avatarURL      = "avatar_url"
         case memberSince    = "member_since"
         case topSpeed       = "top_speed"
         case totalDistance  = "total_distance"
@@ -138,6 +140,7 @@ struct UserSearchResult: Identifiable, Decodable {
     let username: String
     let fullName: String
     let country: String
+    let avatarURL: String
     var isFollowedByMe: Bool
 
     var id: Int { userId }
@@ -147,6 +150,7 @@ struct UserSearchResult: Identifiable, Decodable {
         case username
         case fullName       = "full_name"
         case country
+        case avatarURL      = "avatar_url"
         case isFollowedByMe = "is_followed_by_me"
     }
 }

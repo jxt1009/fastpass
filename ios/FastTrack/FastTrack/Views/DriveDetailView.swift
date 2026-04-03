@@ -15,19 +15,30 @@ struct DriveDetailView: View {
                 // Map with route
                 Group {
                     if !routeCoordinates.isEmpty {
-                        Map(coordinateRegion: .constant(regionForRoute), interactionModes: .all, showsUserLocation: false, annotationItems: routeAnnotations) { annotation in
-                            MapAnnotation(coordinate: annotation.coordinate) {
-                                Circle()
-                                    .fill(annotation.isStart ? Color.green : Color.red)
-                                    .frame(width: 12, height: 12)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.white, lineWidth: 2)
-                                    )
+                        Map(initialPosition: .region(regionForRoute)) {
+                            // Driven path
+                            MapPolyline(coordinates: routeCoordinates)
+                                .stroke(.blue, lineWidth: 3)
+                            // Start marker
+                            Annotation("Start", coordinate: routeCoordinates.first!) {
+                                ZStack {
+                                    Circle().fill(Color.green).frame(width: 18, height: 18)
+                                    Image(systemName: "flag.fill")
+                                        .font(.system(size: 9)).foregroundColor(.white)
+                                }
+                            }
+                            // End marker
+                            Annotation("End", coordinate: routeCoordinates.last!) {
+                                ZStack {
+                                    Circle().fill(Color.red).frame(width: 18, height: 18)
+                                    Image(systemName: "flag.checkered")
+                                        .font(.system(size: 9)).foregroundColor(.white)
+                                }
                             }
                         }
                         .frame(height: 200)
                         .cornerRadius(12)
+                        .disabled(true) // static overview; no interaction needed
                     } else {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.systemGray6))
@@ -164,14 +175,6 @@ struct DriveDetailView: View {
         return MKCoordinateRegion(center: center, span: span)
     }
     
-    private var routeAnnotations: [RouteAnnotation] {
-        guard !routeCoordinates.isEmpty else { return [] }
-        return [
-            RouteAnnotation(coordinate: routeCoordinates.first!, isStart: true),
-            RouteAnnotation(coordinate: routeCoordinates.last!, isStart: false)
-        ]
-    }
-    
     private func parseRouteData() {
         guard let routeData = drive.routeData,
               let data = routeData.data(using: .utf8),
@@ -274,6 +277,8 @@ struct DriveCarSelectorView: View {
                 if let index = driveManager.drives.firstIndex(where: { $0.id == drive.id }) {
                     driveManager.drives[index] = updatedDrive
                 }
+                // Rebuild per-car stats so profile reflects the reassignment
+                CarStatsManager.shared.rebuildStats(from: driveManager.drives)
 
                 await MainActor.run {
                     dismiss()
@@ -293,11 +298,7 @@ struct DriveCarSelectorView: View {
 
 // MARK: - Route Annotation
 
-private struct RouteAnnotation: Identifiable {
-    let id = UUID()
-    let coordinate: CLLocationCoordinate2D
-    let isStart: Bool
-}
+// (Removed — using new Map API with MapPolyline and Annotation directly)
 
 #Preview {
     NavigationStack {
