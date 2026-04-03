@@ -91,20 +91,103 @@ This archives, exports, and submits for App Review. Automatic release is **off**
 
 ## Required GitHub Secrets
 
-| Secret | Used by | Description |
-|--------|---------|-------------|
-| `JWT_SECRET` | backend-deploy | 64-char random string for JWT signing |
-| `DATABASE_URL` | backend-deploy | Postgres connection string |
-| `SERVER_HOST` | backend-deploy | SSH hostname of the server |
-| `SERVER_USER` | backend-deploy | SSH username (e.g. `deploy`) |
-| `SSH_PRIVATE_KEY` | backend-deploy | Private key for SSH deploy access |
-| `APPLE_APP_BUNDLE_ID` | backend-deploy | App bundle ID (e.g. `dev.toper.FastTrack`) |
-| `BASE_URL` | backend-deploy | Public base URL (e.g. `https://fast.toper.dev`) |
-| `APP_STORE_CONNECT_API_KEY` | ios-release | Full `.p8` key file content (JSON wrapper) |
-| `APP_STORE_CONNECT_KEY_ID` | ios-release | Key ID from App Store Connect |
-| `APP_STORE_CONNECT_ISSUER_ID` | ios-release | Issuer ID from App Store Connect |
-| `MATCH_PASSWORD` | ios-release | Fastlane match encryption password |
-| `MATCH_GIT_BASIC_AUTHORIZATION` | ios-release | Base64 `user:token` for match repo access |
+Add these at: **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**
+
+### ✅ Available Now (Backend — set these first)
+
+**`JWT_SECRET`**
+A random 64-character hex string used to sign JWTs. Generate one:
+```sh
+openssl rand -hex 32
+```
+
+**`DATABASE_URL`**
+Postgres connection string for the production database:
+```
+postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
+```
+
+**`SERVER_HOST`**
+The IP address or hostname of your server, e.g. `fast.toper.dev`
+
+**`SERVER_USER`**
+The SSH username on the server, e.g. `root` or `ubuntu`
+
+**`SSH_PRIVATE_KEY`**
+A dedicated SSH keypair for deployments. Generate and install it:
+```sh
+# On your local machine:
+ssh-keygen -t ed25519 -C "fasttrack-deploy" -f ~/.ssh/fasttrack_deploy
+
+# Authorize it on the server:
+ssh-copy-id -i ~/.ssh/fasttrack_deploy.pub USER@SERVER_HOST
+
+# Paste the contents of the PRIVATE key into the secret:
+cat ~/.ssh/fasttrack_deploy
+```
+The value should include the full `-----BEGIN OPENSSH PRIVATE KEY-----` block.
+
+**`APPLE_APP_BUNDLE_ID`**
+Value: `dev.toper.FastTrack`
+
+**`BASE_URL`**
+Value: `https://fast.toper.dev`
+
+---
+
+### ⏳ Requires Apple Developer Account Approval (iOS — set when ready)
+
+**`APP_STORE_CONNECT_KEY_ID`**
+Found at: [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users & Access → Integrations → App Store Connect API → Generate Key.
+It's the 10-character alphanumeric Key ID shown next to your key (e.g. `ABC1234DEF`).
+
+**`APP_STORE_CONNECT_ISSUER_ID`**
+Shown at the top of the same App Store Connect API page.
+It's a UUID: `69a6de70-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+
+**`APP_STORE_CONNECT_API_KEY`**
+Download the `.p8` file when you create the key (only downloadable once). Format as JSON:
+```json
+{
+  "key_id": "ABC1234DEF",
+  "issuer_id": "69a6de70-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "key": "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMG...\n-----END PRIVATE KEY-----"
+}
+```
+The `key` value is the `.p8` file contents with actual newlines replaced by `\n`.
+
+**`MATCH_PASSWORD`**
+A strong password you choose — Fastlane Match uses this to encrypt certificates stored in the certs repo. Pick something and save it in your password manager:
+```sh
+openssl rand -base64 24
+```
+
+**`MATCH_GIT_BASIC_AUTHORIZATION`**
+Required for CI to access your private certs repo (see Fastlane Matchfile).
+Create a GitHub Personal Access Token with `repo` scope, then:
+```sh
+echo -n "your-github-username:ghp_yourPersonalAccessToken" | base64
+```
+Paste the base64 output as the secret value.
+
+---
+
+### Summary Table
+
+| Secret | Workflow | Status |
+|--------|----------|--------|
+| `JWT_SECRET` | backend-deploy | ✅ Set now |
+| `DATABASE_URL` | backend-deploy | ✅ Set now |
+| `SERVER_HOST` | backend-deploy | ✅ Set now |
+| `SERVER_USER` | backend-deploy | ✅ Set now |
+| `SSH_PRIVATE_KEY` | backend-deploy | ✅ Set now |
+| `APPLE_APP_BUNDLE_ID` | backend-deploy | ✅ Set now (`dev.toper.FastTrack`) |
+| `BASE_URL` | backend-deploy | ✅ Set now (`https://fast.toper.dev`) |
+| `APP_STORE_CONNECT_KEY_ID` | ios-release | ⏳ After Developer approval |
+| `APP_STORE_CONNECT_ISSUER_ID` | ios-release | ⏳ After Developer approval |
+| `APP_STORE_CONNECT_API_KEY` | ios-release | ⏳ After Developer approval |
+| `MATCH_PASSWORD` | ios-release | ⏳ Choose now, set later |
+| `MATCH_GIT_BASIC_AUTHORIZATION` | ios-release | ⏳ After Developer approval |
 
 ---
 
