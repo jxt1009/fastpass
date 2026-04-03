@@ -13,7 +13,7 @@ struct SettingsView: View {
                 Text("Prevents the display from sleeping during an active drive. Disabling this saves battery but may pause recording if the screen locks.")
             }
 
-            Section("Units") {
+            Section {
                 Picker("Unit System", selection: $settings.unitSystem) {
                     ForEach(UnitSystem.allCases) { system in
                         Text(system.displayName).tag(system)
@@ -21,6 +21,8 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .listRowInsets(.init(top: 12, leading: 16, bottom: 12, trailing: 16))
+            } header: {
+                Text("Units")
             } footer: {
                 Text(settings.unitSystem == .imperial
                      ? "Speeds shown in mph, distances in miles."
