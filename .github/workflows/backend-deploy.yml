@@ -11,6 +11,7 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    environment: production
     needs: []  # runs independently; backend-ci runs in parallel on the same push
 
     steps:
