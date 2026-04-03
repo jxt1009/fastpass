@@ -70,6 +70,13 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: Verify cluster connectivity
+        run: |
+          kubectl cluster-info --request-timeout=10s || {
+            echo "❌ Cannot reach cluster. Ensure port 6443 is forwarded on your router: 73.158.156.201:6443 → 10.0.0.102:6443"
+            exit 1
+          }
+
       - name: Ensure staging secrets exist
         run: |
           kubectl create namespace fasttrack-staging --dry-run=client -o yaml | kubectl apply -f -
@@ -105,6 +112,13 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+
+      - name: Verify cluster connectivity
+        run: |
+          kubectl cluster-info --request-timeout=10s || {
+            echo "❌ Cannot reach cluster. Ensure port 6443 is forwarded on your router: 73.158.156.201:6443 → 10.0.0.102:6443"
+            exit 1
+          }
 
       - name: Ensure production secrets exist
         run: |
