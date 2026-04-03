@@ -7,10 +7,11 @@ resources:
   - ../../base
   - namespace.yaml
 
-# Single replica is fine for staging
 patches:
   - path: patch-deployment.yaml
   - path: patch-ingress.yaml
 
-commonLabels:
-  environment: staging
+labels:
+  - pairs:
+      environment: staging
+    includeSelectors: false

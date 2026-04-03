@@ -6,7 +6,9 @@ resources:
   - service.yaml
   - ingress.yaml
 
+# CI overrides this tag via: kustomize edit set image fasttrack-api=...
+# Local/server builds use localhost:5000 (the on-server registry)
 images:
   - name: fasttrack-api
-    newName: ghcr.io/jtoper/fasttrack-backend
+    newName: localhost:5000/fasttrack-backend
     newTag: latest
