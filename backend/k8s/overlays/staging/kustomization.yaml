@@ -14,4 +14,5 @@ patches:
 labels:
   - pairs:
       environment: staging
-    includeSelectors: false
+    includeSelectors: true
+    includeTemplates: true
