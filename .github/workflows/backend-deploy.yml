@@ -87,36 +87,50 @@ jobs:
             --namespace fasttrack-staging \
             --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f - 2>/dev/null || true
 
-          # Merge-patch: only update keys that are non-empty in GitHub secrets.
-          # --type=merge leaves any key we don't provide completely untouched.
+          # Update only non-empty GitHub secrets via merge-patch (leaves existing keys untouched).
+          # For required keys: if not in GitHub secrets, verify cluster already has a non-empty
+          # value — fail only if neither source has the key (true first-time misconfiguration).
           python3 << 'PYEOF'
           import subprocess, base64, json, sys
 
           ns = "fasttrack-staging"
-          candidates = {
-              "database-url":       "${{ secrets.STAGING_DATABASE_URL }}",
-              "jwt-secret":         "${{ secrets.JWT_SECRET }}",
-              "apple-app-bundle-id":"${{ secrets.APPLE_APP_BUNDLE_ID }}",
-              "base-url":           "${{ secrets.STAGING_BASE_URL }}",
-              "google-client-id":   "${{ secrets.GOOGLE_CLIENT_ID }}",
+          from_ci = {
+              "database-url":        "${{ secrets.STAGING_DATABASE_URL }}",
+              "jwt-secret":          "${{ secrets.JWT_SECRET }}",
+              "apple-app-bundle-id": "${{ secrets.APPLE_APP_BUNDLE_ID }}",
+              "base-url":            "${{ secrets.STAGING_BASE_URL }}",
+              "google-client-id":    "${{ secrets.GOOGLE_CLIENT_ID }}",
               "google-client-secret":"${{ secrets.GOOGLE_CLIENT_SECRET }}",
           }
-          # Required keys — fail fast if missing so we catch config errors early
+
           required = {"database-url", "jwt-secret"}
-          missing = [k for k in required if not candidates[k].strip()]
-          if missing:
-              print(f"ERROR: required secrets not set: {missing}", file=sys.stderr)
-              sys.exit(1)
+          missing_from_ci = {k for k in required if not from_ci[k].strip()}
+          if missing_from_ci:
+              # Check if cluster already has these keys set
+              r = subprocess.run(
+                  ["kubectl", "get", "secret", "fasttrack-secrets", "-n", ns,
+                   "-o", "jsonpath={.data}"],
+                  capture_output=True, text=True)
+              existing = json.loads(r.stdout) if r.stdout.strip() else {}
+              truly_missing = [k for k in missing_from_ci
+                               if not existing.get(k, "").strip()]
+              if truly_missing:
+                  print(f"ERROR: required secrets missing from both CI and cluster: {truly_missing}", file=sys.stderr)
+                  sys.exit(1)
+              print(f"INFO: {missing_from_ci} not in CI secrets — cluster values will be kept as-is")
 
           data = {k: base64.b64encode(v.strip().encode()).decode()
-                  for k, v in candidates.items() if v.strip()}
-          patch = json.dumps({"data": data})
-          r = subprocess.run(
-              ["kubectl", "patch", "secret", "fasttrack-secrets",
-               "-n", ns, "--type=merge", "-p", patch],
-              capture_output=True, text=True)
-          print(r.stdout, r.stderr)
-          sys.exit(r.returncode)
+                  for k, v in from_ci.items() if v.strip()}
+          if data:
+              patch = json.dumps({"data": data})
+              r = subprocess.run(
+                  ["kubectl", "patch", "secret", "fasttrack-secrets",
+                   "-n", ns, "--type=merge", "-p", patch],
+                  capture_output=True, text=True)
+              print(r.stdout, r.stderr)
+              sys.exit(r.returncode)
+          else:
+              print("INFO: No CI secrets provided — cluster secret left unchanged")
           PYEOF
 
           kubectl create secret docker-registry ghcr-pull-secret \
@@ -168,13 +182,14 @@ jobs:
             --namespace fasttrack-production \
             --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f - 2>/dev/null || true
 
-          # Merge-patch: only update keys that are non-empty in GitHub secrets.
-          # --type=merge leaves any key we don't provide completely untouched.
+          # Update only non-empty GitHub secrets via merge-patch (leaves existing keys untouched).
+          # For required keys: if not in GitHub secrets, verify cluster already has a non-empty
+          # value — fail only if neither source has the key (true first-time misconfiguration).
           python3 << 'PYEOF'
           import subprocess, base64, json, sys
 
           ns = "fasttrack-production"
-          candidates = {
+          from_ci = {
               "database-url":        "${{ secrets.PRODUCTION_DATABASE_URL }}",
               "jwt-secret":          "${{ secrets.JWT_SECRET }}",
               "apple-app-bundle-id": "${{ secrets.APPLE_APP_BUNDLE_ID }}",
@@ -182,22 +197,35 @@ jobs:
               "google-client-id":    "${{ secrets.GOOGLE_CLIENT_ID }}",
               "google-client-secret":"${{ secrets.GOOGLE_CLIENT_SECRET }}",
           }
-          # Required keys — fail fast if missing so we catch config errors early
+
           required = {"database-url", "jwt-secret"}
-          missing = [k for k in required if not candidates[k].strip()]
-          if missing:
-              print(f"ERROR: required secrets not set: {missing}", file=sys.stderr)
-              sys.exit(1)
+          missing_from_ci = {k for k in required if not from_ci[k].strip()}
+          if missing_from_ci:
+              # Check if cluster already has these keys set
+              r = subprocess.run(
+                  ["kubectl", "get", "secret", "fasttrack-secrets", "-n", ns,
+                   "-o", "jsonpath={.data}"],
+                  capture_output=True, text=True)
+              existing = json.loads(r.stdout) if r.stdout.strip() else {}
+              truly_missing = [k for k in missing_from_ci
+                               if not existing.get(k, "").strip()]
+              if truly_missing:
+                  print(f"ERROR: required secrets missing from both CI and cluster: {truly_missing}", file=sys.stderr)
+                  sys.exit(1)
+              print(f"INFO: {missing_from_ci} not in CI secrets — cluster values will be kept as-is")
 
           data = {k: base64.b64encode(v.strip().encode()).decode()
-                  for k, v in candidates.items() if v.strip()}
-          patch = json.dumps({"data": data})
-          r = subprocess.run(
-              ["kubectl", "patch", "secret", "fasttrack-secrets",
-               "-n", ns, "--type=merge", "-p", patch],
-              capture_output=True, text=True)
-          print(r.stdout, r.stderr)
-          sys.exit(r.returncode)
+                  for k, v in from_ci.items() if v.strip()}
+          if data:
+              patch = json.dumps({"data": data})
+              r = subprocess.run(
+                  ["kubectl", "patch", "secret", "fasttrack-secrets",
+                   "-n", ns, "--type=merge", "-p", patch],
+                  capture_output=True, text=True)
+              print(r.stdout, r.stderr)
+              sys.exit(r.returncode)
+          else:
+              print("INFO: No CI secrets provided — cluster secret left unchanged")
           PYEOF
 
           kubectl create secret docker-registry ghcr-pull-secret \
