@@ -16,3 +16,9 @@ labels:
       environment: production
     includeSelectors: true
     includeTemplates: true
+
+# Default to local registry; CI replaces this via: kustomize edit set image fasttrack-api=ghcr.io/...
+images:
+  - name: fasttrack-api
+    newName: localhost:5000/fasttrack-backend
+    newTag: latest

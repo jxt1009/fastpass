@@ -6,9 +6,5 @@ resources:
   - service.yaml
   - ingress.yaml
 
-# CI overrides this tag via: kustomize edit set image fasttrack-api=...
-# Local/server builds use localhost:5000 (the on-server registry)
-images:
-  - name: fasttrack-api
-    newName: localhost:5000/fasttrack-backend
-    newTag: latest
+# Image is set by each overlay's kustomization.yaml (production/staging).
+# CI updates it at deploy time via: kustomize edit set image fasttrack-api=...
