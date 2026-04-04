@@ -358,8 +358,7 @@ struct DriveDetailView: View {
         let playbackSpeed = 4.0
         let tickInterval: TimeInterval = 0.05
         let stepSize = (tickInterval * playbackSpeed) / duration
-        playbackTimer = Timer.scheduledTimer(withTimeInterval: tickInterval, repeats: true) { [weak self] _ in
-            guard let self else { return }
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: tickInterval, repeats: true) { _ in
             DispatchQueue.main.async {
                 if self.playbackProgress >= 1 {
                     self.stopPlayback()
