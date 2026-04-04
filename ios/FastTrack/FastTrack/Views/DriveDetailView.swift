@@ -57,6 +57,9 @@ struct DriveDetailView: View {
     @State private var routeEvents: [RouteEvent] = []
     @State private var showingCarPicker = false
 
+    // Map expand state
+    @State private var isMapExpanded = false
+
     // Playback state
     @State private var playbackProgress: Double = 0
     @State private var isPlaying = false
@@ -164,54 +167,34 @@ struct DriveDetailView: View {
     @ViewBuilder
     private var mapSection: some View {
         if !routeCoordinates.isEmpty {
-            Map(initialPosition: .region(regionForRoute)) {
-                // Speed-colored segments when rich data is available; fall back to blue
-                if !speedSegments.isEmpty {
-                    ForEach(Array(speedSegments.enumerated()), id: \.offset) { _, seg in
-                        MapPolyline(coordinates: seg.coordinates)
-                            .stroke(speedBandColor(seg.speedBand), lineWidth: 4)
+            mapContent
+                .frame(height: 260)
+                .cornerRadius(12)
+                // Expand button overlay (top-right)
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        isMapExpanded = true
+                    } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(8)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
                     }
-                } else {
-                    MapPolyline(coordinates: routeCoordinates).stroke(.blue, lineWidth: 3)
+                    .padding(10)
                 }
-
-                // Start / End markers
-                Annotation("Start", coordinate: routeCoordinates.first!) {
-                    ZStack {
-                        Circle().fill(Color.green).frame(width: 20, height: 20)
-                        Image(systemName: "flag.fill").font(.system(size: 10)).foregroundColor(.white)
-                    }
-                }
-                Annotation("End", coordinate: routeCoordinates.last!) {
-                    ZStack {
-                        Circle().fill(Color.red).frame(width: 20, height: 20)
-                        Image(systemName: "flag.checkered").font(.system(size: 10)).foregroundColor(.white)
-                    }
-                }
-
-                // Event markers
-                ForEach(Array(routeEvents.enumerated()), id: \.offset) { _, event in
-                    Annotation(event.label, coordinate: event.coordinate) {
-                        ZStack {
-                            Circle().fill(event.color.opacity(0.85)).frame(width: 22, height: 22)
-                            Image(systemName: event.icon).font(.system(size: 10)).foregroundColor(.white)
-                        }
+                .fullScreenCover(isPresented: $isMapExpanded) {
+                    NavigationStack {
+                        mapContent
+                            .ignoresSafeArea()
+                            .navigationTitle("Route")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("Done") { isMapExpanded = false }
+                                }
+                            }
                     }
                 }
-
-                // Playback position marker
-                if let playCoord = playbackCoordinate {
-                    Annotation("", coordinate: playCoord) {
-                        ZStack {
-                            Circle().fill(Color.blue).frame(width: 14, height: 14)
-                            Circle().stroke(Color.white, lineWidth: 2).frame(width: 14, height: 14)
-                        }
-                    }
-                }
-            }
-            .frame(height: 260)
-            .cornerRadius(12)
-            .disabled(true)
         } else {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemGray6))
@@ -222,6 +205,56 @@ struct DriveDetailView: View {
                         Text("No route data available").font(.subheadline).foregroundColor(.secondary)
                     }
                 )
+        }
+    }
+
+    /// The Map view used in both compact and full-screen contexts.
+    @ViewBuilder
+    private var mapContent: some View {
+        Map(initialPosition: .region(regionForRoute)) {
+            // Speed-colored segments when rich data is available; fall back to blue
+            if !speedSegments.isEmpty {
+                ForEach(Array(speedSegments.enumerated()), id: \.offset) { _, seg in
+                    MapPolyline(coordinates: seg.coordinates)
+                        .stroke(speedBandColor(seg.speedBand), lineWidth: 4)
+                }
+            } else {
+                MapPolyline(coordinates: routeCoordinates).stroke(.blue, lineWidth: 3)
+            }
+
+            // Start / End markers
+            Annotation("Start", coordinate: routeCoordinates.first!) {
+                ZStack {
+                    Circle().fill(Color.green).frame(width: 20, height: 20)
+                    Image(systemName: "flag.fill").font(.system(size: 10)).foregroundColor(.white)
+                }
+            }
+            Annotation("End", coordinate: routeCoordinates.last!) {
+                ZStack {
+                    Circle().fill(Color.red).frame(width: 20, height: 20)
+                    Image(systemName: "flag.checkered").font(.system(size: 10)).foregroundColor(.white)
+                }
+            }
+
+            // Event markers
+            ForEach(Array(routeEvents.enumerated()), id: \.offset) { _, event in
+                Annotation(event.label, coordinate: event.coordinate) {
+                    ZStack {
+                        Circle().fill(event.color.opacity(0.85)).frame(width: 22, height: 22)
+                        Image(systemName: event.icon).font(.system(size: 10)).foregroundColor(.white)
+                    }
+                }
+            }
+
+            // Playback position marker
+            if let playCoord = playbackCoordinate {
+                Annotation("", coordinate: playCoord) {
+                    ZStack {
+                        Circle().fill(Color.blue).frame(width: 14, height: 14)
+                        Circle().stroke(Color.white, lineWidth: 2).frame(width: 14, height: 14)
+                    }
+                }
+            }
         }
     }
 
