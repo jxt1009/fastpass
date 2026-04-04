@@ -414,8 +414,8 @@ enum AnalyticsMetric: CaseIterable {
         switch self {
         case .speed: return drive.maxSpeed * s.speedFactor
         case .distance: return drive.distance * s.distanceFactor
-        case .smoothness: return 75
-        case .acceleration: return 0.5
+        case .smoothness: return AnalyticsData.smoothnessScore(for: drive)
+        case .acceleration: return drive.peakGForce
         }
     }
 }
@@ -463,8 +463,11 @@ struct AnalyticsData {
     }
     
     var overallDrivingScore: Double {
-        // Placeholder calculation - would use performance metrics
-        return 78.5
+        guard !drives.isEmpty else { return 0 }
+        let smoothComponent    = avgSmoothness * 0.40
+        let consistencyComp    = consistency   * 0.30
+        let perfComp           = min(avgMaxSpeed / (160 / 3.6) * 100, 100) * 0.30
+        return max(0, min(100, smoothComponent + consistencyComp + perfComp))
     }
     
     var speedTrend: TrendDirection {
@@ -481,12 +484,17 @@ struct AnalyticsData {
     }
     
     var scoreTrend: TrendDirection {
-        return .up // Placeholder
+        guard drives.count >= 4 else { return .neutral }
+        let half = drives.count / 2
+        let recentScore = AnalyticsData(drives: Array(drives.prefix(half))).overallDrivingScore
+        let olderScore  = AnalyticsData(drives: Array(drives.suffix(half))).overallDrivingScore
+        if recentScore > olderScore + 3 { return .up }
+        if recentScore < olderScore - 3 { return .down }
+        return .neutral
     }
     
     var bestZeroToSixty: Double? {
-        // Would calculate from performance metrics
-        return 5.8
+        drives.compactMap(\.best060Time).min()
     }
     
     var zeroToSixtyCategory: String {
@@ -500,7 +508,7 @@ struct AnalyticsData {
     }
     
     var maxLateralG: Double {
-        return 0.65 // Placeholder
+        drives.map(\.peakGForce).max() ?? 0
     }
     
     var corneringGrade: String {
@@ -512,7 +520,21 @@ struct AnalyticsData {
     }
     
     var avgSmoothness: Double {
-        return 82.3 // Placeholder
+        guard !drives.isEmpty else { return 0 }
+        let scores = drives.map { AnalyticsData.smoothnessScore(for: $0) }
+        return scores.reduce(0, +) / Double(scores.count)
+    }
+
+    /// Smoothness score 0–100 for a single drive.
+    /// Penalises harsh acceleration, hard braking, and high G-force events.
+    static func smoothnessScore(for drive: Drive) -> Double {
+        guard drive.maxSpeed > 0, drive.duration > 0 else { return 50 }
+        let speedEfficiency = drive.avgSpeed / max(drive.maxSpeed, 1)   // 0–1: higher is smoother
+        let accelPenalty    = min(drive.maxAcceleration / 9.81, 1.0) * 15
+        let decelPenalty    = min(drive.maxDeceleration / 9.81, 1.0) * 15
+        let gPenalty        = min(drive.peakGForce / 2.0, 1.0) * 20
+        let brakePenalty    = min(Double(drive.brakeEvents) * 2.0, 20)
+        return max(0, min(100, speedEfficiency * 100 - accelPenalty - decelPenalty - gPenalty - brakePenalty))
     }
     
     var drivingStyle: String {
@@ -525,7 +547,13 @@ struct AnalyticsData {
     }
     
     var consistency: Double {
-        return 74.2 // Placeholder
+        guard drives.count >= 3 else { return drives.isEmpty ? 0 : 85 }
+        let speeds = drives.map(\.maxSpeed)
+        let mean   = speeds.reduce(0, +) / Double(speeds.count)
+        guard mean > 0 else { return 0 }
+        let variance = speeds.map { pow($0 - mean, 2) }.reduce(0, +) / Double(speeds.count)
+        let cv = sqrt(variance) / mean  // coefficient of variation: lower = more consistent
+        return max(0, min(100, 100 - cv * 150))
     }
     
     var consistencyGrade: String {
@@ -569,12 +597,79 @@ struct DrivePerformanceDetailView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Detailed Analysis")
                             .font(.headline)
-                        
-                        Text("Performance metrics will be calculated from GPS data...")
-                            .foregroundColor(.secondary)
+
+                        if drive.maxAcceleration > 0 || drive.maxDeceleration > 0 || drive.peakGForce > 0 {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                if drive.maxAcceleration > 0 {
+                                    PerformanceStatCard(
+                                        title: "Max Accel",
+                                        value: String(format: "%.2f G", drive.maxAcceleration / 9.81),
+                                        icon: "arrow.up.right.circle"
+                                    )
+                                }
+                                if drive.maxDeceleration > 0 {
+                                    PerformanceStatCard(
+                                        title: "Max Brake",
+                                        value: String(format: "%.2f G", drive.maxDeceleration / 9.81),
+                                        icon: "arrow.down.right.circle"
+                                    )
+                                }
+                                if drive.peakGForce > 0 {
+                                    PerformanceStatCard(
+                                        title: "Peak G-Force",
+                                        value: String(format: "%.2f G", drive.peakGForce),
+                                        icon: "circle.circle"
+                                    )
+                                }
+                                if let best060 = drive.best060Time {
+                                    PerformanceStatCard(
+                                        title: "0–60 mph",
+                                        value: String(format: "%.2f sec", best060),
+                                        icon: "timer"
+                                    )
+                                }
+                            }
+                        }
+
+                        if drive.brakeEvents > 0 || drive.leftTurns > 0 || drive.rightTurns > 0 || drive.laneChanges > 0 {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                if drive.brakeEvents > 0 {
+                                    PerformanceStatCard(title: "Brakes", value: "\(drive.brakeEvents)", icon: "hand.raised.fill")
+                                }
+                                if drive.leftTurns > 0 {
+                                    PerformanceStatCard(title: "Left Turns", value: "\(drive.leftTurns)", icon: "arrow.turn.up.left")
+                                }
+                                if drive.rightTurns > 0 {
+                                    PerformanceStatCard(title: "Right Turns", value: "\(drive.rightTurns)", icon: "arrow.turn.up.right")
+                                }
+                                if drive.laneChanges > 0 {
+                                    PerformanceStatCard(title: "Lane Changes", value: "\(drive.laneChanges)", icon: "arrow.left.arrow.right")
+                                }
+                            }
+                        }
+
+                        // Smoothness score
+                        let smoothness = AnalyticsData.smoothnessScore(for: drive)
+                        if smoothness > 0 {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Driving Style Score")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "%.0f / 100", smoothness))
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                }
+                                Spacer()
+                                ProgressView(value: smoothness / 100)
+                                    .progressViewStyle(.linear)
+                                    .tint(smoothness > 75 ? .green : smoothness > 50 ? .orange : .red)
+                                    .frame(width: 100)
+                            }
                             .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                        }
                     }
                 }
                 .padding()

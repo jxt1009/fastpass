@@ -158,6 +158,24 @@ private struct LeaderboardRow: View {
                 .foregroundStyle(rankColor)
                 .frame(width: 40, alignment: .leading)
 
+            // Avatar
+            Group {
+                if !entry.avatarURL.isEmpty, let url = URL(string: entry.avatarURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                                .frame(width: 36, height: 36)
+                                .clipShape(Circle())
+                        default:
+                            avatarFallback(entry.username)
+                        }
+                    }
+                } else {
+                    avatarFallback(entry.username)
+                }
+            }
+
             // User info
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
@@ -190,6 +208,20 @@ private struct LeaderboardRow: View {
                 .foregroundStyle(.primary)
         }
         .padding(.vertical, 2)
+    }
+
+    private func avatarFallback(_ username: String) -> some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 36, height: 36)
+            Text(String(username.prefix(1)).uppercased())
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundStyle(.white)
+        }
     }
 
     private var rankColor: Color {

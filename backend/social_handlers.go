@@ -12,11 +12,12 @@ import (
 // ─── Response types ──────────────────────────────────────────────────────────
 
 type LeaderboardEntry struct {
-	Rank     int     `json:"rank"`
-	UserID   uint    `json:"user_id"`
-	Username string  `json:"username"`
-	Country  string  `json:"country"`
-	Value    float64 `json:"value"`
+	Rank      int     `json:"rank"`
+	UserID    uint    `json:"user_id"`
+	Username  string  `json:"username"`
+	Country   string  `json:"country"`
+	AvatarURL string  `json:"avatar_url"`
+	Value     float64 `json:"value"`
 }
 
 type PublicProfileResponse struct {
@@ -127,18 +128,19 @@ func getLeaderboard(c *gin.Context) {
 	}
 
 	type rawRow struct {
-		UserID   uint    `gorm:"column:user_id"`
-		Username string  `gorm:"column:username"`
-		Country  string  `gorm:"column:country"`
-		Value    float64 `gorm:"column:value"`
+		UserID    uint    `gorm:"column:user_id"`
+		Username  string  `gorm:"column:username"`
+		Country   string  `gorm:"column:country"`
+		AvatarURL string  `gorm:"column:avatar_url"`
+		Value     float64 `gorm:"column:value"`
 	}
 
 	sql := fmt.Sprintf(`
-		SELECT d.user_id, u.username, u.country, %s AS value
+		SELECT d.user_id, u.username, u.country, u.avatar_url, %s AS value
 		FROM drives d
 		JOIN users u ON d.user_id = u.id
 		WHERE u.is_public = true %s %s %s
-		GROUP BY d.user_id, u.username, u.country
+		GROUP BY d.user_id, u.username, u.country, u.avatar_url
 		ORDER BY %s
 		LIMIT 50`,
 		agg.expr, agg.extraWhere, periodWhere, scopeWhere, agg.order)
@@ -149,11 +151,12 @@ func getLeaderboard(c *gin.Context) {
 	entries := make([]LeaderboardEntry, len(rows))
 	for i, r := range rows {
 		entries[i] = LeaderboardEntry{
-			Rank:     i + 1,
-			UserID:   r.UserID,
-			Username: r.Username,
-			Country:  r.Country,
-			Value:    r.Value,
+			Rank:      i + 1,
+			UserID:    r.UserID,
+			Username:  r.Username,
+			Country:   r.Country,
+			AvatarURL: r.AvatarURL,
+			Value:     r.Value,
 		}
 	}
 

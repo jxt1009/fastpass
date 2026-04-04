@@ -16,6 +16,11 @@ class DriveManager: ObservableObject {
     private var speedReadings: [Double] = []
     private var pollTimer: Timer?
 
+    // Rich route data: each point stores speed+timestamp alongside lat/lng
+    private var richRoutePoints: [(lat: Double, lng: Double, speed: Double, ts: Double)] = []
+    // Event locations for map markers
+    private var recordedRouteEvents: [(type: String, lat: Double, lng: Double, ts: Double)] = []
+
     // Extended tracking state
     private var stoppedSince: Date?
     private var totalStoppedTime: Double = 0
@@ -58,6 +63,8 @@ class DriveManager: ObservableObject {
         isRecording = true
         recordingLocations = []
         routeCoordinates = []
+        richRoutePoints = []
+        recordedRouteEvents = []
         speedReadings = []
 
         print("⏰ Recording start time: \(recordingStartTime!)")
@@ -143,9 +150,15 @@ class DriveManager: ObservableObject {
         guard var drive = currentDrive, !recordingLocations.isEmpty else { return }
         drive.endTime = Date()
 
-        // Serialize route
-        let pts = routeCoordinates.map { ["lat": $0.latitude, "lng": $0.longitude] }
-        if let data = try? JSONSerialization.data(withJSONObject: pts),
+        // Serialize route as v2 format: {v:2, points:[{lat,lng,speed,ts}], events:[{type,lat,lng,ts}]}
+        let pointDicts = richRoutePoints.map { p -> [String: Any] in
+            ["lat": p.lat, "lng": p.lng, "speed": p.speed, "ts": p.ts]
+        }
+        let eventDicts = recordedRouteEvents.map { e -> [String: Any] in
+            ["type": e.type, "lat": e.lat, "lng": e.lng, "ts": e.ts]
+        }
+        let routePayload: [String: Any] = ["v": 2, "points": pointDicts, "events": eventDicts]
+        if let data = try? JSONSerialization.data(withJSONObject: routePayload),
            let json = String(data: data, encoding: .utf8) {
             drive.routeData = json
         }
@@ -193,6 +206,13 @@ class DriveManager: ObservableObject {
         
         recordingLocations.append(location)
         routeCoordinates.append(location.coordinate)
+        // Track rich route point: use raw GPS speed (non-negative)
+        richRoutePoints.append((
+            lat: location.coordinate.latitude,
+            lng: location.coordinate.longitude,
+            speed: max(location.speed, 0),
+            ts: location.timestamp.timeIntervalSince1970
+        ))
         speedReadings.append(speed)
         
         print("📊 Recorded \(recordingLocations.count) locations, current speed: \(speedMph) mph")
@@ -364,6 +384,12 @@ class DriveManager: ObservableObject {
             if updates.brakeCount > 0 {
                 self.brakeEvents += 1
                 self.lastBrakeTime = ts
+                self.recordedRouteEvents.append((
+                    type: "brake",
+                    lat: location.coordinate.latitude,
+                    lng: location.coordinate.longitude,
+                    ts: ts.timeIntervalSince1970
+                ))
             }
             if let gForce = updates.gForce, gForce > self.peakGForce {
                 self.peakGForce = gForce
@@ -389,6 +415,15 @@ class DriveManager: ObservableObject {
                 self.leftTurns += turnData.left
                 self.rightTurns += turnData.right
                 self.laneChanges += turnData.lanes
+                if turnData.left > 0 {
+                    self.recordedRouteEvents.append((type: "turn_left", lat: location.coordinate.latitude, lng: location.coordinate.longitude, ts: ts.timeIntervalSince1970))
+                }
+                if turnData.right > 0 {
+                    self.recordedRouteEvents.append((type: "turn_right", lat: location.coordinate.latitude, lng: location.coordinate.longitude, ts: ts.timeIntervalSince1970))
+                }
+                if turnData.lanes > 0 {
+                    self.recordedRouteEvents.append((type: "lane_change", lat: location.coordinate.latitude, lng: location.coordinate.longitude, ts: ts.timeIntervalSince1970))
+                }
                 if turnData.left > 0 || turnData.right > 0 || turnData.lanes > 0 {
                     self.lastTurnOrLaneTime = ts
                 }

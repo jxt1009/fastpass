@@ -7,15 +7,17 @@ struct LeaderboardEntry: Identifiable, Decodable {
     let userId: Int
     let username: String
     let country: String
+    let avatarURL: String
     let value: Double
 
     var id: Int { userId }
 
     enum CodingKeys: String, CodingKey {
         case rank
-        case userId = "user_id"
+        case userId    = "user_id"
         case username
         case country
+        case avatarURL = "avatar_url"
         case value
     }
 }
