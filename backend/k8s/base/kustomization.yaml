@@ -5,6 +5,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - uploads-pvc.yaml
 
 # Image is set by each overlay's kustomization.yaml (production/staging).
 # CI updates it at deploy time via: kustomize edit set image fasttrack-api=...

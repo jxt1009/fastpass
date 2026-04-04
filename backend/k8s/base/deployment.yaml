@@ -66,6 +66,9 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
           livenessProbe:
             httpGet:
               path: /health
@@ -80,3 +83,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 3
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: fasttrack-uploads-pvc

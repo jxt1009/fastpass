@@ -6,6 +6,7 @@ namespace: fasttrack-production
 resources:
   - ../../base
   - namespace.yaml
+  - uploads-pv.yaml
 
 patches:
   - path: patch-deployment.yaml
