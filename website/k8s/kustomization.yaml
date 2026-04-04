@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: fasttrack-production
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+# CI updates this via: kustomize edit set image fasttrack-web=ghcr.io/...
+images:
+  - name: fasttrack-web
+    newName: localhost:5000/fasttrack-web
+    newTag: latest

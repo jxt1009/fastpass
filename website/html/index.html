@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FastTrack — Performance Driving App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue: #0A84FF;
+      --bg: #0d0d0f;
+      --surface: #1c1c1e;
+      --text: #f5f5f7;
+      --muted: #98989d;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; line-height: 1.6; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 700; }
+    .nav-logo svg { width: 28px; height: 28px; fill: var(--blue); }
+    .nav-links { display: flex; gap: 24px; font-size: .9rem; color: var(--muted); }
+
+    /* Hero */
+    .hero { text-align: center; padding: 100px 24px 80px; }
+    .hero-badge { display: inline-block; background: rgba(10,132,255,.15); color: var(--blue); border: 1px solid rgba(10,132,255,.3); border-radius: 20px; padding: 5px 14px; font-size: .8rem; font-weight: 600; letter-spacing: .05em; margin-bottom: 24px; }
+    .hero h1 { font-size: clamp(2.4rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-bottom: 24px; }
+    .hero h1 span { color: var(--blue); }
+    .hero p { font-size: 1.2rem; color: var(--muted); max-width: 560px; margin: 0 auto 40px; }
+    .hero-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--blue); color: #fff; font-weight: 700; padding: 14px 28px; border-radius: 12px; font-size: 1rem; transition: opacity .2s; }
+    .hero-cta:hover { opacity: .85; text-decoration: none; }
+    .app-store-badge { margin-top: 16px; display: block; }
+    .app-store-badge img { height: 44px; }
+
+    /* Features */
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+    .feature-card { background: var(--surface); border: 1px solid rgba(255,255,255,.07); border-radius: 16px; padding: 28px 24px; }
+    .feature-icon { font-size: 2rem; margin-bottom: 14px; }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: .9rem; color: var(--muted); }
+
+    /* Section heading */
+    .section-heading { text-align: center; padding: 60px 24px 40px; }
+    .section-heading h2 { font-size: 2rem; font-weight: 700; margin-bottom: 12px; }
+    .section-heading p { color: var(--muted); max-width: 500px; margin: 0 auto; }
+
+    /* Stats bar */
+    .stats-bar { background: var(--surface); border-top: 1px solid rgba(255,255,255,.07); border-bottom: 1px solid rgba(255,255,255,.07); display: flex; justify-content: center; flex-wrap: wrap; gap: 0; }
+    .stat-item { padding: 32px 48px; text-align: center; border-right: 1px solid rgba(255,255,255,.07); }
+    .stat-item:last-child { border-right: none; }
+    .stat-num { font-size: 2.2rem; font-weight: 800; color: var(--blue); }
+    .stat-label { font-size: .82rem; color: var(--muted); margin-top: 4px; }
+
+    /* Footer */
+    footer { text-align: center; padding: 40px 24px; color: var(--muted); font-size: .82rem; border-top: 1px solid rgba(255,255,255,.08); }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+    .footer-links { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+      .stat-item { padding: 24px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+    FastTrack
+  </div>
+  <div class="nav-links">
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">Available on iOS</div>
+  <h1>Track Every<br/><span>Performance Moment</span></h1>
+  <p>Measure acceleration, top speed, braking G-forces, and more. Compare with friends on global leaderboards.</p>
+  <a href="#" class="hero-cta">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+    Download on the App Store
+  </a>
+</section>
+
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-num">0–60</div><div class="stat-label">mph Timing</div></div>
+  <div class="stat-item"><div class="stat-num">1/4</div><div class="stat-label">Mile Runs</div></div>
+  <div class="stat-item"><div class="stat-num">G-Force</div><div class="stat-label">Live Measurement</div></div>
+  <div class="stat-item"><div class="stat-num">Global</div><div class="stat-label">Leaderboards</div></div>
+</div>
+
+<div class="section-heading">
+  <h2>Everything You Need to Measure Performance</h2>
+  <p>Precision GPS and accelerometer data — no external hardware required.</p>
+</div>
+
+<div class="features">
+  <div class="feature-card">
+    <div class="feature-icon">⚡️</div>
+    <h3>0–60 &amp; 0–100 Timing</h3>
+    <p>Accurate acceleration runs with automatic start detection. Compare across cars and conditions.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🏁</div>
+    <h3>Quarter Mile</h3>
+    <p>Full quarter-mile timing with trap speed. See how your run stacks up against your personal bests.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🌀</div>
+    <h3>G-Force &amp; Braking</h3>
+    <p>Live lateral and longitudinal G-force measurement. Identify hard corners and braking events.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🗺️</div>
+    <h3>Drive Playback</h3>
+    <p>Review every drive on a color-coded speed map. See exactly where events happened.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🏆</div>
+    <h3>Leaderboards</h3>
+    <p>Compete globally by top speed, 0–60, or quarter mile. Follow friends and track rivalries.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🚗</div>
+    <h3>Garage</h3>
+    <p>Track multiple vehicles and compare performance across your whole fleet.</p>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+  </div>
+  <p>&copy; 2026 FastTrack. Use on closed courses only. Always obey traffic laws.</p>
+</footer>
+
+</body>
+</html>

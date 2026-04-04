@@ -11,6 +11,29 @@ spec:
     - host: fast.toper.dev
       http:
         paths:
+          # Marketing/legal pages → web deployment (exact matches take priority)
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name: fasttrack-web
+                port:
+                  number: 80
+          - path: /privacy
+            pathType: Exact
+            backend:
+              service:
+                name: fasttrack-web
+                port:
+                  number: 80
+          - path: /terms
+            pathType: Exact
+            backend:
+              service:
+                name: fasttrack-web
+                port:
+                  number: 80
+          # API, uploads, health, metrics → backend (catch-all prefix)
           - path: /
             pathType: Prefix
             backend:
