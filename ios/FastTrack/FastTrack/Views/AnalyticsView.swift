@@ -21,23 +21,28 @@ struct AnalyticsView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Time Frame Selector
-                    timeFramePicker
-                    
-                    // Performance Overview Cards
-                    performanceOverview
-                    
-                    // Main Chart
-                    chartSection
-                    
-                    // Performance Breakdown
-                    performanceBreakdown
-                    
-                    // Recent Best Performances
-                    recentBests
+                if driveManager.isLoadingDrives {
+                    analyticsSkeleton
+                } else {
+                    VStack(spacing: 20) {
+                        // Time Frame Selector
+                        timeFramePicker
+
+                        // Performance Overview Cards
+                        performanceOverview
+
+                        // Main Chart
+                        chartSection
+
+                        // Performance Breakdown
+                        performanceBreakdown
+
+                        // Recent Best Performances
+                        recentBests
+                    }
+                    .padding()
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
                 }
-                .padding()
             }
             .navigationTitle("Analytics")
             .navigationBarTitleDisplayMode(.large)
@@ -45,6 +50,39 @@ struct AnalyticsView: View {
         .sheet(item: $selectedDrive) { drive in
             DrivePerformanceDetailView(drive: drive)
         }
+    }
+
+    // MARK: - Loading skeleton
+
+    private var analyticsSkeleton: some View {
+        VStack(spacing: 20) {
+            // Time frame picker placeholder
+            SkeletonBlock(height: 36, cornerRadius: 10)
+
+            // Overview cards row
+            HStack(spacing: 12) {
+                ForEach(0..<3, id: \.self) { _ in StatCardSkeleton() }
+            }
+
+            // Chart placeholder
+            VStack(alignment: .leading, spacing: 12) {
+                SkeletonBlock(width: 140, height: 16)
+                SkeletonBlock(height: 180, cornerRadius: 12)
+            }
+
+            // Breakdown rows
+            VStack(alignment: .leading, spacing: 12) {
+                SkeletonBlock(width: 180, height: 16)
+                ForEach(0..<4, id: \.self) { _ in
+                    HStack {
+                        SkeletonBlock(width: 100, height: 14)
+                        Spacer()
+                        SkeletonBlock(width: 60, height: 18)
+                    }
+                }
+            }
+        }
+        .padding()
     }
     
     // MARK: - Time Frame Picker

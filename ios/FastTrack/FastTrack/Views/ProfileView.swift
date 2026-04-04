@@ -124,16 +124,20 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
                         garageSection
-                        mainStatsGrid
-                        topSpeedCard
-                        best060Card
-                        DarkSectionHeader(title: "Maneuvers")
-                        maneuvorsGrid
-                        TurnPreferenceBar(leftFraction: stats.turnPreferencePct)
-                        DarkSectionHeader(title: "Performance")
-                        performanceGrid
-                        DarkSectionHeader(title: "More Stats")
-                        moreStatsGrid
+                        if driveManager.isLoadingDrives {
+                            profileStatsSkeleton
+                        } else {
+                            mainStatsGrid
+                            topSpeedCard
+                            best060Card
+                            DarkSectionHeader(title: "Maneuvers")
+                            maneuvorsGrid
+                            TurnPreferenceBar(leftFraction: stats.turnPreferencePct)
+                            DarkSectionHeader(title: "Performance")
+                            performanceGrid
+                            DarkSectionHeader(title: "More Stats")
+                            moreStatsGrid
+                        }
                         privacyToggleCard
                         signOutButton
                     }
@@ -215,6 +219,29 @@ struct ProfileView: View {
                         .font(.caption2)
                         .foregroundColor(Color(white: 0.5))
                 }
+            }
+        }
+    }
+
+    // MARK: - Loading skeleton (dark theme)
+
+    private var profileStatsSkeleton: some View {
+        VStack(spacing: 16) {
+            // Stats grid skeleton (4 cells)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(0..<6, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6).opacity(0.2))
+                        .frame(height: 80)
+                        .shimmer()
+                }
+            }
+            // Full-width card skeletons
+            ForEach(0..<3, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6).opacity(0.2))
+                    .frame(height: 60)
+                    .shimmer()
             }
         }
     }

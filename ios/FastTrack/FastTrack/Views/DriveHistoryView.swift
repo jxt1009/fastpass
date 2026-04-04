@@ -2,14 +2,31 @@ import SwiftUI
 
 struct DriveHistoryView: View {
     @EnvironmentObject var driveManager: DriveManager
-    
+
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(driveManager.drives) { drive in
-                    NavigationLink(destination: DriveDetailView(drive: drive)) {
-                        DriveRowView(drive: drive)
+            Group {
+                if driveManager.isLoadingDrives {
+                    List {
+                        ForEach(0..<6, id: \.self) { _ in
+                            DriveRowSkeleton()
+                        }
                     }
+                } else if driveManager.drives.isEmpty {
+                    ContentUnavailableView(
+                        "No Drives Yet",
+                        systemImage: "car.fill",
+                        description: Text("Start a drive to see your history here.")
+                    )
+                } else {
+                    List {
+                        ForEach(driveManager.drives) { drive in
+                            NavigationLink(destination: DriveDetailView(drive: drive)) {
+                                DriveRowView(drive: drive)
+                            }
+                        }
+                    }
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
                 }
             }
             .navigationTitle("Drive History")
@@ -17,6 +34,26 @@ struct DriveHistoryView: View {
             .onAppear { driveManager.startPolling() }
             .onDisappear { driveManager.stopPolling() }
         }
+    }
+}
+
+struct DriveRowSkeleton: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                SkeletonBlock(width: 120, height: 16)
+                Spacer()
+                SkeletonBlock(width: 80, height: 14)
+            }
+            HStack {
+                SkeletonBlock(width: 70, height: 12)
+                Spacer()
+                SkeletonBlock(width: 70, height: 12)
+                Spacer()
+                SkeletonBlock(width: 50, height: 12)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 

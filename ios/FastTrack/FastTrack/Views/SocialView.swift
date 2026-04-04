@@ -74,9 +74,15 @@ struct SocialView: View {
 
     @ViewBuilder
     private var content: some View {
-        if isLoading && entries.isEmpty {
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        if isLoading {
+            // Show skeleton rows while loading (covers both initial load and filter switches)
+            VStack(spacing: 0) {
+                ForEach(0..<8, id: \.self) { _ in
+                    LeaderboardSkeletonRow()
+                    Divider().padding(.leading, 76)
+                }
+            }
+            .transition(.opacity)
         } else if let error = errorMessage, entries.isEmpty {
             ContentUnavailableView(
                 "Couldn't Load",
@@ -127,14 +133,20 @@ struct SocialView: View {
     }
 
     private func loadLeaderboard() async {
-        isLoading = true
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isLoading = true
+            entries = []  // clear stale data so skeleton shows immediately
+        }
         errorMessage = nil
         do {
-            entries = try await APIService.shared.fetchLeaderboard(
+            let fetched = try await APIService.shared.fetchLeaderboard(
                 category: selectedCategory,
                 scope: selectedScope,
                 period: selectedPeriod
             )
+            withAnimation(.easeInOut(duration: 0.25)) {
+                entries = fetched
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

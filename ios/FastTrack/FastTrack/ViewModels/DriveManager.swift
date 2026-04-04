@@ -7,6 +7,7 @@ class DriveManager: ObservableObject {
     @Published var isRecording = false
     @Published var currentDrive: Drive?
     @Published var drives: [Drive] = []
+    @Published var isLoadingDrives = true  // true until first fetch completes
     @Published var routeCoordinates: [CLLocationCoordinate2D] = []
     @Published var recordingStartTime: Date?
 
@@ -535,8 +536,12 @@ class DriveManager: ObservableObject {
         Task {
             do {
                 let fetched = try await APIService.shared.fetchDrives()
-                await MainActor.run { self.drives = fetched }
+                await MainActor.run {
+                    self.drives = fetched
+                    self.isLoadingDrives = false
+                }
             } catch {
+                await MainActor.run { self.isLoadingDrives = false }
                 print("Failed to fetch drives: \(error.localizedDescription)")
             }
         }
