@@ -54,8 +54,8 @@ class DriveManager: ObservableObject {
         guard !isRecording else { return }
         print("🚗 Starting drive recording...")
         
+        recordingStartTime = Date()  // set before isRecording so onChange sees it immediately
         isRecording = true
-        recordingStartTime = Date()
         recordingLocations = []
         routeCoordinates = []
         speedReadings = []
@@ -271,16 +271,26 @@ class DriveManager: ObservableObject {
             }
             return 
         }
+
+        // Skip acceleration/G-force calculation if either GPS reading has poor speed accuracy.
+        // speedAccuracy is in m/s std dev; -1 means unavailable. Threshold: 2 m/s (~4.5 mph).
+        let speedAccuracyOK = location.speedAccuracy > 0 && location.speedAccuracy < 2.0
+                           && prev.speedAccuracy > 0 && prev.speedAccuracy < 2.0
         
         // Heavy calculations on background thread
-        let accel = (speed - prevSpeed) / dt
+        let rawAccel = (speed - prevSpeed) / dt
+        // Physical sanity cap: > 5G is impossible on a public road; clamp to prevent GPS spikes
+        let maxPhysicalAccelMS2 = 5.0 * 9.81  // ~49 m/s²
+        let accel = max(-maxPhysicalAccelMS2, min(maxPhysicalAccelMS2, rawAccel))
         let currentMaxAccel = await MainActor.run { self.maxAcceleration }
         let currentMaxDecel = await MainActor.run { self.maxDeceleration }
         
-        updates.acceleration = accel > currentMaxAccel ? accel : nil
-        updates.deceleration = -accel > currentMaxDecel ? -accel : nil
+        if speedAccuracyOK {
+            updates.acceleration = accel > currentMaxAccel ? accel : nil
+            updates.deceleration = -accel > currentMaxDecel ? -accel : nil
+        }
         
-        // Brake event detection
+        // Brake event detection (uses raw accel; doesn't need accuracy gate — threshold is high enough)
         if accel < -2.5 {
             let lastBrake = await MainActor.run { self.lastBrakeTime }
             let gap = lastBrake.map { ts.timeIntervalSince($0) } ?? 100
@@ -289,24 +299,26 @@ class DriveManager: ObservableObject {
             }
         }
         
-        // G-force calculation
-        var latAccel = 0.0
-        if location.course >= 0 && prev.course >= 0 && speed > 1 {
-            var dh = location.course - prev.course
-            if dh > 180 { dh -= 360 }
-            if dh < -180 { dh += 360 }
-            let omega = (dh * .pi / 180) / dt
-            latAccel = speed * omega
-        }
-        
-        let lonG = accel / 9.81
-        let latG = abs(latAccel) / 9.81
-        let totalG = (lonG * lonG + latG * latG).squareRoot()
-        
-        updates.gForce = totalG
+        // G-force calculation — only when GPS accuracy is reliable
         let currentTopCornerSpeed = await MainActor.run { self.topCornerSpeed }
-        if latG > 0.15 && speed > currentTopCornerSpeed {
-            updates.cornerSpeed = speed
+        if speedAccuracyOK {
+            var latAccel = 0.0
+            if location.course >= 0 && prev.course >= 0 && speed > 1 {
+                var dh = location.course - prev.course
+                if dh > 180 { dh -= 360 }
+                if dh < -180 { dh += 360 }
+                let omega = (dh * .pi / 180) / dt
+                latAccel = speed * omega
+            }
+
+            let lonG = accel / 9.81
+            let latG = abs(latAccel) / 9.81
+            let totalG = (lonG * lonG + latG * latG).squareRoot()
+
+            updates.gForce = totalG
+            if latG > 0.15 && speed > currentTopCornerSpeed {
+                updates.cornerSpeed = speed
+            }
         }
         
         // 0-60 timing
