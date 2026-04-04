@@ -14,6 +14,8 @@ spec:
       labels:
         app: fasttrack-api
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: fasttrack-api
           image: fasttrack-api  # overridden by kustomization.yaml images block
