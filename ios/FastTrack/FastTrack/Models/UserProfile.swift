@@ -247,8 +247,10 @@ class ProfileManager: ObservableObject {
         }
     }
 
-    func saveAvatar(_ image: UIImage) {        profileImage = image
-        if let data = image.jpegData(compressionQuality: 0.8) {
+    func saveAvatar(_ image: UIImage) {
+        profileImage = image
+        let resized = image.resizedForAvatar(maxDimension: 800)
+        if let data = resized.jpegData(compressionQuality: 0.8) {
             try? data.write(to: avatarURL())
             // Upload to server so it's visible on public profile
             Task {
@@ -278,5 +280,19 @@ class ProfileManager: ObservableObject {
     private func avatarURL() -> URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(avatarFilename)
+    }
+}
+
+// MARK: - UIImage helpers
+
+extension UIImage {
+    /// Returns a copy scaled so neither dimension exceeds `maxDimension`, preserving aspect ratio.
+    func resizedForAvatar(maxDimension: CGFloat) -> UIImage {
+        let largest = max(size.width, size.height)
+        guard largest > maxDimension else { return self }
+        let scale = maxDimension / largest
+        let newSize = CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in draw(in: CGRect(origin: .zero, size: newSize)) }
     }
 }
