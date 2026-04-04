@@ -80,15 +80,45 @@ jobs:
       - name: Verify cluster connectivity
         run: |
           kubectl create namespace fasttrack-staging --dry-run=client -o yaml | kubectl apply -f -
+
+          # Ensure secret exists (no-op if already present)
           kubectl create secret generic fasttrack-secrets \
-            --from-literal=database-url="${{ secrets.STAGING_DATABASE_URL }}" \
-            --from-literal=jwt-secret="${{ secrets.JWT_SECRET }}" \
-            --from-literal=apple-app-bundle-id="${{ secrets.APPLE_APP_BUNDLE_ID }}" \
-            --from-literal=base-url="${{ secrets.STAGING_BASE_URL }}" \
-            --from-literal=google-client-id="${{ secrets.GOOGLE_CLIENT_ID }}" \
-            --from-literal=google-client-secret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --from-literal=_placeholder=1 \
             --namespace fasttrack-staging \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f - 2>/dev/null || true
+
+          # Merge-patch: only update keys that are non-empty in GitHub secrets.
+          # --type=merge leaves any key we don't provide completely untouched.
+          python3 << 'PYEOF'
+          import subprocess, base64, json, sys
+
+          ns = "fasttrack-staging"
+          candidates = {
+              "database-url":       "${{ secrets.STAGING_DATABASE_URL }}",
+              "jwt-secret":         "${{ secrets.JWT_SECRET }}",
+              "apple-app-bundle-id":"${{ secrets.APPLE_APP_BUNDLE_ID }}",
+              "base-url":           "${{ secrets.STAGING_BASE_URL }}",
+              "google-client-id":   "${{ secrets.GOOGLE_CLIENT_ID }}",
+              "google-client-secret":"${{ secrets.GOOGLE_CLIENT_SECRET }}",
+          }
+          # Required keys — fail fast if missing so we catch config errors early
+          required = {"database-url", "jwt-secret"}
+          missing = [k for k in required if not candidates[k].strip()]
+          if missing:
+              print(f"ERROR: required secrets not set: {missing}", file=sys.stderr)
+              sys.exit(1)
+
+          data = {k: base64.b64encode(v.strip().encode()).decode()
+                  for k, v in candidates.items() if v.strip()}
+          patch = json.dumps({"data": data})
+          r = subprocess.run(
+              ["kubectl", "patch", "secret", "fasttrack-secrets",
+               "-n", ns, "--type=merge", "-p", patch],
+              capture_output=True, text=True)
+          print(r.stdout, r.stderr)
+          sys.exit(r.returncode)
+          PYEOF
+
           kubectl create secret docker-registry ghcr-pull-secret \
             --docker-server=ghcr.io \
             --docker-username=${{ github.actor }} \
@@ -131,15 +161,45 @@ jobs:
       - name: Verify cluster connectivity
         run: |
           kubectl create namespace fasttrack-production --dry-run=client -o yaml | kubectl apply -f -
+
+          # Ensure secret exists (no-op if already present)
           kubectl create secret generic fasttrack-secrets \
-            --from-literal=database-url="${{ secrets.PRODUCTION_DATABASE_URL }}" \
-            --from-literal=jwt-secret="${{ secrets.JWT_SECRET }}" \
-            --from-literal=apple-app-bundle-id="${{ secrets.APPLE_APP_BUNDLE_ID }}" \
-            --from-literal=base-url="${{ secrets.PRODUCTION_BASE_URL }}" \
-            --from-literal=google-client-id="${{ secrets.GOOGLE_CLIENT_ID }}" \
-            --from-literal=google-client-secret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --from-literal=_placeholder=1 \
             --namespace fasttrack-production \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f - 2>/dev/null || true
+
+          # Merge-patch: only update keys that are non-empty in GitHub secrets.
+          # --type=merge leaves any key we don't provide completely untouched.
+          python3 << 'PYEOF'
+          import subprocess, base64, json, sys
+
+          ns = "fasttrack-production"
+          candidates = {
+              "database-url":        "${{ secrets.PRODUCTION_DATABASE_URL }}",
+              "jwt-secret":          "${{ secrets.JWT_SECRET }}",
+              "apple-app-bundle-id": "${{ secrets.APPLE_APP_BUNDLE_ID }}",
+              "base-url":            "${{ secrets.PRODUCTION_BASE_URL }}",
+              "google-client-id":    "${{ secrets.GOOGLE_CLIENT_ID }}",
+              "google-client-secret":"${{ secrets.GOOGLE_CLIENT_SECRET }}",
+          }
+          # Required keys — fail fast if missing so we catch config errors early
+          required = {"database-url", "jwt-secret"}
+          missing = [k for k in required if not candidates[k].strip()]
+          if missing:
+              print(f"ERROR: required secrets not set: {missing}", file=sys.stderr)
+              sys.exit(1)
+
+          data = {k: base64.b64encode(v.strip().encode()).decode()
+                  for k, v in candidates.items() if v.strip()}
+          patch = json.dumps({"data": data})
+          r = subprocess.run(
+              ["kubectl", "patch", "secret", "fasttrack-secrets",
+               "-n", ns, "--type=merge", "-p", patch],
+              capture_output=True, text=True)
+          print(r.stdout, r.stderr)
+          sys.exit(r.returncode)
+          PYEOF
+
           kubectl create secret docker-registry ghcr-pull-secret \
             --docker-server=ghcr.io \
             --docker-username=${{ github.actor }} \
