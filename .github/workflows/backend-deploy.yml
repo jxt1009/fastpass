@@ -132,3 +132,4 @@ jobs:
           kubectl apply -k .
           kubectl rollout status deployment/fasttrack-api -n fasttrack-production --timeout=120s
 
+
