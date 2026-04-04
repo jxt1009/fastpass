@@ -240,20 +240,21 @@ struct DriveDetailView: View {
                 }
             }
 
-            // Scrubber
-            Slider(value: $playbackProgress, in: 0...1)
-                .tint(.blue)
-                .onChange(of: playbackProgress) { _ in
-                    if isPlaying { stopPlayback() }
-                }
+            // Scrubber — onEditingChanged fires only on user interaction,
+            // not when the playback timer updates the value programmatically.
+            Slider(value: $playbackProgress, in: 0...1, onEditingChanged: { editing in
+                if editing && isPlaying { stopPlayback() }
+            })
+            .tint(.blue)
 
             // Transport controls
             HStack {
+                // Seek back 10 seconds
                 Button {
-                    stopPlayback()
-                    playbackProgress = 0
+                    let step = 10.0 / max(drive.duration, 1)
+                    playbackProgress = max(0, playbackProgress - step)
                 } label: {
-                    Image(systemName: "backward.end.fill")
+                    Image(systemName: "gobackward.10")
                         .foregroundColor(.primary)
                 }
                 Spacer()
@@ -263,11 +264,12 @@ struct DriveDetailView: View {
                         .foregroundColor(.blue)
                 }
                 Spacer()
+                // Seek forward 10 seconds
                 Button {
-                    stopPlayback()
-                    playbackProgress = 1
+                    let step = 10.0 / max(drive.duration, 1)
+                    playbackProgress = min(1, playbackProgress + step)
                 } label: {
-                    Image(systemName: "forward.end.fill")
+                    Image(systemName: "goforward.10")
                         .foregroundColor(.primary)
                 }
             }
@@ -350,10 +352,14 @@ struct DriveDetailView: View {
     private func startPlayback() {
         if playbackProgress >= 1 { playbackProgress = 0 }
         isPlaying = true
-        let totalPoints = routePoints.count
-        let stepSize = 1.0 / Double(totalPoints)
-        // ~25 fps playback (4× real-time for long drives; adjust as needed)
-        playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { _ in
+        let duration = max(drive.duration, 1)
+        // Playback at 4× real-time. Each tick (0.05s wall time) advances
+        // 0.2s of drive time, so progress step = 0.2 / duration.
+        let playbackSpeed = 4.0
+        let tickInterval: TimeInterval = 0.05
+        let stepSize = (tickInterval * playbackSpeed) / duration
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: tickInterval, repeats: true) { [weak self] _ in
+            guard let self else { return }
             DispatchQueue.main.async {
                 if self.playbackProgress >= 1 {
                     self.stopPlayback()

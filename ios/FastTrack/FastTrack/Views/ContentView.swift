@@ -6,13 +6,9 @@ struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
     @ObservedObject private var settings = AppSettings.shared
-    @State private var elapsedTime: TimeInterval = 0
     @State private var showingCarPicker = false
     @State private var showingSafetyDisclaimer = false
     @ObservedObject private var profileManager = ProfileManager.shared
-
-    // 1-second ticker for live timer
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private let hasAcceptedSafetyKey = "hasAcceptedSafetyDisclaimer"
 
@@ -79,12 +75,20 @@ struct ContentView: View {
                                     .fontWeight(.semibold)
 
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                    StatCard(
-                                        title: "Time",
-                                        value: formatElapsed(elapsedTime),
-                                        icon: "clock.fill",
-                                        color: .blue
-                                    )
+                                    // TimelineView updates itself every second independently of
+                                    // view rebuilds — immune to the sensor-data churn that caused
+                                    // Timer.publish to reset and freeze.
+                                    TimelineView(.periodic(from: driveManager.recordingStartTime ?? .now, by: 1)) { ctx in
+                                        let elapsed: TimeInterval = driveManager.recordingStartTime.map {
+                                            ctx.date.timeIntervalSince($0)
+                                        } ?? 0
+                                        StatCard(
+                                            title: "Time",
+                                            value: formatElapsed(max(0, elapsed)),
+                                            icon: "clock.fill",
+                                            color: .blue
+                                        )
+                                    }
                                     StatCard(
                                         title: "Distance",
                                         value: settings.distanceDisplay(drive.distance, decimals: 2),
@@ -156,13 +160,11 @@ struct ContentView: View {
                             if driveManager.isRecording {
                                 print("🛑 Stop recording button pressed")
                                 driveManager.stopRecording()
-                                elapsedTime = 0
                             } else {
                                 print("▶️ Start recording button pressed")
                                 let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
                                 if hasAccepted {
                                     driveManager.startRecording()
-                                    elapsedTime = 0
                                 } else {
                                     showingSafetyDisclaimer = true
                                 }
@@ -193,27 +195,10 @@ struct ContentView: View {
                 Button("I Understand — Start Drive") {
                     UserDefaults.standard.set(true, forKey: hasAcceptedSafetyKey)
                     driveManager.startRecording()
-                    elapsedTime = 0
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("FastTrack is designed to be used on closed courses, private roads, or as a passenger only.\n\nNever operate this app while driving on public roads. Always obey traffic laws. You are solely responsible for your safety and the safety of others.")
-            }
-            // Tick the live timer every second
-            .onReceive(timer) { _ in
-                guard driveManager.isRecording, let start = driveManager.recordingStartTime else { 
-                    return 
-                }
-                let newElapsed = Date().timeIntervalSince(start)
-                elapsedTime = newElapsed
-            }
-            // Snap elapsed immediately on recording state change (avoids first-tick delay)
-            .onChange(of: driveManager.isRecording) { _, isRecording in
-                if isRecording, let start = driveManager.recordingStartTime {
-                    elapsedTime = Date().timeIntervalSince(start)
-                } else {
-                    elapsedTime = 0
-                }
             }
         }
     }
