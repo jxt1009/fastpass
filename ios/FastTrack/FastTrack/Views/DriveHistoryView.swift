@@ -31,8 +31,7 @@ struct DriveHistoryView: View {
             }
             .navigationTitle("Drive History")
             .navigationBarTitleDisplayMode(.large)
-            .onAppear { driveManager.startPolling() }
-            .onDisappear { driveManager.stopPolling() }
+            .onAppear { driveManager.fetchDrives() }
         }
     }
 }

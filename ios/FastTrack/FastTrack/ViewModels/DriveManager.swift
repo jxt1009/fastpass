@@ -548,6 +548,7 @@ class DriveManager: ObservableObject {
     }
 
     func startPolling() {
+        guard pollTimer == nil else { return }   // already running
         fetchDrives()
         pollTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             self?.fetchDrives()

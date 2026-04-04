@@ -92,7 +92,10 @@ struct RootView: View {
                     tabResetIDs[oldTab] = UUID()
                 }
             }
-            .onAppear { locationManager.requestPermission() }
+            .onAppear {
+                locationManager.requestPermission()
+                driveManager.startPolling()
+            }
         } else {
             SignInView()
                 .environmentObject(authManager)
