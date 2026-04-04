@@ -7,35 +7,70 @@ class AuthManager: ObservableObject {
 
     @Published var isAuthenticated: Bool = false
 
-    private let tokenKey = "auth_token"
-    private let refreshTokenKey = "refresh_token"
+    private let tokenKey = "com.fasttrack.auth_token"
+    private let refreshTokenKey = "com.fasttrack.refresh_token"
     private let userKey = "current_user"
 
     private init() {
         isAuthenticated = getToken() != nil
     }
     
+    // MARK: - Keychain helpers
+
+    private func keychainSave(_ value: String, forKey key: String) {
+        let data = Data(value.utf8)
+        let query: [CFString: Any] = [
+            kSecClass:            kSecClassGenericPassword,
+            kSecAttrAccount:      key,
+            kSecValueData:        data,
+            kSecAttrAccessible:   kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        SecItemDelete(query as CFDictionary)
+        SecItemAdd(query as CFDictionary, nil)
+    }
+
+    private func keychainLoad(forKey key: String) -> String? {
+        let query: [CFString: Any] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrAccount: key,
+            kSecReturnData:  true,
+            kSecMatchLimit:  kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func keychainDelete(forKey key: String) {
+        let query: [CFString: Any] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrAccount: key
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
     // MARK: - Token Management
     
     func saveToken(_ token: String) {
-        UserDefaults.standard.set(token, forKey: tokenKey)
+        keychainSave(token, forKey: tokenKey)
     }
     
     func saveRefreshToken(_ token: String) {
-        UserDefaults.standard.set(token, forKey: refreshTokenKey)
+        keychainSave(token, forKey: refreshTokenKey)
     }
     
     func getToken() -> String? {
-        return UserDefaults.standard.string(forKey: tokenKey)
+        return keychainLoad(forKey: tokenKey)
     }
     
     func getRefreshToken() -> String? {
-        return UserDefaults.standard.string(forKey: refreshTokenKey)
+        return keychainLoad(forKey: refreshTokenKey)
     }
     
     func clearTokens() {
-        UserDefaults.standard.removeObject(forKey: tokenKey)
-        UserDefaults.standard.removeObject(forKey: refreshTokenKey)
+        keychainDelete(forKey: tokenKey)
+        keychainDelete(forKey: refreshTokenKey)
         UserDefaults.standard.removeObject(forKey: userKey)
         isAuthenticated = false
     }

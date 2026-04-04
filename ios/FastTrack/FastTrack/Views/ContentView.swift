@@ -8,10 +8,13 @@ struct ContentView: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var elapsedTime: TimeInterval = 0
     @State private var showingCarPicker = false
+    @State private var showingSafetyDisclaimer = false
     @ObservedObject private var profileManager = ProfileManager.shared
 
     // 1-second ticker for live timer
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private let hasAcceptedSafetyKey = "hasAcceptedSafetyDisclaimer"
 
     var body: some View {
         NavigationStack {
@@ -156,8 +159,13 @@ struct ContentView: View {
                                 elapsedTime = 0
                             } else {
                                 print("▶️ Start recording button pressed")
-                                driveManager.startRecording()
-                                elapsedTime = 0
+                                let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
+                                if hasAccepted {
+                                    driveManager.startRecording()
+                                    elapsedTime = 0
+                                } else {
+                                    showingSafetyDisclaimer = true
+                                }
                             }
                         } label: {
                             HStack {
@@ -180,6 +188,16 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingCarPicker) {
                 CarSelectorView()
+            }
+            .alert("Safety First", isPresented: $showingSafetyDisclaimer) {
+                Button("I Understand — Start Drive") {
+                    UserDefaults.standard.set(true, forKey: hasAcceptedSafetyKey)
+                    driveManager.startRecording()
+                    elapsedTime = 0
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("FastTrack is designed to be used on closed courses, private roads, or as a passenger only.\n\nNever operate this app while driving on public roads. Always obey traffic laws. You are solely responsible for your safety and the safety of others.")
             }
             // Tick the live timer every second
             .onReceive(timer) { _ in

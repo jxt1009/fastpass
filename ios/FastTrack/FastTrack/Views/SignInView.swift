@@ -63,12 +63,29 @@ struct SignInView: View {
 
             Spacer()
 
-            Text("By signing in you agree to our Terms of Service and Privacy Policy")
-                .font(.caption2)
+            // Legal footer with tappable links (required for App Store)
+            (Text("By signing in you agree to our ")
                 .foregroundColor(.secondary)
+             + Text("Terms of Service")
+                .foregroundColor(.blue)
+             + Text(" and ")
+                .foregroundColor(.secondary)
+             + Text("Privacy Policy")
+                .foregroundColor(.blue))
+                .font(.caption2)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-                .padding(.bottom, 24)
+                .padding(.bottom, 8)
+                .onTapGesture { }  // handled by individual Link overlays below
+
+            HStack(spacing: 16) {
+                Link("Terms of Service",
+                     destination: URL(string: "https://fast.toper.dev/terms")!)
+                Link("Privacy Policy",
+                     destination: URL(string: "https://fast.toper.dev/privacy")!)
+            }
+            .font(.caption2)
+            .padding(.bottom, 24)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
     }
