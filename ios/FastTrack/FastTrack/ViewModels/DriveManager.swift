@@ -44,6 +44,8 @@ class DriveManager: ObservableObject {
     private var lastBrakeTime: Date?
     private var zeroStart: Date?
     private var best060Active = false
+    /// Rolling 10-second heading history used to detect sustained curves/ramps.
+    private var headingHistory: [(course: Double, time: Date)] = []
 
     // Live Activity
     private var liveActivity: Activity<DriveActivityAttributes>?
@@ -98,6 +100,7 @@ class DriveManager: ObservableObject {
         currentMaxSpeed = 0  // Reset max speed for new recording
         headingWindow = nil; lastTurnOrLaneTime = nil
         lastBrakeTime = nil; zeroStart = nil
+        headingHistory = []
 
         locationManager?.startUpdatingLocation()
         print("📍 Location manager started")
@@ -453,7 +456,10 @@ class DriveManager: ObservableObject {
     private func processHeadingBackground(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
         let window = await MainActor.run { self.headingWindow }
         guard let window = window else {
-            await MainActor.run { self.headingWindow = (course, timestamp) }
+            await MainActor.run {
+                self.headingWindow = (course, timestamp)
+                self.headingHistory.append((course, timestamp))
+            }
             return nil
         }
         
@@ -467,11 +473,21 @@ class DriveManager: ObservableObject {
         let lastTurnTime = await MainActor.run { self.lastTurnOrLaneTime }
         let gap = lastTurnTime.map { timestamp.timeIntervalSince($0) } ?? 100
         
+        // Append to rolling history and check for sustained curve before classifying
+        let inCurve = await MainActor.run { () -> Bool in
+            self.headingHistory.append((course, timestamp))
+            // Trim entries older than 10 seconds
+            let cutoff = timestamp.addingTimeInterval(-10)
+            self.headingHistory.removeAll { $0.time < cutoff }
+            return self.isSustainedCurve(upTo: timestamp)
+        }
+        
         var leftTurns = 0, rightTurns = 0, laneChanges = 0
         
         if abs(delta) > 35 && gap > 4 {
             if delta > 0 { rightTurns = 1 } else { leftTurns = 1 }
-        } else if abs(delta) >= 10 && abs(delta) <= 35 && speed > 6.7 && gap > 3 {
+        } else if abs(delta) >= 10 && abs(delta) <= 35 && speed > 6.7 && gap > 3 && !inCurve {
+            // Only count as lane change when NOT in a sustained ramp/curve
             laneChanges = 1
         }
         
@@ -480,7 +496,37 @@ class DriveManager: ObservableObject {
         return leftTurns + rightTurns + laneChanges > 0 ? (leftTurns, rightTurns, laneChanges) : nil
     }
 
+    /// Returns true if the heading history shows a sustained curve (ramp, cloverleaf, etc.)
+    /// rather than a brief lane-change deflection. A sustained curve is defined as ≥5 seconds
+    /// of consistent heading rotation in a single direction totalling >40°.
+    private func isSustainedCurve(upTo timestamp: Date) -> Bool {
+        let windowStart = timestamp.addingTimeInterval(-8)
+        let window = headingHistory.filter { $0.time >= windowStart }
+        guard window.count >= 4 else { return false }
+
+        var cumulative = 0.0
+        var signs: [Double] = []
+        for i in 1..<window.count {
+            var d = window[i].course - window[i-1].course
+            if d > 180 { d -= 360 }
+            if d < -180 { d += 360 }
+            if abs(d) > 0.5 {
+                cumulative += abs(d)
+                signs.append(d > 0 ? 1 : -1)
+            }
+        }
+        guard cumulative > 40, signs.count >= 3 else { return false }
+        // All deltas in same rotational direction = sustained curve
+        let allSame = signs.allSatisfy { $0 == signs[0] }
+        return allSame
+    }
+
     private func processHeading(course: Double, speed: Double, timestamp: Date) {
+        // Maintain rolling history
+        headingHistory.append((course, timestamp))
+        let cutoff = timestamp.addingTimeInterval(-10)
+        headingHistory.removeAll { $0.time < cutoff }
+
         guard let window = headingWindow else {
             headingWindow = (course, timestamp)
             return
@@ -497,7 +543,8 @@ class DriveManager: ObservableObject {
         if abs(delta) > 35 && gap > 4 {
             if delta > 0 { rightTurns += 1 } else { leftTurns += 1 }
             lastTurnOrLaneTime = timestamp
-        } else if abs(delta) >= 10 && abs(delta) <= 35 && speed > 6.7 && gap > 3 {
+        } else if abs(delta) >= 10 && abs(delta) <= 35 && speed > 6.7 && gap > 3
+                    && !isSustainedCurve(upTo: timestamp) {
             laneChanges += 1
             lastTurnOrLaneTime = timestamp
         }

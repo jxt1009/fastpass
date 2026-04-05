@@ -26,7 +26,7 @@ enum StatInfo {
     static let laneChanges = StatInfoEntry(
         "Lane Changes",
         summary: "Estimates lateral lane-change maneuvers.",
-        howCalculated: "Detected when heading changes 10–35° over a 2-second GPS window while travelling above 15 mph. Smaller changes (parking, curves) are ignored. A 3-second cooldown prevents double-counting.",
+        howCalculated: "Detected when heading changes 10–35° over a 2-second GPS window while travelling above 15 mph. Sustained curves (ramps, cloverleafs) are excluded by checking that heading hasn't been rotating consistently in one direction for more than 5 seconds totalling >40° — so a 270° California cloverleaf onramp is correctly classified as a curve, not multiple lane changes. A 3-second cooldown prevents double-counting.",
         unit: "count"
     )
     static let leftTurns = StatInfoEntry(
