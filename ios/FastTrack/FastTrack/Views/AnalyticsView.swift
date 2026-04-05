@@ -134,7 +134,8 @@ struct AnalyticsView: View {
                 value: String(format: "%.0f", analyticsData.overallDrivingScore),
                 icon: "star.fill",
                 iconColor: .yellow,
-                trend: analyticsData.scoreTrend
+                trend: analyticsData.scoreTrend,
+                info: StatInfo.drivingScore
             )
         }
     }
@@ -268,7 +269,8 @@ struct AnalyticsCard: View {
     let icon: String
     let iconColor: Color
     let trend: TrendDirection?
-    
+    var info: StatInfoEntry? = nil
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -279,12 +281,13 @@ struct AnalyticsCard: View {
                 if let trend = trend {
                     TrendIndicator(trend: trend)
                 }
+                if let info { StatInfoButton(entry: info) }
             }
-            
+
             Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-            
+
             Text(title)
                 .font(.caption)
                 .foregroundColor(.secondary)

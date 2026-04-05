@@ -20,13 +20,18 @@ private struct ProfileStatCell: View {
     let label: String
     let value: String
     let unit: String
+    var info: StatInfoEntry? = nil
 
     var body: some View {
         DarkCard {
             VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: icon)
-                    .foregroundColor(iconColor)
-                    .font(.title3)
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(iconColor)
+                        .font(.title3)
+                    Spacer()
+                    if let info { StatInfoButton(entry: info).colorScheme(.dark) }
+                }
                 Text(label)
                     .font(.caption)
                     .foregroundColor(Color(white: 0.6))
@@ -94,11 +99,18 @@ private struct TurnPreferenceBar: View {
 
 private struct DarkSectionHeader: View {
     let title: String
+    var info: StatInfoEntry? = nil
     var body: some View {
-        Text(title)
-            .font(.title3).fontWeight(.bold)
-            .foregroundColor(.white)
-            .padding(.top, 8)
+        HStack {
+            Text(title)
+                .font(.title3).fontWeight(.bold)
+                .foregroundColor(.white)
+            if let info {
+                StatInfoButton(entry: info)
+                    .colorScheme(.dark)
+            }
+        }
+        .padding(.top, 8)
     }
 }
 
@@ -131,10 +143,10 @@ struct ProfileView: View {
                             mainStatsGrid
                             topSpeedCard
                             best060Card
-                            DarkSectionHeader(title: "Maneuvers")
+                            DarkSectionHeader(title: "Maneuvers", info: StatInfo.maneuversSection)
                             maneuvorsGrid
                             TurnPreferenceBar(leftFraction: stats.turnPreferencePct)
-                            DarkSectionHeader(title: "Performance")
+                            DarkSectionHeader(title: "Performance", info: StatInfo.performanceSection)
                             performanceGrid
                             DarkSectionHeader(title: "More Stats")
                             moreStatsGrid
@@ -391,6 +403,7 @@ struct ProfileView: View {
                     }
                 }
                 Spacer()
+                StatInfoButton(entry: StatInfo.zeroToSixty).colorScheme(.dark)
             }
         }
     }
@@ -401,19 +414,23 @@ struct ProfileView: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             ProfileStatCell(
                 icon: "arrow.turn.up.left", iconColor: .blue,
-                label: "Left Turns", value: "\(stats.totalLeftTurns)", unit: ""
+                label: "Left Turns", value: "\(stats.totalLeftTurns)", unit: "",
+                info: StatInfo.leftTurns
             )
             ProfileStatCell(
                 icon: "arrow.turn.up.right", iconColor: .orange,
-                label: "Right Turns", value: "\(stats.totalRightTurns)", unit: ""
+                label: "Right Turns", value: "\(stats.totalRightTurns)", unit: "",
+                info: StatInfo.rightTurns
             )
             ProfileStatCell(
                 icon: "hand.raised.fill", iconColor: .red,
-                label: "Brake Events", value: "\(stats.totalBrakeEvents)", unit: ""
+                label: "Brake Events", value: "\(stats.totalBrakeEvents)", unit: "",
+                info: StatInfo.brakeEvents
             )
             ProfileStatCell(
                 icon: "arrow.left.arrow.right", iconColor: .green,
-                label: "Lane Changes", value: "\(stats.totalLaneChanges)", unit: ""
+                label: "Lane Changes", value: "\(stats.totalLaneChanges)", unit: "",
+                info: StatInfo.laneChanges
             )
         }
     }
@@ -426,25 +443,29 @@ struct ProfileView: View {
                 icon: "arrow.down.circle.fill", iconColor: .red,
                 label: "Max Deceleration",
                 value: String(format: "%.1f", stats.overallMaxDeceleration),
-                unit: "m/s²"
+                unit: "m/s²",
+                info: StatInfo.maxDeceleration
             )
             ProfileStatCell(
                 icon: "arrow.up.circle.fill", iconColor: .green,
                 label: "Max Acceleration",
                 value: String(format: "%.1f", stats.overallMaxAcceleration),
-                unit: "m/s²"
+                unit: "m/s²",
+                info: StatInfo.maxAcceleration
             )
             ProfileStatCell(
                 icon: "circle.circle.fill", iconColor: .orange,
                 label: "Peak G-Force",
                 value: String(format: "%.2f", stats.overallPeakGForce),
-                unit: "G"
+                unit: "G",
+                info: StatInfo.peakGForce
             )
             ProfileStatCell(
                 icon: "arrow.triangle.2.circlepath", iconColor: .cyan,
                 label: "Top Corner Speed",
                 value: String(format: "%.0f", settings.speedValue(stats.overallTopCornerSpeed)),
-                unit: settings.speedUnit
+                unit: settings.speedUnit,
+                info: StatInfo.cornerSpeed
             )
         }
     }

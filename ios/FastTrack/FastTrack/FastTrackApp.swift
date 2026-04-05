@@ -32,6 +32,7 @@ struct FastTrackApp: App {
 
 struct RootView: View {
     @EnvironmentObject var locationManager: LocationManager
+    @EnvironmentObject var driveManager: DriveManager
     @ObservedObject private var authManager = AuthManager.shared
     @ObservedObject private var settings = AppSettings.shared
     @State private var isInitializing = true
