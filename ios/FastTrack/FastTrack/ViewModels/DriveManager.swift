@@ -57,6 +57,18 @@ class DriveManager: ObservableObject {
                 self.processLocation(location)
             }
             .store(in: &cancellables)
+
+        // Subscribe to zero-lock break events — the authoritative "car started from stopped" signal.
+        // This is more reliable than a 5 mph GPS threshold for anchoring the 0-60 timer.
+        manager.$zeroLockBrokeAt
+            .compactMap { $0 }
+            .sink { [weak self] startDate in
+                guard let self, self.isRecording else { return }
+                self.zeroStart = startDate
+                self.best060Active = false
+                print("🏁 0-60 timer anchored from zero-lock break at \(startDate)")
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Recording control
@@ -350,15 +362,15 @@ class DriveManager: ObservableObject {
             }
         }
         
-        // 0-60 timing
-        if speedMph < 5 {
-            updates.zeroToSixtyTime = -1 // Signal to reset
-        } else if speedMph >= 60 {
+        // 0-60 timing: detect 60 mph crossing.
+        // The zero start is now anchored by the zero-lock break event (set in setLocationManager),
+        // not by a 5 mph GPS threshold — this avoids rolling-start false positives.
+        if speedMph >= 60 {
             let zeroStart = await MainActor.run { self.zeroStart }
             let best060Active = await MainActor.run { self.best060Active }
             if let start = zeroStart, !best060Active {
-                let elapsed = ts.timeIntervalSince(start)
-                if elapsed < 30 {
+                let elapsed = Date().timeIntervalSince(start)  // use wall clock, not GPS timestamp
+                if elapsed > 1.0 && elapsed < 30 {
                     let currentBest = await MainActor.run { self.best060Time }
                     if currentBest == nil || elapsed < currentBest! {
                         updates.zeroToSixtyTime = elapsed
@@ -408,16 +420,11 @@ class DriveManager: ObservableObject {
                 self.topCornerSpeed = cornerSpeed
             }
             
-            // 0-60 timing
+            // 0-60 timing: only completion signals remain (zero-start is handled by zero-lock subscription)
             if let zeroSixty = updates.zeroToSixtyTime {
-                if zeroSixty == -1 {
-                    self.zeroStart = ts
-                    self.best060Active = false
-                } else {
-                    self.best060Time = zeroSixty
-                    self.best060Active = true
-                    self.zeroStart = nil
-                }
+                self.best060Time = zeroSixty
+                self.best060Active = true
+                self.zeroStart = nil
             }
             
             // Turns

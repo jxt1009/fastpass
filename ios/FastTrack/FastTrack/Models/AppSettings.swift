@@ -52,6 +52,12 @@ class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(keepScreenOn, forKey: "settings_keepScreenOn") }
     }
 
+    /// Speedometer calibration offset as a percentage (+5.0 means car speedo reads 5% high).
+    /// Applied to the displayed speed only — raw GPS data is stored unmodified.
+    @Published var speedometerBiasPercent: Double {
+        didSet { UserDefaults.standard.set(speedometerBiasPercent, forKey: "settings_speedometerBias") }
+    }
+
     @Published var preferredColorScheme: AppColorScheme {
         didSet {
             UserDefaults.standard.set(preferredColorScheme.rawValue, forKey: "settings_colorScheme")
@@ -72,6 +78,9 @@ class AppSettings: ObservableObject {
         } else {
             keepScreenOn = UserDefaults.standard.bool(forKey: "settings_keepScreenOn")
         }
+
+        speedometerBiasPercent = UserDefaults.standard.double(forKey: "settings_speedometerBias")
+        // Default of 0.0 means no correction; default() for Double is already 0
 
         let rawScheme = UserDefaults.standard.string(forKey: "settings_colorScheme") ?? "system"
         preferredColorScheme = AppColorScheme(rawValue: rawScheme) ?? .system
@@ -123,6 +132,12 @@ class AppSettings: ObservableObject {
 
     /// Convert m/s to display units value (no label).
     func speedValue(_ ms: Double) -> Double { ms * speedFactor }
+
+    /// Convert m/s to display units, applying the user's speedometer calibration offset.
+    /// Use this for real-time speed display only — do NOT apply to stored drive data.
+    func calibratedSpeedValue(_ ms: Double) -> Double {
+        speedValue(ms) * (1.0 + speedometerBiasPercent / 100.0)
+    }
 
     /// Convert meters to display units value (no label).
     func distanceValue(_ meters: Double) -> Double { meters * distanceFactor }

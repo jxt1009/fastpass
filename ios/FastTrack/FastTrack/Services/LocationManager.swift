@@ -14,6 +14,9 @@ class LocationManager: NSObject, ObservableObject {
     @Published var speedAccuracy: Double = -1
     @Published var currentLocation: CLLocation?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    /// Fires with the timestamp of the moment zero-lock broke (car started moving from confirmed stop).
+    /// Used by DriveManager to anchor the 0–60 timer to a genuine zero-velocity start.
+    @Published var zeroLockBrokeAt: Date? = nil
 
     // MARK: - Private
 
@@ -23,6 +26,7 @@ class LocationManager: NSObject, ObservableObject {
 
     /// Latest GPS course (degrees clockwise from true north). -1 = unavailable.
     private var currentCourse: Double = -1
+    private var wasZeroLocked = false
 
     // MARK: - Init
 
@@ -70,6 +74,8 @@ class LocationManager: NSObject, ObservableObject {
         clManager.stopUpdatingLocation()
         stopIMU()
         fusion.reset()
+        wasZeroLocked = false
+        zeroLockBrokeAt = nil
     }
 
     // MARK: - CoreMotion at 25 Hz
@@ -109,11 +115,19 @@ class LocationManager: NSObject, ObservableObject {
             longG = IMUProjector.fallbackAccelG(from: motion, speedTrend: speedTrend)
         }
 
+        let wasLocked = fusion.isZeroLocked
         fusion.predict(longAccelG: longG, dt: dt)
 
-        // Publish fused speed — threshold 0.1 m/s (~0.2 mph) avoids rapid flicker
+        // Detect zero-lock break: the moment the car starts moving from a confirmed stop.
+        // Publish the timestamp so DriveManager can anchor the 0-60 timer here.
+        if wasLocked && !fusion.isZeroLocked {
+            zeroLockBrokeAt = Date()
+        }
+        wasZeroLocked = fusion.isZeroLocked
+
+        // Publish fused speed — threshold 0.03 m/s (~0.07 mph) to zero out promptly
         let fused = fusion.speed
-        if abs(fused - currentSpeed) > 0.1 {
+        if abs(fused - currentSpeed) > 0.03 {
             currentSpeed = fused
         }
     }

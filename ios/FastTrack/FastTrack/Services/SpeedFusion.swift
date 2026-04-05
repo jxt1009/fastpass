@@ -16,14 +16,14 @@ class SpeedFusion {
     // MARK: - Kalman state
     private(set) var speed: Double = 0          // m/s
     private var P: Double = 4.0                  // variance (m/s)²
-    private var zeroLocked: Bool = false         // true when GPS confirms we're stopped
+    private(set) var isZeroLocked: Bool = false  // true when GPS confirms we're stopped
 
     // Noise tuning
     private let Q: Double = 0.5   // process noise variance per second — higher = more responsive to IMU changes
     private let R_min: Double = 0.09  // min GPS measurement noise (0.3 m/s std dev)
     // Zero-speed lock threshold: GPS must report < this with good accuracy to lock
     private let zeroSpeedThreshold: Double = 0.3   // m/s (~0.7 mph)
-    private let zeroAccuracyThreshold: Double = 1.5 // m/s — only trust zero if GPS is this accurate
+    private let zeroAccuracyThreshold: Double = 2.5 // m/s — relaxed from 1.5 to handle urban GPS (~2-4 m/s accuracy)
 
     // Course tracking for longitudinal projection
     private var lastCourse: Double = -1   // degrees, -1 = invalid
@@ -33,14 +33,20 @@ class SpeedFusion {
     /// `longAccelG` = longitudinal acceleration in **g** units, from IMU projected onto travel direction
     func predict(longAccelG: Double, dt: Double) {
         // While zero-locked (GPS confirmed stopped), only break lock on meaningful forward acceleration
-        if zeroLocked {
+        if isZeroLocked {
             guard longAccelG > 0.05 else { return }  // < ~0.05g of noise: stay at zero
-            zeroLocked = false
+            isZeroLocked = false
         }
         let a = longAccelG * 9.81          // convert to m/s²
         speed += a * dt
         speed = max(0, speed)              // speed is never negative
         P += Q * dt                        // grow uncertainty over time
+
+        // Drain IMU drift in the near-zero zone — prevents stuck-at-1-mph after deceleration
+        // 0.85 drains 0.5 m/s to ~0.1 m/s in ~6 IMU steps (~0.24s at 25 Hz)
+        if speed < 0.5 {
+            speed *= 0.85
+        }
     }
 
     // MARK: - Update (called at ~1 Hz when GPS fires)
@@ -53,14 +59,14 @@ class SpeedFusion {
         if gpsSpeed < zeroSpeedThreshold && accuracyKnown && gpsSpeedAccuracy < zeroAccuracyThreshold {
             speed = 0
             P = R_min
-            zeroLocked = true
+            isZeroLocked = true
             lastGPSSpeed = 0
             return
         }
 
         // Leaving zero: clear lock
-        if zeroLocked && gpsSpeed >= zeroSpeedThreshold {
-            zeroLocked = false
+        if isZeroLocked && gpsSpeed >= zeroSpeedThreshold {
+            isZeroLocked = false
         }
 
         let sigma = gpsSpeedAccuracy > 0 ? gpsSpeedAccuracy : 1.5
@@ -90,7 +96,7 @@ class SpeedFusion {
     func reset() {
         speed = 0
         P = 4.0
-        zeroLocked = false
+        isZeroLocked = false
         lastCourse = -1
         lastGPSSpeed = 0
     }

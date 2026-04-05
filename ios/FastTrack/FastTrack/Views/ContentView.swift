@@ -42,11 +42,11 @@ struct ContentView: View {
                     VStack(spacing: 20) {
                         // Speed
                         VStack {
-                            Text("\(Int(settings.speedValue(locationManager.currentSpeed)))")
+                            Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
                                 .font(.system(size: 80, weight: .bold, design: .rounded))
                                 .foregroundColor(speedColor(for: locationManager.currentSpeed))
                                 .contentTransition(.numericText())
-                                .animation(.easeInOut(duration: 0.2), value: Int(settings.speedValue(locationManager.currentSpeed)))
+                                .animation(.easeInOut(duration: 0.2), value: Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))
                             Text(settings.speedUnit.uppercased())
                                 .font(.title2)
                                 .foregroundStyle(.secondary)
