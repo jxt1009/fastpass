@@ -106,6 +106,7 @@ private struct DarkSectionHeader: View {
 
 struct ProfileView: View {
     @StateObject private var profileManager = ProfileManager.shared
+    @StateObject private var achievementManager = AchievementManager.shared
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var locationManager: LocationManager
     @ObservedObject private var settings = AppSettings.shared
@@ -139,6 +140,10 @@ struct ProfileView: View {
                             moreStatsGrid
                         }
                         privacyToggleCard
+                        DarkSectionHeader(title: "Achievements")
+                        achievementsSection
+                        DarkSectionHeader(title: "Settings")
+                        settingsSection
                         signOutButton
                     }
                     .padding()
@@ -168,6 +173,10 @@ struct ProfileView: View {
                     showingSetup = true
                 }
                 driveManager.fetchDrives()
+                achievementManager.updateProgress(with: driveManager.drives)
+            }
+            .onChange(of: driveManager.drives) { _, drives in
+                achievementManager.updateProgress(with: drives)
             }
         }
     }
@@ -490,6 +499,127 @@ struct ProfileView: View {
                     }
                 }
                 .tint(.blue)
+            }
+        }
+    }
+
+    // MARK: Achievements Section
+
+    private var achievementsSection: some View {
+        DarkCard {
+            VStack(spacing: 12) {
+                // Summary row
+                HStack(spacing: 16) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "trophy.fill").foregroundColor(.yellow)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("\(achievementManager.unlockedAchievements.count)")
+                                .font(.title3).fontWeight(.bold).foregroundColor(.white)
+                            Text("Unlocked").font(.caption).foregroundColor(Color(white: 0.55))
+                        }
+                    }
+                    Divider().background(Color(white: 0.3)).frame(height: 32)
+                    HStack(spacing: 6) {
+                        Image(systemName: "chart.bar.fill").foregroundColor(.blue)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("\(achievementManager.achievements.count)")
+                                .font(.title3).fontWeight(.bold).foregroundColor(.white)
+                            Text("Total").font(.caption).foregroundColor(Color(white: 0.55))
+                        }
+                    }
+                    Spacer()
+                    NavigationLink(destination: AchievementsView()) {
+                        Text("View All")
+                            .font(.subheadline).fontWeight(.semibold)
+                            .foregroundColor(.blue)
+                    }
+                }
+
+                // Most recent unlocked achievements (up to 3)
+                let recent = achievementManager.unlockedAchievements.prefix(3)
+                if !recent.isEmpty {
+                    Divider().background(Color(white: 0.25))
+                    VStack(spacing: 8) {
+                        ForEach(recent) { achievement in
+                            HStack(spacing: 10) {
+                                Text(achievement.icon).font(.title3)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(achievement.title)
+                                        .font(.subheadline).fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                    Text(achievement.description)
+                                        .font(.caption)
+                                        .foregroundColor(Color(white: 0.55))
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Settings Section
+
+    private var settingsSection: some View {
+        DarkCard {
+            VStack(spacing: 0) {
+                // Keep Screen On
+                Toggle(isOn: $settings.keepScreenOn) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "sun.max.fill")
+                            .foregroundColor(.yellow)
+                            .frame(width: 20)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Keep Screen On While Recording")
+                                .font(.subheadline).foregroundColor(.white)
+                            Text("Prevents sleep during active drives")
+                                .font(.caption).foregroundColor(Color(white: 0.55))
+                        }
+                    }
+                }
+                .tint(.blue)
+
+                Divider().background(Color(white: 0.25)).padding(.vertical, 12)
+
+                // Unit System
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "ruler.fill")
+                            .foregroundColor(.orange)
+                            .frame(width: 20)
+                        Text("Units").font(.subheadline).foregroundColor(.white)
+                    }
+                    Picker("Unit System", selection: $settings.unitSystem) {
+                        ForEach(UnitSystem.allCases) { system in
+                            Text(system.displayName).tag(system)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .colorScheme(.dark)
+                }
+
+                Divider().background(Color(white: 0.25)).padding(.vertical, 12)
+
+                // Appearance
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "circle.lefthalf.filled")
+                            .foregroundColor(.purple)
+                            .frame(width: 20)
+                        Text("Appearance").font(.subheadline).foregroundColor(.white)
+                    }
+                    Picker("Color Scheme", selection: $settings.preferredColorScheme) {
+                        ForEach(AppColorScheme.allCases) { scheme in
+                            Text(scheme.displayName).tag(scheme)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .colorScheme(.dark)
+                }
             }
         }
     }

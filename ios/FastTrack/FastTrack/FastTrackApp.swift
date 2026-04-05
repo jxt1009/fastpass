@@ -82,9 +82,9 @@ struct RootView: View {
                 SocialView()
                     .id(tabResetIDs[3])
                     .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(3)
-                MoreView()
+                ProfileView()
                     .id(tabResetIDs[4])
-                    .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }.tag(4)
+                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(4)
             }
             .onChange(of: selectedTab) { oldTab, _ in
                 // Reset the tab being left (but never the Track tab)
