@@ -40,12 +40,18 @@ class LocationManager: NSObject, ObservableObject {
         if Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") != nil {
             clManager.allowsBackgroundLocationUpdates = true
             clManager.pausesLocationUpdatesAutomatically = false
+            #if DEBUG
             print("✅ Background location updates enabled")
+            #endif
         } else {
+            #if DEBUG
             print("ℹ️ Background location not configured – foreground only")
+            #endif
         }
         #else
+        #if DEBUG
         print("ℹ️ Simulator: background location disabled")
+        #endif
         #endif
     }
 
@@ -56,7 +62,9 @@ class LocationManager: NSObject, ObservableObject {
     }
 
     func startUpdatingLocation() {
+        #if DEBUG
         print("📍 Starting location updates...")
+        #endif
         // Start with good accuracy for faster initial fix
         clManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         clManager.startUpdatingLocation()
@@ -64,7 +72,9 @@ class LocationManager: NSObject, ObservableObject {
         // After a few seconds, switch to best accuracy
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
             self?.clManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+            #if DEBUG
             print("📍 Switched to high accuracy mode")
+            #endif
         }
         
         startIMU()
@@ -82,7 +92,9 @@ class LocationManager: NSObject, ObservableObject {
 
     private func startIMU() {
         guard motionManager.isDeviceMotionAvailable else {
+            #if DEBUG
             print("ℹ️ Device motion unavailable")
+            #endif
             return
         }
         motionManager.deviceMotionUpdateInterval = 1.0 / 25.0
@@ -94,7 +106,9 @@ class LocationManager: NSObject, ObservableObject {
             guard let self, let motion, error == nil else { return }
             self.handleMotionUpdate(motion)
         }
+        #if DEBUG
         print("✅ IMU fusion started at 25 Hz")
+        #endif
     }
 
     private func stopIMU() {
@@ -139,14 +153,19 @@ extension LocationManager: CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
+        // NOTE: exact coordinates are intentionally not logged in release builds
+        #if DEBUG
         print("📍 Location update: lat=\(location.coordinate.latitude), lon=\(location.coordinate.longitude), speed=\(location.speed)")
+        #endif
         
         currentLocation = location
         currentCourse = location.course  // -1 if invalid
 
-        guard location.speed >= 0 else { 
+        guard location.speed >= 0 else {
+            #if DEBUG
             print("⚠️ Negative speed filtered out: \(location.speed)")
-            return 
+            #endif
+            return
         }
 
         rawGPSSpeed = location.speed
@@ -156,17 +175,23 @@ extension LocationManager: CLLocationManagerDelegate {
         fusion.update(gpsSpeed: location.speed, gpsSpeedAccuracy: location.speedAccuracy)
         currentSpeed = fusion.speed
         
+        #if DEBUG
         print("🔄 Speed updated: GPS=\(location.speed), Fused=\(fusion.speed)")
+        #endif
     }
 
     func locationManager(_ manager: CLLocationManager,
                          didChangeAuthorization status: CLAuthorizationStatus) {
+        #if DEBUG
         print("📱 Location authorization changed to: \(status.rawValue)")
+        #endif
         DispatchQueue.main.async { self.authorizationStatus = status }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        #if DEBUG
         print("Location error: \(error.localizedDescription)")
+        #endif
     }
 }
 

@@ -68,7 +68,9 @@ class DriveManager: ObservableObject {
                 guard let self, self.isRecording else { return }
                 self.zeroStart = startDate
                 self.best060Active = false
+                #if DEBUG
                 print("🏁 0-60 timer anchored from zero-lock break at \(startDate)")
+                #endif
             }
             .store(in: &cancellables)
     }
@@ -77,7 +79,9 @@ class DriveManager: ObservableObject {
 
     func startRecording() {
         guard !isRecording else { return }
+        #if DEBUG
         print("🚗 Starting drive recording...")
+        #endif
         
         recordingStartTime = Date()  // set before isRecording so onChange sees it immediately
         isRecording = true
@@ -87,7 +91,9 @@ class DriveManager: ObservableObject {
         recordedRouteEvents = []
         speedReadings = []
 
+        #if DEBUG
         print("⏰ Recording start time: \(recordingStartTime!)")
+        #endif
 
         // Reset extended stats
         stoppedSince = nil
@@ -103,8 +109,12 @@ class DriveManager: ObservableObject {
         headingHistory = []
 
         locationManager?.startUpdatingLocation()
+        #if DEBUG
         print("📍 Location manager started")
+        #endif
+        #if DEBUG
         print("🔒 Location authorization: \(locationManager?.authorizationStatus.rawValue ?? -1)")
+        #endif
 
         // Keep screen on while recording if the setting is enabled
         if AppSettings.shared.keepScreenOn {
@@ -130,7 +140,9 @@ class DriveManager: ObservableObject {
             selectedCar = UserCar(make: "Unknown", model: "Vehicle", year: nil, trim: "", nickname: "")
         }
         
+        #if DEBUG
         print("📱 Starting recording with car: \(selectedCar?.displayString ?? "No car")")
+        #endif
 
         currentDrive = Drive(
             id: nil,
@@ -203,10 +215,14 @@ class DriveManager: ObservableObject {
                     CarStatsManager.shared.updateStats(for: saved)
                     self.currentDrive = nil
                     self.recordingStartTime = nil
+                    #if DEBUG
                     print("✅ Drive saved and car stats updated")
+                    #endif
                 }
             } catch {
+                #if DEBUG
                 print("❌ Failed to save drive: \(error.localizedDescription)")
+                #endif
             }
         }
     }
@@ -217,11 +233,15 @@ class DriveManager: ObservableObject {
         // Skip very old locations (more than 5 seconds old)
         let age = abs(location.timestamp.timeIntervalSinceNow)
         if age > 5.0 {
+            #if DEBUG
             print("⚠️ Skipping old location (age: \(age)s)")
+            #endif
             return
         }
         
+        #if DEBUG
         print("📍 Processing location: speed=\(location.speed), accuracy=\(location.horizontalAccuracy)m, course=\(location.course)")
+        #endif
         
         // Basic processing on main thread for UI updates
         let speed = max(location.speed, 0)
@@ -238,12 +258,16 @@ class DriveManager: ObservableObject {
         ))
         speedReadings.append(speed)
         
+        #if DEBUG
         print("📊 Recorded \(recordingLocations.count) locations, current speed: \(speedMph) mph")
+        #endif
         
         // Update basic stats immediately for UI responsiveness
         if speedMph > currentMaxSpeed {
             currentMaxSpeed = speedMph
+            #if DEBUG
             print("🏁 New max speed: \(currentMaxSpeed) mph")
+            #endif
         }
         
         // Offload heavy calculations to background queue to prevent UI freezing
@@ -566,7 +590,9 @@ class DriveManager: ObservableObject {
                 pushType: nil
             )
         } catch {
+            #if DEBUG
             print("⚡ Live Activity start failed: \(error)")
+            #endif
         }
     }
 
@@ -599,7 +625,9 @@ class DriveManager: ObservableObject {
         guard var drive = currentDrive,
               let firstLoc = recordingLocations.first,
               let lastLoc  = recordingLocations.last else {
+            #if DEBUG
             print("⚠️ UpdateCurrentDrive failed: currentDrive=\(currentDrive != nil), locations=\(recordingLocations.count)")
+            #endif
             return
         }
 
@@ -615,7 +643,9 @@ class DriveManager: ObservableObject {
         drive.distance = totalDist
         if let start = recordingStartTime { 
             drive.duration = Date().timeIntervalSince(start) 
+            #if DEBUG
             print("⏱️ Drive duration updated: \(drive.duration) seconds")
+            #endif
         }
 
         if !speedReadings.isEmpty {
@@ -632,7 +662,9 @@ class DriveManager: ObservableObject {
         drive.best060Time = best060Time
 
         currentDrive = drive
+        #if DEBUG
         print("✅ Current drive updated: distance=\(totalDist), duration=\(drive.duration), maxSpeed=\(drive.maxSpeed)")
+        #endif
     }
 
     // MARK: - API
@@ -647,7 +679,9 @@ class DriveManager: ObservableObject {
                 }
             } catch {
                 await MainActor.run { self.isLoadingDrives = false }
+                #if DEBUG
                 print("Failed to fetch drives: \(error.localizedDescription)")
+                #endif
             }
         }
     }

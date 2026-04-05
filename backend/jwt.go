@@ -66,7 +66,7 @@ func generateJWT(user User) (string, error) {
 		AppleUserID: user.AppleUserID,
 		Email:       user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "triprank-api",
 		},
@@ -82,7 +82,7 @@ func generateRefreshToken(user User) (string, error) {
 		AppleUserID: user.AppleUserID,
 		Email:       user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)), // 30 days
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 7 days
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "triprank-api",
 		},

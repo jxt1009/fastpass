@@ -27,10 +27,12 @@ func main() {
 
 	initJWTSecret()
 
-	// Database connection
+	// Database connection — DATABASE_URL must be set (no insecure fallback).
+	// Example (with SSL): host=db user=postgres password=<secret> dbname=triprank port=5432 sslmode=require
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=postgres dbname=triprank port=5432 sslmode=disable"
+		slog.Error("DATABASE_URL environment variable is required")
+		os.Exit(1)
 	}
 	
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -65,7 +67,7 @@ func main() {
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "version": buildVersion, "commit": buildCommit})
+		c.JSON(200, gin.H{"status": "ok"})
 	})
 	
 	// Serve uploaded avatars as static files

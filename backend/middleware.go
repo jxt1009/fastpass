@@ -74,17 +74,9 @@ func getUserID(c *gin.Context) (uint, bool) {
 }
 
 func getUserIDString(c *gin.Context) string {
-	// For backward compatibility with old user_id query param
-	userID := c.Query("user_id")
-	if userID != "" {
-		return userID
-	}
-
-	// Check if authenticated
 	_, exists := getUserID(c)
 	if exists {
 		return c.GetString("apple_user_id")
 	}
-
 	return ""
 }
