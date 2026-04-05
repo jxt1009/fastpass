@@ -357,10 +357,25 @@ struct DriveDetailView: View {
         }
     }
 
+    /// Linearly interpolates between the two surrounding route points at the
+    /// current playback position, giving smooth sub-second movement.
     private var playbackPoint: RoutePoint? {
-        guard !routePoints.isEmpty else { return nil }
-        let idx = Int(playbackProgress * Double(routePoints.count - 1))
-        return routePoints[min(idx, routePoints.count - 1)]
+        guard routePoints.count >= 2 else { return routePoints.first }
+        let t = playbackProgress * Double(routePoints.count - 1)
+        let lo = max(0, min(routePoints.count - 2, Int(t)))
+        let hi = lo + 1
+        let frac = t - Double(lo)
+
+        let a = routePoints[lo]
+        let b = routePoints[hi]
+        return RoutePoint(
+            coordinate: CLLocationCoordinate2D(
+                latitude:  a.coordinate.latitude  + (b.coordinate.latitude  - a.coordinate.latitude)  * frac,
+                longitude: a.coordinate.longitude + (b.coordinate.longitude - a.coordinate.longitude) * frac
+            ),
+            speed:     a.speed     + (b.speed     - a.speed)     * frac,
+            timestamp: a.timestamp + (b.timestamp - a.timestamp) * frac
+        )
     }
 
     private var playbackCoordinate: CLLocationCoordinate2D? {
