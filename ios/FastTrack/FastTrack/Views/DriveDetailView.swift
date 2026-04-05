@@ -184,15 +184,23 @@ struct DriveDetailView: View {
                 }
                 .fullScreenCover(isPresented: $isMapExpanded) {
                     NavigationStack {
-                        mapContent
-                            .ignoresSafeArea()
-                            .navigationTitle("Route")
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") { isMapExpanded = false }
-                                }
+                        ZStack(alignment: .bottom) {
+                            mapContent
+                                .ignoresSafeArea()
+                            if !routePoints.isEmpty {
+                                playbackControls
+                                    .padding(.horizontal)
+                                    .padding(.bottom, 12)
+                                    .background(.ultraThinMaterial)
                             }
+                        }
+                        .navigationTitle("Route")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { isMapExpanded = false }
+                            }
+                        }
                     }
                 }
         } else {
