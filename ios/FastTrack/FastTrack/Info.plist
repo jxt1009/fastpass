@@ -43,6 +43,12 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 
+	<!-- Live Activities (also displays on CarPlay Dashboard, iOS 17+) -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
+
 	<!-- Required hardware capabilities -->
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>

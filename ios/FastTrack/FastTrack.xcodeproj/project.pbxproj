@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXContainerItemProxy section */
+		A16BBA3641B0888DB43B95A7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B6B2AAA02F7CBF1700AA4AA0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1C3AD0769E5FFAD9F84805C;
+			remoteInfo = FastTrackWidgets;
+		};
 		B6CDB23D2F7F6D330013FCA5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B6B2AAA02F7CBF1700AA4AA0 /* Project object */;
@@ -17,11 +24,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A1717AC285AC7B5F1C4400C2 /* FastTrackWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FastTrackWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6CDB2392F7F6D330013FCA5 /* FastTrackTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FastTrackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A1F91CC22552C9CCB105106F /* Exceptions for "FastTrackWidgets" folder in "FastTrackWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+			);
+			target = A1C3AD0769E5FFAD9F84805C /* FastTrackWidgets */;
+		};
 		B6B2AAD32F7CCEA800AA4AA0 /* Exceptions for "FastTrack" folder in "FastTrack" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -32,6 +46,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A149B974BA7CA135EA3D3D98 /* FastTrackWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A1F91CC22552C9CCB105106F /* Exceptions for "FastTrackWidgets" folder in "FastTrackWidgets" target */,
+			);
+			path = FastTrackWidgets;
+			sourceTree = "<group>";
+		};
 		B6B2AAAA2F7CBF1700AA4AA0 /* FastTrack */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -48,6 +70,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A15396DF6072B1A6DC4E70BC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B6B2AAA52F7CBF1700AA4AA0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -69,6 +98,7 @@
 			isa = PBXGroup;
 			children = (
 				B6B2AAAA2F7CBF1700AA4AA0 /* FastTrack */,
+				A149B974BA7CA135EA3D3D98 /* FastTrackWidgets */,
 				B6CDB23A2F7F6D330013FCA5 /* FastTrackTests */,
 				B6B2AAA92F7CBF1700AA4AA0 /* Products */,
 			);
@@ -78,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */,
+				A1717AC285AC7B5F1C4400C2 /* FastTrackWidgets.appex */,
 				B6CDB2392F7F6D330013FCA5 /* FastTrackTests.xctest */,
 			);
 			name = Products;
@@ -85,7 +116,47 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXBuildFile section */
+		A1ECBE36197800194773C221 /* FastTrackWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A1717AC285AC7B5F1C4400C2 /* FastTrackWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1E945176F273E6BF3D31EC2 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1ECBE36197800194773C221 /* FastTrackWidgets.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXNativeTarget section */
+		A1C3AD0769E5FFAD9F84805C /* FastTrackWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1C0B031E97EF30D513731D3 /* Build configuration list for PBXNativeTarget "FastTrackWidgets" */;
+			buildPhases = (
+				A141EF01ACEA8E66FD3FD5D7 /* Sources */,
+				A15396DF6072B1A6DC4E70BC /* Frameworks */,
+				A18B9F96AB73E34F7D23F50B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A149B974BA7CA135EA3D3D98 /* FastTrackWidgets */,
+			);
+			name = FastTrackWidgets;
+			packageProductDependencies = (
+			);
+			productName = FastTrackWidgets;
+			productReference = A1717AC285AC7B5F1C4400C2 /* FastTrackWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B6B2AAB32F7CBF1900AA4AA0 /* Build configuration list for PBXNativeTarget "FastTrack" */;
@@ -93,10 +164,12 @@
 				B6B2AAA42F7CBF1700AA4AA0 /* Sources */,
 				B6B2AAA52F7CBF1700AA4AA0 /* Frameworks */,
 				B6B2AAA62F7CBF1700AA4AA0 /* Resources */,
+				A1E945176F273E6BF3D31EC2 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A135D3BE4282E51F8CA6DF85 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				B6B2AAAA2F7CBF1700AA4AA0 /* FastTrack */,
@@ -141,6 +214,9 @@
 				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
+					A1C3AD0769E5FFAD9F84805C = {
+						CreatedOnToolsVersion = 26.4;
+					};
 					B6B2AAA72F7CBF1700AA4AA0 = {
 						CreatedOnToolsVersion = 26.4;
 					};
@@ -165,12 +241,20 @@
 			projectRoot = "";
 			targets = (
 				B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */,
+				A1C3AD0769E5FFAD9F84805C /* FastTrackWidgets */,
 				B6CDB2382F7F6D330013FCA5 /* FastTrackTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A18B9F96AB73E34F7D23F50B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B6B2AAA62F7CBF1700AA4AA0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -188,6 +272,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A141EF01ACEA8E66FD3FD5D7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B6B2AAA42F7CBF1700AA4AA0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -205,6 +296,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		A135D3BE4282E51F8CA6DF85 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1C3AD0769E5FFAD9F84805C /* FastTrackWidgets */;
+			targetProxy = A16BBA3641B0888DB43B95A7 /* PBXContainerItemProxy */;
+		};
 		B6CDB23E2F7F6D330013FCA5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = B6B2AAA72F7CBF1700AA4AA0 /* FastTrack */;
@@ -213,6 +309,66 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		A13C87FB33927977FCE3906A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4L6H9V7Z6D;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = FastTrackWidgets;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastTrack.FastTrackWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A155E9A720993569E5125692 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4L6H9V7Z6D;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = FastTrackWidgets;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toper.FastTrack.FastTrackWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		B6B2AAB12F7CBF1900AA4AA0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -441,6 +597,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A1C0B031E97EF30D513731D3 /* Build configuration list for PBXNativeTarget "FastTrackWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A13C87FB33927977FCE3906A /* Debug */,
+				A155E9A720993569E5125692 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		B6B2AAA32F7CBF1700AA4AA0 /* Build configuration list for PBXProject "FastTrack" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

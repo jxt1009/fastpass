@@ -2,6 +2,7 @@ import Foundation
 import CoreLocation
 import Combine
 import UIKit
+import ActivityKit
 
 class DriveManager: ObservableObject {
     @Published var isRecording = false
@@ -32,6 +33,7 @@ class DriveManager: ObservableObject {
     private var maxAcceleration: Double = 0
     private var maxDeceleration: Double = 0
     private var peakGForce: Double = 0
+    @Published var currentGForce: Double = 0  // Live value for UI / Live Activity updates
     private var topCornerSpeed: Double = 0
     private var best060Time: Double?
     private var currentMaxSpeed: Double = 0  // For real-time UI updates
@@ -42,6 +44,9 @@ class DriveManager: ObservableObject {
     private var lastBrakeTime: Date?
     private var zeroStart: Date?
     private var best060Active = false
+
+    // Live Activity
+    private var liveActivity: Activity<DriveActivityAttributes>?
 
     func setLocationManager(_ manager: LocationManager) {
         locationManager = manager
@@ -133,12 +138,14 @@ class DriveManager: ObservableObject {
             peakGForce: 0, topCornerSpeed: 0,
             best060Time: nil
         )
+        startLiveActivity()
     }
 
     func stopRecording() {
         guard isRecording else { return }
         isRecording = false
         locationManager?.stopUpdatingLocation()
+        endLiveActivity()
         // Re-enable normal screen sleep
         UIApplication.shared.isIdleTimerDisabled = false
 
@@ -231,6 +238,7 @@ class DriveManager: ObservableObject {
         
         // Update drive stats on main thread (lightweight)
         updateCurrentDrive()
+        updateLiveActivity(speedMph: speedMph, distanceMiles: currentDrive?.distance.metersToMiles ?? 0)
     }
     
     private func processLocationHeavy(_ location: CLLocation, speed: Double, speedMph: Double) async {
@@ -392,8 +400,9 @@ class DriveManager: ObservableObject {
                     ts: ts.timeIntervalSince1970
                 ))
             }
-            if let gForce = updates.gForce, gForce > self.peakGForce {
-                self.peakGForce = gForce
+            if let gForce = updates.gForce {
+                if gForce > self.peakGForce { self.peakGForce = gForce }
+                self.currentGForce = gForce
             }
             if let cornerSpeed = updates.cornerSpeed {
                 self.topCornerSpeed = cornerSpeed
@@ -488,6 +497,48 @@ class DriveManager: ObservableObject {
         headingWindow = (course, timestamp)
     }
 
+    // MARK: - Live Activity
+
+    private func startLiveActivity() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled,
+              let startDate = recordingStartTime else { return }
+        let attrs = DriveActivityAttributes(startDate: startDate)
+        let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0)
+        let content = ActivityContent(state: state, staleDate: nil)
+        do {
+            liveActivity = try Activity<DriveActivityAttributes>.request(
+                attributes: attrs,
+                content: content,
+                pushType: nil
+            )
+        } catch {
+            print("⚡ Live Activity start failed: \(error)")
+        }
+    }
+
+    private func updateLiveActivity(speedMph: Double, distanceMiles: Double) {
+        guard let activity = liveActivity else { return }
+        let state = DriveActivityAttributes.DriveActivityState(
+            speedMph: speedMph,
+            gForce: currentGForce,
+            distanceMiles: distanceMiles
+        )
+        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(10))
+        Task {
+            await activity.update(content)
+        }
+    }
+
+    private func endLiveActivity() {
+        guard let activity = liveActivity else { return }
+        let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0)
+        let content = ActivityContent(state: state, staleDate: nil)
+        Task {
+            await activity.end(content, dismissalPolicy: .default)
+            await MainActor.run { self.liveActivity = nil }
+        }
+    }
+
     // MARK: - Drive stats update
 
     private func updateCurrentDrive() {
@@ -569,4 +620,8 @@ extension DriveManager {
         m.drives = [Drive.example]
         return m
     }
+}
+
+private extension Double {
+    var metersToMiles: Double { self / 1609.344 }
 }
