@@ -47,6 +47,11 @@ struct AnalyticsView: View {
             .navigationTitle("Analytics")
             .navigationBarTitleDisplayMode(.large)
         }
+        // Ensure a fetch is in-flight whenever this tab is visible. SwiftUI may not
+        // propagate @EnvironmentObject changes to non-active tabs, so we kick off our
+        // own fetch when the view first appears rather than relying solely on the
+        // TabView-level startPolling() call.
+        .onAppear { driveManager.fetchDrives() }
         .sheet(item: $selectedDrive) { drive in
             DrivePerformanceDetailView(drive: drive)
         }

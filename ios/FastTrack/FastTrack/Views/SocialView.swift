@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SocialView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject private var profileManager = ProfileManager.shared
 
     @State private var entries: [LeaderboardEntry] = []
     @State private var isLoading = false
@@ -74,8 +74,8 @@ struct SocialView: View {
 
     @ViewBuilder
     private var content: some View {
-        if isLoading {
-            // Show skeleton rows while loading (covers both initial load and filter switches)
+        if isLoading && entries.isEmpty {
+            // Full skeleton only on initial/empty load
             VStack(spacing: 0) {
                 ForEach(0..<8, id: \.self) { _ in
                     LeaderboardSkeletonRow()
@@ -93,35 +93,50 @@ struct SocialView: View {
             ContentUnavailableView(
                 "No Data Yet",
                 systemImage: "chart.bar.xaxis",
-                description: Text("No drives recorded in this category.")
+                description: Text(selectedCategory == .best060
+                    ? "Complete a drive with a 0–60 mph run to appear here."
+                    : "No drives recorded in this category.")
             )
         } else {
-            List {
-                if selectedScope == .following {
-                    Section {
-                        Text("Showing you + everyone you follow")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            ZStack(alignment: .top) {
+                List {
+                    if selectedScope == .following {
+                        Section {
+                            Text("Showing you + everyone you follow")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                }
-                Section {
-                    ForEach(entries) { entry in
-                        NavigationLink(destination: PublicProfileView(username: entry.username)) {
-                            LeaderboardRow(
-                                entry: entry,
-                                category: selectedCategory,
-                                isCurrentUser: entry.username == currentUsername
+                    Section {
+                        ForEach(entries) { entry in
+                            NavigationLink(destination: PublicProfileView(username: entry.username)) {
+                                LeaderboardRow(
+                                    entry: entry,
+                                    category: selectedCategory,
+                                    isCurrentUser: entry.username == currentUsername
+                                )
+                            }
+                            .listRowBackground(
+                                entry.username == currentUsername
+                                    ? Color.blue.opacity(0.08)
+                                    : Color(.systemBackground)
                             )
                         }
-                        .listRowBackground(
-                            entry.username == currentUsername
-                                ? Color.blue.opacity(0.08)
-                                : Color(.systemBackground)
-                        )
                     }
                 }
+                .listStyle(.insetGrouped)
+                .opacity(isLoading ? 0.5 : 1.0)
+                .animation(.easeInOut(duration: 0.2), value: isLoading)
+
+                // Subtle refresh indicator while re-fetching with existing data
+                if isLoading {
+                    ProgressView()
+                        .padding(10)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .padding(.top, 12)
+                        .transition(.opacity)
+                }
             }
-            .listStyle(.insetGrouped)
         }
     }
 
@@ -133,10 +148,7 @@ struct SocialView: View {
     }
 
     private func loadLeaderboard() async {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            isLoading = true
-            entries = []  // clear stale data so skeleton shows immediately
-        }
+        withAnimation(.easeInOut(duration: 0.15)) { isLoading = true }
         errorMessage = nil
         do {
             let fetched = try await APIService.shared.fetchLeaderboard(
@@ -150,7 +162,7 @@ struct SocialView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
-        isLoading = false
+        withAnimation { isLoading = false }
     }
 }
 

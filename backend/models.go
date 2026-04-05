@@ -46,7 +46,7 @@ type Drive struct {
 	MaxDeceleration float64   `json:"max_deceleration"`
 	PeakGForce      float64   `json:"peak_g_force"`
 	TopCornerSpeed  float64   `json:"top_corner_speed"`
-	Best060Time     *float64  `json:"best_060_time"`
+	Best060Time     *float64  `gorm:"column:best_060_time" json:"best_060_time"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

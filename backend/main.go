@@ -41,6 +41,12 @@ func main() {
 	
 	// Auto-migrate models
 	db.AutoMigrate(&User{}, &Drive{}, &Follow{})
+	// Rename best060_time → best_060_time if GORM previously auto-generated the name without underscores.
+	db.Exec(`DO $$ BEGIN
+		IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='drives' AND column_name='best060_time') THEN
+			ALTER TABLE drives RENAME COLUMN best060_time TO best_060_time;
+		END IF;
+	END $$;`)
 	// Backfill: any user created before is_public column was added gets false (Go zero value).
 	// Since privacy is a new feature, safely default all existing accounts to public.
 	db.Exec("UPDATE users SET is_public = true WHERE NOT is_public")
