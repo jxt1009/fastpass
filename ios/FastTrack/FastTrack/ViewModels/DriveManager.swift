@@ -581,7 +581,7 @@ class DriveManager: ObservableObject {
         guard ActivityAuthorizationInfo().areActivitiesEnabled,
               let startDate = recordingStartTime else { return }
         let attrs = DriveActivityAttributes(startDate: startDate)
-        let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0)
+        let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0, maxSpeedMph: 0)
         let content = ActivityContent(state: state, staleDate: nil)
         do {
             liveActivity = try Activity<DriveActivityAttributes>.request(
@@ -601,7 +601,8 @@ class DriveManager: ObservableObject {
         let state = DriveActivityAttributes.DriveActivityState(
             speedMph: speedMph,
             gForce: currentGForce,
-            distanceMiles: distanceMiles
+            distanceMiles: distanceMiles,
+            maxSpeedMph: currentMaxSpeed * 2.23694  // m/s → mph
         )
         let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(10))
         Task {
@@ -611,10 +612,11 @@ class DriveManager: ObservableObject {
 
     private func endLiveActivity() {
         guard let activity = liveActivity else { return }
-        let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0)
-        let content = ActivityContent(state: state, staleDate: nil)
+        let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0, maxSpeedMph: 0)
+        let content = ActivityContent(state: state, staleDate: Date())
         Task {
-            await activity.end(content, dismissalPolicy: .default)
+            // .immediate removes the activity banner/pill right away instead of lingering
+            await activity.end(content, dismissalPolicy: .immediate)
             await MainActor.run { self.liveActivity = nil }
         }
     }

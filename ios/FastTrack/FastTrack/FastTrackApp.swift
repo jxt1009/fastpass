@@ -81,16 +81,24 @@ struct RootView: View {
                     .id(tabResetIDs[2])
                     .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }.tag(2)
                 SocialView()
-                    .id(tabResetIDs[3])
+                    // NOT reset on tab switch — leaderboard data is expensive to reload and
+                    // the view manages its own nav stack; internal filter changes re-fetch via .task(id:)
                     .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(3)
                 ProfileView()
                     .id(tabResetIDs[4])
                     .tabItem { Label("Profile", systemImage: "person.fill") }.tag(4)
             }
             .onChange(of: selectedTab) { oldTab, _ in
-                // Reset the tab being left (but never the Track tab)
-                if oldTab > 0 {
+                // Reset the tab being left (but never Track or Social)
+                if oldTab > 0 && oldTab != 3 {
                     tabResetIDs[oldTab] = UUID()
+                }
+            }
+            .onOpenURL { url in
+                // Handle deep links from Live Activity controls
+                if url.scheme == "fasttrack", url.host == "stop-recording" {
+                    driveManager.stopRecording()
+                    selectedTab = 0  // Switch to Track tab
                 }
             }
             .onAppear {

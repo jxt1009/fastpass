@@ -226,9 +226,18 @@ class APIService {
     func fetchLeaderboard(
         category: LeaderboardCategory,
         scope: LeaderboardScope = .global,
-        period: LeaderboardPeriod = .allTime
+        period: LeaderboardPeriod = .allTime,
+        carMake: String = "",
+        carModel: String = ""
     ) async throws -> [LeaderboardEntry] {
-        return try await get(endpoint: "/leaderboard?category=\(category.rawValue)&scope=\(scope.rawValue)&period=\(period.rawValue)")
+        var endpoint = "/leaderboard?category=\(category.rawValue)&scope=\(scope.rawValue)&period=\(period.rawValue)"
+        if !carMake.isEmpty, let enc = carMake.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            endpoint += "&car_make=\(enc)"
+        }
+        if !carModel.isEmpty, let enc = carModel.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            endpoint += "&car_model=\(enc)"
+        }
+        return try await get(endpoint: endpoint)
     }
 
     func fetchPublicProfile(username: String) async throws -> PublicProfile {

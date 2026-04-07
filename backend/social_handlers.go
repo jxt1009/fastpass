@@ -18,6 +18,8 @@ type LeaderboardEntry struct {
 	Country   string  `json:"country"`
 	AvatarURL string  `json:"avatar_url"`
 	Value     float64 `json:"value"`
+	CarMake   string  `json:"car_make"`
+	CarModel  string  `json:"car_model"`
 }
 
 type PublicProfileResponse struct {
@@ -127,26 +129,76 @@ func getLeaderboard(c *gin.Context) {
 		}
 	}
 
+	// Optional car filter
+	carMakeFilter := strings.TrimSpace(c.Query("car_make"))
+	carModelFilter := strings.TrimSpace(c.Query("car_model"))
+	carWhere := ""
+	if carMakeFilter != "" {
+		carWhere += " AND LOWER(d.car_make) = LOWER(?)"
+		args = append(args, carMakeFilter)
+	}
+	if carModelFilter != "" {
+		carWhere += " AND LOWER(d.car_model) = LOWER(?)"
+		args = append(args, carModelFilter)
+	}
+
 	type rawRow struct {
 		UserID    uint    `gorm:"column:user_id"`
 		Username  string  `gorm:"column:username"`
 		Country   string  `gorm:"column:country"`
 		AvatarURL string  `gorm:"column:avatar_url"`
 		Value     float64 `gorm:"column:value"`
+		CarMake   string  `gorm:"column:car_make"`
+		CarModel  string  `gorm:"column:car_model"`
 	}
 
-	sql := fmt.Sprintf(`
-		SELECT d.user_id, u.username, u.country, u.avatar_url, %s AS value
+	// For each user, also surface which car achieved their best value.
+	// We use a subquery to find the drive that produced the aggregate value.
+	sqlQuery := fmt.Sprintf(`
+		SELECT d.user_id, u.username, u.country, u.avatar_url,
+		       %s AS value,
+		       COALESCE((
+		           SELECT d2.car_make FROM drives d2
+		           WHERE d2.user_id = d.user_id %s %s %s
+		           ORDER BY %s LIMIT 1
+		       ), '') AS car_make,
+		       COALESCE((
+		           SELECT d2.car_model FROM drives d2
+		           WHERE d2.user_id = d.user_id %s %s %s
+		           ORDER BY %s LIMIT 1
+		       ), '') AS car_model
 		FROM drives d
 		JOIN users u ON d.user_id = u.id
-		WHERE u.is_public = true %s %s %s
+		WHERE u.is_public = true %s %s %s %s
 		GROUP BY d.user_id, u.username, u.country, u.avatar_url
 		ORDER BY %s
 		LIMIT 50`,
-		agg.expr, agg.extraWhere, periodWhere, scopeWhere, agg.order)
+		agg.expr,
+		// subquery for car_make
+		agg.extraWhere, periodWhere, carWhere, agg.order,
+		// subquery for car_model
+		agg.extraWhere, periodWhere, carWhere, agg.order,
+		// main WHERE
+		agg.extraWhere, periodWhere, scopeWhere, carWhere,
+		agg.order)
+
+	// args are reused for main query; subqueries need same period/car args
+	// Build full args: [subquery1 args] + [subquery2 args] + [main args]
+	subArgs := []interface{}{}
+	if period == "week" {
+		subArgs = append(subArgs, startOfCurrentWeek())
+	}
+	if carMakeFilter != "" {
+		subArgs = append(subArgs, carMakeFilter)
+	}
+	if carModelFilter != "" {
+		subArgs = append(subArgs, carModelFilter)
+	}
+	fullArgs := append(subArgs, subArgs...)
+	fullArgs = append(fullArgs, args...)
 
 	var rows []rawRow
-	db.Raw(sql, args...).Scan(&rows)
+	db.Raw(sqlQuery, fullArgs...).Scan(&rows)
 
 	entries := make([]LeaderboardEntry, len(rows))
 	for i, r := range rows {
@@ -157,6 +209,8 @@ func getLeaderboard(c *gin.Context) {
 			Country:   r.Country,
 			AvatarURL: r.AvatarURL,
 			Value:     r.Value,
+			CarMake:   r.CarMake,
+			CarModel:  r.CarModel,
 		}
 	}
 

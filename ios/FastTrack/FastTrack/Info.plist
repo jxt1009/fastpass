@@ -37,6 +37,14 @@
 				<string>com.toper.fasttrack</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.toper.fasttrack.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fasttrack</string>
+			</array>
+		</dict>
 	</array>
 
 	<!-- Export compliance: app uses HTTPS only, no custom encryption -->

@@ -12,5 +12,6 @@ struct DriveActivityAttributes: ActivityAttributes {
         var speedMph: Double
         var gForce: Double
         var distanceMiles: Double
+        var maxSpeedMph: Double
     }
 }

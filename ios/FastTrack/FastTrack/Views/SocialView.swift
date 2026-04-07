@@ -10,6 +10,8 @@ struct SocialView: View {
     @State private var selectedCategory: LeaderboardCategory = .topSpeed
     @State private var selectedScope: LeaderboardScope = .global
     @State private var selectedPeriod: LeaderboardPeriod = .allTime
+    @State private var carFilter: String = ""          // "Make Model" free-text filter
+    @State private var isEditingCarFilter = false
 
     private var currentUsername: String? {
         profileManager.profile?.username
@@ -64,6 +66,30 @@ struct SocialView: View {
                 }
                 .pickerStyle(.segmented)
             }
+
+            // Car filter row
+            HStack(spacing: 8) {
+                Image(systemName: "car.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                TextField("Filter by car (e.g. Tesla Model 3)", text: $carFilter)
+                    .font(.subheadline)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    .onSubmit { Task { await loadLeaderboard() } }
+                if !carFilter.isEmpty {
+                    Button {
+                        carFilter = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
@@ -144,17 +170,23 @@ struct SocialView: View {
 
     /// A stable key for the `.task(id:)` modifier — changes whenever any filter changes.
     private var queryKey: String {
-        "\(selectedCategory.rawValue)-\(selectedScope.rawValue)-\(selectedPeriod.rawValue)"
+        "\(selectedCategory.rawValue)-\(selectedScope.rawValue)-\(selectedPeriod.rawValue)-\(carFilter)"
     }
 
     private func loadLeaderboard() async {
         withAnimation(.easeInOut(duration: 0.15)) { isLoading = true }
         errorMessage = nil
+        // Parse car filter: first word = make, rest = model
+        let parts = carFilter.split(separator: " ", maxSplits: 1)
+        let make = parts.count > 0 ? String(parts[0]) : ""
+        let model = parts.count > 1 ? String(parts[1]) : ""
         do {
             let fetched = try await APIService.shared.fetchLeaderboard(
                 category: selectedCategory,
                 scope: selectedScope,
-                period: selectedPeriod
+                period: selectedPeriod,
+                carMake: make,
+                carModel: model
             )
             withAnimation(.easeInOut(duration: 0.25)) {
                 entries = fetched
@@ -216,10 +248,20 @@ private struct LeaderboardRow: View {
                             .background(Color.blue, in: Capsule())
                     }
                 }
-                if !entry.country.isEmpty {
+                // Car that achieved the best result
+                if !entry.carDisplayString.isEmpty {
+                    Text(entry.carDisplayString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if !entry.country.isEmpty {
                     Text(entry.country)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+                if !entry.carDisplayString.isEmpty && !entry.country.isEmpty {
+                    Text(entry.country)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
             }
 

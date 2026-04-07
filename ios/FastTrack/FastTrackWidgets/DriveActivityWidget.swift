@@ -9,34 +9,45 @@ struct DriveActivityWidget: Widget {
         ActivityConfiguration(for: DriveActivityAttributes.self) { context in
             // Standard lock screen / notification banner view
             LockScreenLiveActivityView(context: context)
-                .activityBackgroundTint(Color.black.opacity(0.8))
+                .activityBackgroundTint(Color.black.opacity(0.85))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
                 // Expanded island (press-and-hold)
                 DynamicIslandExpandedRegion(.leading) {
-                    Label {
-                        Text(String(format: "%.0f", context.state.speedMph))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Speed", systemImage: "speedometer")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .labelStyle(.titleAndIcon)
+                        Text(String(format: "%.0f mph", context.state.speedMph))
                             .font(.title2).fontWeight(.bold)
-                    } icon: {
-                        Image(systemName: "speedometer")
+                            .monospacedDigit()
                             .foregroundColor(.yellow)
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Label {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Label("G-Force", systemImage: "circle.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .labelStyle(.titleAndIcon)
                         Text(String(format: "%.2fG", context.state.gForce))
                             .font(.title2).fontWeight(.bold)
-                    } icon: {
-                        Image(systemName: "circle.circle.fill")
+                            .monospacedDigit()
                             .foregroundColor(.orange)
                     }
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "record.circle")
-                            .foregroundColor(.red)
-                            .symbolEffect(.pulse)
+                    VStack(spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "record.circle")
+                                .foregroundColor(.red)
+                                .symbolEffect(.pulse)
+                            Text("FastTrack")
+                                .font(.caption).fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                        }
                         Text(timerInterval: context.attributes.startDate...Date.distantFuture,
                              countsDown: false)
                             .font(.headline).fontWeight(.semibold)
@@ -44,12 +55,39 @@ struct DriveActivityWidget: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text(String(format: "%.2f mi", context.state.distanceMiles))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 20) {
+                        // Distance
+                        VStack(spacing: 1) {
+                            Text(String(format: "%.2f mi", context.state.distanceMiles))
+                                .font(.subheadline).fontWeight(.semibold)
+                                .monospacedDigit()
+                            Text("distance")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        // Max speed
+                        VStack(spacing: 1) {
+                            Text(String(format: "%.0f mph", context.state.maxSpeedMph))
+                                .font(.subheadline).fontWeight(.semibold)
+                                .monospacedDigit()
+                                .foregroundColor(.yellow.opacity(0.8))
+                            Text("top speed")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        // Stop button — deep-links into the app to stop recording
+                        Link(destination: URL(string: "fasttrack://stop-recording")!) {
+                            Label("Stop", systemImage: "stop.circle.fill")
+                                .font(.caption).fontWeight(.semibold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.red.opacity(0.8), in: Capsule())
+                        }
+                    }
+                    .padding(.top, 4)
                 }
             } compactLeading: {
-                // Speed in compact leading slot
                 HStack(spacing: 2) {
                     Image(systemName: "speedometer")
                         .font(.caption2)
@@ -59,7 +97,6 @@ struct DriveActivityWidget: Widget {
                         .monospacedDigit()
                 }
             } compactTrailing: {
-                // G-force in compact trailing slot
                 Text(String(format: "%.1fG", context.state.gForce))
                     .font(.caption).fontWeight(.semibold)
                     .foregroundColor(.orange)
@@ -81,10 +118,8 @@ private struct LockScreenLiveActivityView: View {
 
     var body: some View {
         if activityFamily == .small {
-            // CarPlay / Watch compact view
             smallView
         } else {
-            // Lock screen / notification view
             lockScreenView
         }
     }
@@ -120,61 +155,60 @@ private struct LockScreenLiveActivityView: View {
 
     // Full lock screen / notification view
     private var lockScreenView: some View {
-        HStack(spacing: 0) {
-            // Recording indicator + timer
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
+        VStack(spacing: 10) {
+            // Top row: app name + timer + stop button
+            HStack {
+                HStack(spacing: 5) {
                     Image(systemName: "record.circle")
                         .foregroundColor(.red)
                         .symbolEffect(.pulse)
-                    Text("Recording")
-                        .font(.caption)
+                    Text("FastTrack")
+                        .font(.caption).fontWeight(.semibold)
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
                 Text(timerInterval: context.attributes.startDate...Date.distantFuture,
                      countsDown: false)
-                    .font(.title2).fontWeight(.bold)
+                    .font(.headline).fontWeight(.bold)
                     .monospacedDigit()
+                Spacer()
+                // Deep-link stop button
+                Link(destination: URL(string: "fasttrack://stop-recording")!) {
+                    Label("Stop", systemImage: "stop.circle.fill")
+                        .font(.caption).fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.red.opacity(0.75), in: Capsule())
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Speed
-            VStack(spacing: 2) {
-                Text(String(format: "%.0f", context.state.speedMph))
-                    .font(.title).fontWeight(.bold)
-                    .monospacedDigit()
-                    .foregroundColor(.yellow)
-                Text("mph")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            // Stats row
+            HStack(spacing: 0) {
+                statCell(value: String(format: "%.0f", context.state.speedMph),
+                         unit: "mph", color: .yellow)
+                statCell(value: String(format: "%.0f", context.state.maxSpeedMph),
+                         unit: "top mph", color: .yellow.opacity(0.7))
+                statCell(value: String(format: "%.2f", context.state.gForce),
+                         unit: "G", color: .orange)
+                statCell(value: String(format: "%.1f", context.state.distanceMiles),
+                         unit: "mi", color: .green)
             }
-            .frame(maxWidth: .infinity)
-
-            // G-Force
-            VStack(spacing: 2) {
-                Text(String(format: "%.2f", context.state.gForce))
-                    .font(.title).fontWeight(.bold)
-                    .monospacedDigit()
-                    .foregroundColor(.orange)
-                Text("G")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-
-            // Distance
-            VStack(spacing: 2) {
-                Text(String(format: "%.1f", context.state.distanceMiles))
-                    .font(.title).fontWeight(.bold)
-                    .monospacedDigit()
-                    .foregroundColor(.green)
-                Text("mi")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    private func statCell(value: String, unit: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.title2).fontWeight(.bold)
+                .monospacedDigit()
+                .foregroundColor(color)
+            Text(unit)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }

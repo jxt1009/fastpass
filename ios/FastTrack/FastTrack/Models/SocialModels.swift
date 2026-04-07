@@ -9,8 +9,15 @@ struct LeaderboardEntry: Identifiable, Decodable {
     let country: String
     let avatarURL: String
     let value: Double
+    let carMake: String
+    let carModel: String
 
     var id: Int { userId }
+
+    var carDisplayString: String {
+        let parts = [carMake, carModel].filter { !$0.isEmpty }
+        return parts.joined(separator: " ")
+    }
 
     enum CodingKeys: String, CodingKey {
         case rank
@@ -19,6 +26,8 @@ struct LeaderboardEntry: Identifiable, Decodable {
         case country
         case avatarURL = "avatar_url"
         case value
+        case carMake   = "car_make"
+        case carModel  = "car_model"
     }
 }
 
