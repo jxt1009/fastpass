@@ -53,7 +53,7 @@ struct AchievementsView: View {
                 }
             }
             .navigationTitle("Achievements")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 achievementManager.updateProgress(with: driveManager.drives)
             }
@@ -64,39 +64,24 @@ struct AchievementsView: View {
     }
     
     // MARK: - Stats Header
-    
+
     private var statsHeader: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 20) {
-                StatPill(
-                    title: "Unlocked",
-                    value: "\(achievementManager.unlockedAchievements.count)",
-                    icon: "trophy.fill",
-                    color: .yellow
-                )
-                
-                StatPill(
-                    title: "Total",
-                    value: "\(achievementManager.achievements.count)",
-                    icon: "target",
-                    color: .blue
-                )
-                
-                StatPill(
-                    title: "Progress",
-                    value: String(format: "%.0f%%", progressPercentage),
-                    icon: "chart.line.uptrend.xyaxis",
-                    color: .green
-                )
-            }
-            
-            // Progress Bar
+        HStack(spacing: 16) {
+            Label("\(achievementManager.unlockedAchievements.count) unlocked", systemImage: "trophy.fill")
+                .foregroundStyle(.yellow)
+            Spacer()
+            Label(String(format: "%.0f%%", progressPercentage), systemImage: "chart.line.uptrend.xyaxis")
+                .foregroundStyle(.green)
+        }
+        .font(.subheadline)
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .background(Color(.systemGroupedBackground))
+        .overlay(alignment: .bottom) {
             ProgressView(value: progressPercentage / 100.0)
                 .progressViewStyle(LinearProgressViewStyle(tint: .green))
-                .scaleEffect(x: 1, y: 2, anchor: .center)
+                .padding(.horizontal)
         }
-        .padding()
-        .background(Color(.systemGray6))
     }
     
     private var progressPercentage: Double {
@@ -146,34 +131,6 @@ struct AchievementsView: View {
 }
 
 // MARK: - Supporting Views
-
-struct StatPill: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .font(.title2)
-            
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-    }
-}
-
 struct CategoryFilterChip: View {
     let title: String
     let isSelected: Bool

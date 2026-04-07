@@ -563,7 +563,9 @@ struct ProfileView: View {
                     VStack(spacing: 8) {
                         ForEach(recent) { achievement in
                             HStack(spacing: 10) {
-                                Text(achievement.icon).font(.title3)
+                                Image(systemName: achievement.icon)
+                                    .font(.title3)
+                                    .foregroundColor(achievement.category.color)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(achievement.title)
                                         .font(.subheadline).fontWeight(.semibold)
