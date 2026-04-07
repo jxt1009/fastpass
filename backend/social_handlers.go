@@ -89,16 +89,17 @@ func getLeaderboard(c *gin.Context) {
 	period := c.DefaultQuery("period", "all_time")
 
 	type aggConfig struct {
-		expr       string
-		order      string
-		extraWhere string
+		expr        string
+		order       string
+		extraWhere  string
+		subColOrder string // ORDER BY for the per-user car subquery (uses d2.col not alias)
 	}
 
 	aggMap := map[string]aggConfig{
-		"top_speed":      {expr: "MAX(d.max_speed)", order: "value DESC"},
-		"total_distance": {expr: "SUM(d.distance)", order: "value DESC"},
-		"best_060":       {expr: "MIN(d.best_060_time)", order: "value ASC", extraWhere: "AND d.best_060_time IS NOT NULL"},
-		"drive_count":    {expr: "COUNT(d.id)", order: "value DESC"},
+		"top_speed":      {expr: "MAX(d.max_speed)", order: "value DESC", subColOrder: "d2.max_speed DESC"},
+		"total_distance": {expr: "SUM(d.distance)", order: "value DESC", subColOrder: "d2.distance DESC"},
+		"best_060":       {expr: "MIN(d.best_060_time)", order: "value ASC", extraWhere: "AND d.best_060_time IS NOT NULL", subColOrder: "d2.best_060_time ASC"},
+		"drive_count":    {expr: "COUNT(d.id)", order: "value DESC", subColOrder: "d2.id DESC"},
 	}
 
 	agg, ok := aggMap[category]
@@ -175,9 +176,9 @@ func getLeaderboard(c *gin.Context) {
 		LIMIT 50`,
 		agg.expr,
 		// subquery for car_make
-		agg.extraWhere, periodWhere, carWhere, agg.order,
+		agg.extraWhere, periodWhere, carWhere, agg.subColOrder,
 		// subquery for car_model
-		agg.extraWhere, periodWhere, carWhere, agg.order,
+		agg.extraWhere, periodWhere, carWhere, agg.subColOrder,
 		// main WHERE
 		agg.extraWhere, periodWhere, scopeWhere, carWhere,
 		agg.order)

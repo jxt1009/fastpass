@@ -10,8 +10,8 @@ struct SocialView: View {
     @State private var selectedCategory: LeaderboardCategory = .topSpeed
     @State private var selectedScope: LeaderboardScope = .global
     @State private var selectedPeriod: LeaderboardPeriod = .allTime
-    @State private var carFilter: String = ""          // "Make Model" free-text filter
-    @State private var isEditingCarFilter = false
+    @State private var carFilter: String = ""
+    @FocusState private var carFilterFocused: Bool
 
     private var currentUsername: String? {
         profileManager.profile?.username
@@ -32,9 +32,16 @@ struct SocialView: View {
                         Label("Find People", systemImage: "person.badge.plus")
                     }
                 }
+                // Dismiss keyboard button shown whenever the car filter field is focused
+                ToolbarItem(placement: .keyboard) {
+                    Button("Done") { carFilterFocused = false }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
             .task(id: queryKey) { await loadLeaderboard() }
             .refreshable { await loadLeaderboard() }
+            // Tap anywhere outside the filter to dismiss keyboard
+            .onTapGesture { carFilterFocused = false }
         }
     }
 
@@ -76,10 +83,12 @@ struct SocialView: View {
                     .font(.subheadline)
                     .autocorrectionDisabled()
                     .submitLabel(.search)
-                    .onSubmit { Task { await loadLeaderboard() } }
+                    .focused($carFilterFocused)
+                    .onSubmit { carFilterFocused = false; committedCarFilter = carFilter; Task { await loadLeaderboard() } }
                 if !carFilter.isEmpty {
                     Button {
                         carFilter = ""
+                        committedCarFilter = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
@@ -168,16 +177,20 @@ struct SocialView: View {
 
     // MARK: - Data Loading
 
-    /// A stable key for the `.task(id:)` modifier — changes whenever any filter changes.
+    /// Tracks the committed car filter (updated on submit/clear, not on every keystroke).
+    @State private var committedCarFilter: String = ""
+
+    /// A stable key for the `.task(id:)` modifier — changes when any filter changes.
+    /// Uses committedCarFilter so mid-typing doesn't trigger fetches.
     private var queryKey: String {
-        "\(selectedCategory.rawValue)-\(selectedScope.rawValue)-\(selectedPeriod.rawValue)-\(carFilter)"
+        "\(selectedCategory.rawValue)-\(selectedScope.rawValue)-\(selectedPeriod.rawValue)-\(committedCarFilter)"
     }
 
     private func loadLeaderboard() async {
         withAnimation(.easeInOut(duration: 0.15)) { isLoading = true }
         errorMessage = nil
-        // Parse car filter: first word = make, rest = model
-        let parts = carFilter.split(separator: " ", maxSplits: 1)
+        // Parse committed car filter: first word = make, rest = model
+        let parts = committedCarFilter.split(separator: " ", maxSplits: 1)
         let make = parts.count > 0 ? String(parts[0]) : ""
         let model = parts.count > 1 ? String(parts[1]) : ""
         do {
