@@ -40,8 +40,12 @@ struct SocialView: View {
             }
             .task(id: queryKey) { await loadLeaderboard() }
             .refreshable { await loadLeaderboard() }
-            // Tap anywhere outside the filter to dismiss keyboard
-            .onTapGesture { carFilterFocused = false }
+            // Tap anywhere outside the filter to dismiss keyboard,
+            // using simultaneousGesture so NavigationLinks still work
+            .simultaneousGesture(
+                TapGesture().onEnded { carFilterFocused = false },
+                including: carFilterFocused ? .all : .subviews
+            )
         }
     }
 
