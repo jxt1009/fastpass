@@ -9,3 +9,12 @@ spec:
       secretName: fasttrack-api-tls
   rules:
     - host: fast.toper.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fasttrack-api
+                port:
+                  number: 80
