@@ -40,7 +40,30 @@ jobs:
           working-directory: ios/FastTrack
 
       - name: Create Secrets.swift from template
-        run: cp FastTrack/Secrets.swift.template FastTrack/Secrets.swift
+        env:
+          IOS_GOOGLE_CLIENT_ID: ${{ secrets.IOS_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          cp FastTrack/Secrets.swift.template FastTrack/Secrets.swift
+
+          client_id="${IOS_GOOGLE_CLIENT_ID:-$GOOGLE_CLIENT_ID}"
+          if [ -z "$client_id" ]; then
+            echo "::error::Missing required GitHub Actions secret: IOS_GOOGLE_CLIENT_ID (or fallback GOOGLE_CLIENT_ID)"
+            exit 1
+          fi
+
+          CLIENT_ID="$client_id" python3 <<'PY'
+          import os
+          import pathlib
+
+          path = pathlib.Path("FastTrack/Secrets.swift")
+          placeholder = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+          client_id = os.environ["CLIENT_ID"].strip()
+          content = path.read_text(encoding="utf-8")
+          if placeholder not in content:
+            raise SystemExit("::error::Expected Google client ID placeholder not found in FastTrack/Secrets.swift")
+          path.write_text(content.replace(placeholder, client_id), encoding="utf-8")
+          PY
 
       - name: Validate release secrets
         env:
@@ -51,6 +74,8 @@ jobs:
           TEAM_ID: ${{ secrets.TEAM_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          IOS_GOOGLE_CLIENT_ID: ${{ secrets.IOS_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
           missing=0
           for key in \
@@ -67,6 +92,11 @@ jobs:
               missing=1
             fi
           done
+
+          if [ -z "${IOS_GOOGLE_CLIENT_ID:-$GOOGLE_CLIENT_ID}" ]; then
+            echo "::error::Missing required GitHub Actions secret: IOS_GOOGLE_CLIENT_ID (or fallback GOOGLE_CLIENT_ID)"
+            missing=1
+          fi
 
           if [ "$missing" -ne 0 ]; then
             exit 1

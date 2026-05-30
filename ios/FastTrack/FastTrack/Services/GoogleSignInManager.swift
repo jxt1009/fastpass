@@ -12,6 +12,13 @@ class GoogleSignInManager: NSObject, ObservableObject {
     private var codeVerifier: String = ""
 
     func signInWithGoogle() {
+        guard Self.clientID.contains(".apps.googleusercontent.com"),
+              !Self.clientID.contains("YOUR_GOOGLE_CLIENT_ID")
+        else {
+            self.error = "Google Sign-In is not configured in this build"
+            return
+        }
+
         codeVerifier = generateCodeVerifier()
         let codeChallenge = generateCodeChallenge(from: codeVerifier)
         let state = UUID().uuidString

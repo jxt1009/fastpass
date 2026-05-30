@@ -193,6 +193,9 @@ export GOOGLE_CLIENT_SECRET="YOUR_CLIENT_SECRET"
 The iOS app now sends its Google `client_id` to `/api/v1/auth/google`, and the backend
 tries that first during the PKCE code exchange. `GOOGLE_CLIENT_ID` remains the server-side
 fallback/allowlist value, and it can be a comma-separated list during client ID rotations.
+For tagged iOS releases, GitHub Actions injects `IOS_GOOGLE_CLIENT_ID` (or falls back to
+`GOOGLE_CLIENT_ID`) into `FastTrack/Secrets.swift` at build time so shipped builds do not
+archive with the placeholder value.
 
 ### 3. iOS — Info.plist
 ```xml

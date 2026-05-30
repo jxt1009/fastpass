@@ -76,6 +76,8 @@ For local development, prefer Keychain-backed secrets over plaintext `.env.fastl
 
 5. **Xcode test target** — The shared `FastTrack` scheme already includes `FastTrackTests`; CI and Fastlane both run tests through the app scheme. GitHub Actions now runs the iOS workflows on `macos-26` with Xcode 26 so TestFlight uploads meet App Store Connect's minimum SDK requirement.
 
+6. **Google Sign-In client ID** — Add `IOS_GOOGLE_CLIENT_ID` as a repository GitHub Actions secret with the iOS OAuth client ID for `com.toper.FastTrack`. The release workflow injects it into `FastTrack/Secrets.swift` at build time. If `IOS_GOOGLE_CLIENT_ID` is not set, the workflow falls back to `GOOGLE_CLIENT_ID`.
+
 ### TestFlight release (beta)
 
 Merge the release PR to trigger automatic TestFlight upload. The release PR creates the version tag, and the [ios-release workflow](../.github/workflows/ios-release.yml) runs `fastlane beta` automatically for stable `v*` tags.
@@ -201,6 +203,7 @@ Paste the base64 output as the secret value.
 | `TEAM_ID` | — | ios-release | ⏳ After Developer approval |
 | `MATCH_PASSWORD` | — | ios-release | ⏳ Choose now, set later |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | — | ios-release | ⏳ After Developer approval |
+| `IOS_GOOGLE_CLIENT_ID` | — | ios-release | ✅ Set now for Google Sign-In builds |
 
 ---
 
