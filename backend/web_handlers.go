@@ -1,14 +1,57 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"math"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
+
+var (
+	leaderboardTmpl *template.Template
+	profileTmpl     *template.Template
+)
+
+func initWebTemplates() {
+	funcMap := template.FuncMap{
+		"formatSpeed": func(ms float64) string {
+			return fmt.Sprintf("%.1f", ms*2.23694)
+		},
+		"formatDistance": func(m float64) string {
+			return fmt.Sprintf("%.1f", m/1609.34)
+		},
+		"format060": func(s *float64) string {
+			if s == nil {
+				return "—"
+			}
+			return fmt.Sprintf("%.1fs", *s)
+		},
+		"upper": func(s string) string {
+			if len(s) == 0 {
+				return ""
+			}
+			return strings.ToUpper(s[:1]) + s[1:]
+		},
+	}
+
+	leaderboardTmpl = template.Must(
+		template.New("layout.html").Funcs(funcMap).ParseFiles(
+			"templates/layout.html",
+			"templates/leaderboard.html",
+		),
+	)
+	profileTmpl = template.Must(
+		template.New("layout.html").Funcs(funcMap).ParseFiles(
+			"templates/layout.html",
+			"templates/profile.html",
+		),
+	)
+}
 
 type GarageCar struct {
 	ID       string `json:"id"`
@@ -29,9 +72,14 @@ func renderProfile(c *gin.Context) {
 
 	var user User
 	if err := db.Where("username = ? AND is_public = true", username).First(&user).Error; err != nil {
-		c.HTML(http.StatusNotFound, "profile.html", gin.H{
+		var buf bytes.Buffer
+		if err := profileTmpl.ExecuteTemplate(&buf, "layout.html", gin.H{
 			"not_found": true,
-		})
+		}); err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.Data(http.StatusNotFound, "text/html; charset=utf-8", buf.Bytes())
 		return
 	}
 
@@ -75,7 +123,8 @@ func renderProfile(c *gin.Context) {
 		garage = []GarageCar{}
 	}
 
-	c.HTML(http.StatusOK, "profile.html", gin.H{
+	var buf bytes.Buffer
+	if err := profileTmpl.ExecuteTemplate(&buf, "layout.html", gin.H{
 		"user": gin.H{
 			"Username":  user.Username,
 			"FullName":  user.FullName,
@@ -94,32 +143,18 @@ func renderProfile(c *gin.Context) {
 		"following_count": int(followingCount),
 		"followers":       followers,
 		"following":       following,
-	})
+	}); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.Data(http.StatusOK, "text/html; charset=utf-8", buf.Bytes())
 }
 
 func renderLeaderboard(c *gin.Context) {
-	c.HTML(http.StatusOK, "leaderboard.html", nil)
-}
-
-func formatTemplateFuncMap() map[string]interface{} {
-	return map[string]interface{}{
-		"formatSpeed": func(ms float64) string {
-			return fmt.Sprintf("%.1f", ms*2.23694)
-		},
-		"formatDistance": func(m float64) string {
-			return fmt.Sprintf("%.1f", m/1609.34)
-		},
-		"format060": func(s *float64) string {
-			if s == nil {
-				return "—"
-			}
-			return fmt.Sprintf("%.1fs", *s)
-		},
-		"upper": func(s string) string {
-			if len(s) == 0 {
-				return ""
-			}
-			return strings.ToUpper(s[:1]) + s[1:]
-		},
+	var buf bytes.Buffer
+	if err := leaderboardTmpl.ExecuteTemplate(&buf, "layout.html", nil); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
+	c.Data(http.StatusOK, "text/html; charset=utf-8", buf.Bytes())
 }
