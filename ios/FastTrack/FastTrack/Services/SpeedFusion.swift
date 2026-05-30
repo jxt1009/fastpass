@@ -92,6 +92,8 @@ class SpeedFusion {
             // Just accept the GPS value wholesale — we've drifted badly
             speed = gpsSpeed
             P = R
+            refreshStationaryEstimateAfterGPS(gpsSpeed: gpsSpeed, accuracyKnown: accuracyKnown, gpsSpeedAccuracy: gpsSpeedAccuracy)
+            lastGPSSpeed = gpsSpeed
             return
         }
         speed = speed + K * residual
@@ -99,15 +101,7 @@ class SpeedFusion {
         P = (1 - K) * P
         P = max(P, 0.001)                 // floor variance
 
-        if speed < stationarySpeedThreshold
-            && gpsSpeed < zeroUnlockThreshold
-            && (!accuracyKnown || gpsSpeedAccuracy < 4.0) {
-            stationaryDuration = max(stationaryDuration, stationaryHoldTime * 0.7)
-            stationaryConfidence = min(1.0, stationaryDuration / stationaryHoldTime)
-            if speed < stationaryLockThreshold && stationaryDuration >= stationaryHoldTime {
-                engageZeroLock()
-            }
-        }
+        refreshStationaryEstimateAfterGPS(gpsSpeed: gpsSpeed, accuracyKnown: accuracyKnown, gpsSpeedAccuracy: gpsSpeedAccuracy)
 
         lastGPSSpeed = gpsSpeed
     }
@@ -142,6 +136,28 @@ class SpeedFusion {
         if !isZeroLocked && speed < stationaryLockThreshold && stationaryDuration >= stationaryHoldTime {
             engageZeroLock()
         }
+    }
+
+    private func refreshStationaryEstimateAfterGPS(gpsSpeed: Double, accuracyKnown: Bool, gpsSpeedAccuracy: Double) {
+        if speed >= zeroUnlockThreshold || gpsSpeed >= zeroUnlockThreshold {
+            stationaryDuration = 0
+            stationaryConfidence = 0
+            return
+        }
+
+        if speed < stationarySpeedThreshold
+            && gpsSpeed < zeroUnlockThreshold
+            && (!accuracyKnown || gpsSpeedAccuracy < 4.0) {
+            stationaryDuration = max(stationaryDuration, stationaryHoldTime * 0.7)
+            stationaryConfidence = min(1.0, stationaryDuration / stationaryHoldTime)
+            if speed < stationaryLockThreshold && stationaryDuration >= stationaryHoldTime {
+                engageZeroLock()
+            }
+            return
+        }
+
+        stationaryDuration = max(0, stationaryDuration - (stationaryHoldTime * 0.5))
+        stationaryConfidence = min(1.0, stationaryDuration / stationaryHoldTime)
     }
 
     private func engageZeroLock() {

@@ -193,6 +193,22 @@ final class DriveCalculationTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(fusion.stationaryConfidence, 0.99)
     }
 
+    func testSpeedFusion_MovingGPSUpdateClearsStationaryConfidenceImmediately() {
+        let fusion = SpeedFusion()
+
+        fusion.update(gpsSpeed: 0.4, gpsSpeedAccuracy: 1.0)
+        fusion.predict(longAccelG: 0, dt: 1.0 / 25.0)
+
+        XCTAssertFalse(fusion.isZeroLocked)
+        XCTAssertGreaterThan(fusion.stationaryConfidence, 0.5)
+
+        fusion.update(gpsSpeed: 2.2, gpsSpeedAccuracy: 0.8)
+
+        XCTAssertFalse(fusion.isZeroLocked)
+        XCTAssertEqual(fusion.stationaryConfidence, 0, accuracy: 0.001)
+        XCTAssertGreaterThanOrEqual(fusion.speed, 0.55)
+    }
+
     func testLaunchTracker_InterpolatesFastZeroToSixty() {
         var tracker = LaunchTracker()
         let start = Date(timeIntervalSince1970: 1_700_000_000)

@@ -17,7 +17,7 @@ class LocationManager: NSObject, ObservableObject {
     @Published var currentLocation: CLLocation?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     /// Fires with the timestamp of the moment zero-lock broke (car started moving from confirmed stop).
-    /// Used by DriveManager to anchor the 0–60 timer to a genuine zero-velocity start.
+    /// Kept available for downstream consumers that care about launch transitions or debugging.
     @Published var zeroLockBrokeAt: Date? = nil
 
     // MARK: - Private
