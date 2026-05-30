@@ -69,6 +69,15 @@ platform :ios do
       scheme: "FastTrack",
       configuration: "Release",
       export_method: "app-store",
+      xcargs: "CODE_SIGN_STYLE=Manual",
+      skip_profile_detection: true,
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          "com.toper.FastTrack" => "match AppStore com.toper.FastTrack",
+          "com.toper.FastTrack.FastTrackWidgets" => "com.toper.FastTrack.FastTrackWidgets AppStore"
+        }
+      },
       output_directory: "fastlane/builds",
       output_name: "FastTrack.ipa"
     )
@@ -88,7 +97,16 @@ platform :ios do
       project: "FastTrack.xcodeproj",
       scheme: "FastTrack",
       configuration: "Release",
-      export_method: "app-store"
+      export_method: "app-store",
+      xcargs: "CODE_SIGN_STYLE=Manual",
+      skip_profile_detection: true,
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          "com.toper.FastTrack" => "match AppStore com.toper.FastTrack",
+          "com.toper.FastTrack.FastTrackWidgets" => "com.toper.FastTrack.FastTrackWidgets AppStore"
+        }
+      }
     )
 
     upload_to_app_store(
