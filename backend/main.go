@@ -70,6 +70,8 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	registerPublicPageRoutes(r)
+
 	// Serve uploaded avatars as static files
 	r.Static("/uploads", "./uploads")
 

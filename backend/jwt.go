@@ -22,6 +22,8 @@ const (
 	tokenTypeAccess  = "access"
 	tokenTypeRefresh = "refresh"
 	legacyRefreshTTL = 6 * 24 * time.Hour
+	appleBundleID    = "com.toper.FastTrack"
+	legacyAppleAppID = "com.toper.FastPass"
 )
 
 func initJWTSecret() {
@@ -188,12 +190,8 @@ func verifyAppleIdentityToken(identityToken string) (*AppleIDTokenClaims, error)
 		}
 
 		// Verify audience matches the app bundle ID
-		expectedAud := os.Getenv("APPLE_APP_BUNDLE_ID")
-		if expectedAud == "" {
-			expectedAud = "com.toper.FastTrack"
-		}
-		if claims.Aud != expectedAud {
-			return nil, fmt.Errorf("invalid audience: got %q, expected %q", claims.Aud, expectedAud)
+		if !isAllowedAppleAudience(claims.Aud) {
+			return nil, fmt.Errorf("invalid audience: got %q, allowed %q", claims.Aud, strings.Join(allowedAppleAudiences(), ", "))
 		}
 
 		// Verify expiration
@@ -205,6 +203,39 @@ func verifyAppleIdentityToken(identityToken string) (*AppleIDTokenClaims, error)
 	}
 
 	return nil, errors.New("invalid token claims")
+}
+
+func allowedAppleAudiences() []string {
+	seen := make(map[string]struct{}, 3)
+	audiences := make([]string, 0, 3)
+	add := func(audience string) {
+		audience = strings.TrimSpace(audience)
+		if audience == "" {
+			return
+		}
+		if _, exists := seen[audience]; exists {
+			return
+		}
+		seen[audience] = struct{}{}
+		audiences = append(audiences, audience)
+	}
+
+	for _, audience := range strings.Split(os.Getenv("APPLE_APP_BUNDLE_ID"), ",") {
+		add(audience)
+	}
+	add(appleBundleID)
+	add(legacyAppleAppID)
+
+	return audiences
+}
+
+func isAllowedAppleAudience(audience string) bool {
+	for _, allowed := range allowedAppleAudiences() {
+		if audience == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 func getApplePublicKey(kid string) (*rsa.PublicKey, error) {

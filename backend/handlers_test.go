@@ -277,3 +277,34 @@ func TestDeleteCurrentUser_RemovesOwnedData(t *testing.T) {
 		t.Fatalf("expected avatar file to be removed, stat err = %v", err)
 	}
 }
+
+func TestPublicPages_AreServedByBackend(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	registerPublicPageRoutes(router)
+
+	tests := []struct {
+		path        string
+		wantSnippet string
+	}{
+		{path: "/", wantSnippet: "<title>FastTrack</title>"},
+		{path: "/privacy", wantSnippet: "<title>FastTrack Privacy Policy</title>"},
+		{path: "/terms", wantSnippet: "<title>FastTrack Terms of Service</title>"},
+	}
+
+	for _, tt := range tests {
+		req, _ := http.NewRequest("GET", tt.path, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: expected 200, got %d", tt.path, rec.Code)
+		}
+		if got := rec.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+			t.Fatalf("%s: expected html content type, got %q", tt.path, got)
+		}
+		if !bytes.Contains(rec.Body.Bytes(), []byte(tt.wantSnippet)) {
+			t.Fatalf("%s: response missing %q", tt.path, tt.wantSnippet)
+		}
+	}
+}

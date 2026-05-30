@@ -22,39 +22,40 @@ func revokeAppleAuthorizationCode(authCode string) error {
 		return errors.New("apple authorization code is required")
 	}
 
-	clientID := os.Getenv("APPLE_APP_BUNDLE_ID")
 	teamID := os.Getenv("APPLE_TEAM_ID")
 	keyID := os.Getenv("APPLE_KEY_ID")
 	privateKeyPEM := normalizePEMEnv(os.Getenv("APPLE_PRIVATE_KEY"))
-	if clientID == "" {
-		clientID = "com.toper.FastTrack"
-	}
 	if teamID == "" || keyID == "" || privateKeyPEM == "" {
 		return errAppleRevocationNotConfigured
 	}
 
-	clientSecret, err := generateAppleClientSecret(teamID, keyID, clientID, privateKeyPEM)
-	if err != nil {
-		return fmt.Errorf("generate Apple client secret: %w", err)
+	var lastErr error
+	for _, clientID := range allowedAppleAudiences() {
+		clientSecret, err := generateAppleClientSecret(teamID, keyID, clientID, privateKeyPEM)
+		if err != nil {
+			return fmt.Errorf("generate Apple client secret: %w", err)
+		}
+
+		form := url.Values{}
+		form.Set("client_id", clientID)
+		form.Set("client_secret", clientSecret)
+		form.Set("token", authCode)
+		form.Set("token_type_hint", "authorization_code")
+
+		resp, err := http.PostForm("https://appleid.apple.com/auth/revoke", form)
+		if err != nil {
+			return fmt.Errorf("call Apple revoke endpoint: %w", err)
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			return nil
+		}
+
+		lastErr = fmt.Errorf("apple revoke failed with status %d for client_id %s", resp.StatusCode, clientID)
 	}
 
-	form := url.Values{}
-	form.Set("client_id", clientID)
-	form.Set("client_secret", clientSecret)
-	form.Set("token", authCode)
-	form.Set("token_type_hint", "authorization_code")
-
-	resp, err := http.PostForm("https://appleid.apple.com/auth/revoke", form)
-	if err != nil {
-		return fmt.Errorf("call Apple revoke endpoint: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("apple revoke failed with status %d", resp.StatusCode)
-	}
-
-	return nil
+	return lastErr
 }
 
 func generateAppleClientSecret(teamID, keyID, clientID, privateKeyPEM string) (string, error) {

@@ -173,3 +173,46 @@ func TestExtractBearerToken(t *testing.T) {
 		}
 	}
 }
+
+func TestAllowedAppleAudiences_DefaultsToCurrentAndLegacyBundleIDs(t *testing.T) {
+	t.Setenv("APPLE_APP_BUNDLE_ID", "")
+
+	got := allowedAppleAudiences()
+	want := []string{appleBundleID, legacyAppleAppID}
+
+	if len(got) != len(want) {
+		t.Fatalf("expected %d audiences, got %d: %v", len(want), len(got), got)
+	}
+	for i, audience := range want {
+		if got[i] != audience {
+			t.Fatalf("expected audience %d to be %q, got %q", i, audience, got[i])
+		}
+	}
+}
+
+func TestAllowedAppleAudiences_UsesConfiguredAllowlistOnce(t *testing.T) {
+	t.Setenv("APPLE_APP_BUNDLE_ID", " com.example.FastTrack , com.toper.FastTrack , com.toper.FastPass ")
+
+	got := allowedAppleAudiences()
+	want := []string{"com.example.FastTrack", appleBundleID, legacyAppleAppID}
+
+	if len(got) != len(want) {
+		t.Fatalf("expected %d audiences, got %d: %v", len(want), len(got), got)
+	}
+	for i, audience := range want {
+		if got[i] != audience {
+			t.Fatalf("expected audience %d to be %q, got %q", i, audience, got[i])
+		}
+	}
+}
+
+func TestIsAllowedAppleAudience_AcceptsLegacyBundleID(t *testing.T) {
+	t.Setenv("APPLE_APP_BUNDLE_ID", "")
+
+	if !isAllowedAppleAudience(legacyAppleAppID) {
+		t.Fatal("expected legacy FastPass audience to be accepted")
+	}
+	if isAllowedAppleAudience("com.example.Unknown") {
+		t.Fatal("expected unknown audience to be rejected")
+	}
+}

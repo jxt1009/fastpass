@@ -107,7 +107,7 @@ See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for full Xcode setup.
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL DSN (e.g. `host=... user=fasttrack password=... dbname=fasttrack port=5432 sslmode=disable`) |
 | `JWT_SECRET` | Yes | Random secret for signing JWTs. Generate: `openssl rand -base64 32` |
-| `APPLE_APP_BUNDLE_ID` | Yes | Bundle ID for Apple token verification (e.g. `com.toper.FastTrack`) |
+| `APPLE_APP_BUNDLE_ID` | Yes | Bundle ID allowlist for Apple token verification and revocation. Use the current ID first (for example `com.toper.FastTrack`), optionally followed by legacy IDs separated with commas during migrations. |
 | `APPLE_TEAM_ID` | For Apple account revocation | Apple Developer Team ID used to revoke Sign in with Apple credentials during account deletion |
 | `APPLE_KEY_ID` | For Apple account revocation | Sign in with Apple key ID used to sign the Apple revocation client secret |
 | `APPLE_PRIVATE_KEY` | For Apple account revocation | Contents of the `.p8` Sign in with Apple key, with newlines escaped as `\n` |
@@ -133,7 +133,7 @@ Secrets are stored in Kubernetes secrets (`fasttrack-secrets`), never in source 
 | Display settings | `PUT /api/v1/display-settings` |
 | Drives | `POST/GET /api/v1/drives`, `GET/PUT /api/v1/drives/:id` |
 | Social | `GET /api/v1/users/search`, `GET /api/v1/leaderboard`, `GET /api/v1/users/:username`, `POST/DELETE /api/v1/users/:username/follow`, `GET /api/v1/users/:username/followers`, `GET /api/v1/users/:username/following` |
-| Static | `GET /uploads/*` (avatars) |
+| Static | `GET /`, `GET /privacy`, `GET /terms`, `GET /uploads/*` (avatars) |
 
 All `/api/v1/*` routes except auth require a `Authorization: Bearer <jwt>` header.
 
