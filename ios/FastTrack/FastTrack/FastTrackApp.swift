@@ -47,8 +47,10 @@ struct RootView: View {
     @EnvironmentObject var driveManager: DriveManager
     @ObservedObject private var authManager = AuthManager.shared
     @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var profileManager = ProfileManager.shared
     @State private var isInitializing = true
     @State private var selectedTab = 0
+    @State private var showingProfileSetup = false
     /// Per-tab UUIDs. Changing a UUID causes that tab's content to be recreated (nav reset).
     /// Index 0 (Track) is intentionally never reset so active recordings survive tab switches.
     @State private var tabResetIDs = (0..<5).map { _ in UUID() }
@@ -107,6 +109,20 @@ struct RootView: View {
                 ProfileView()
                     .id(tabResetIDs[4])
                     .tabItem { Label("Profile", systemImage: "person.fill") }.tag(4)
+            }
+            .sheet(isPresented: $showingProfileSetup) {
+                ProfileSetupView()
+                    .interactiveDismissDisabled(!profileManager.isProfileComplete)
+            }
+            .onChange(of: authManager.isAuthenticated) { _, isAuth in
+                if isAuth {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        if !profileManager.isProfileComplete {
+                            showingProfileSetup = true
+                        }
+                    }
+                }
             }
             .onChange(of: selectedTab) { oldTab, _ in
                 // Reset the tab being left (but never Track or Social)
