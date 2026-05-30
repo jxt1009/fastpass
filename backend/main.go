@@ -1,6 +1,7 @@
 package main
 
 import (
+	"html/template"
 	"log/slog"
 	"os"
 
@@ -53,12 +54,16 @@ func main() {
 	// Since privacy is a new feature, safely default all existing accounts to public.
 	db.Exec("UPDATE users SET is_public = true WHERE NOT is_public")
 
+	// Load HTML templates with formatting functions
+	tmpl := template.Must(template.New("").Funcs(template.FuncMap(formatTemplateFuncMap())).ParseGlob("templates/*.html"))
+
 	// Setup router
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(requestIDMiddleware())
 	r.Use(requestLoggerMiddleware())
 	r.Use(metricsMiddleware())
+	r.SetHTMLTemplate(tmpl)
 	// Limit request bodies to 12 MB (avatar upload is the largest expected payload)
 	r.MaxMultipartMemory = 12 << 20
 
@@ -72,8 +77,13 @@ func main() {
 
 	registerPublicPageRoutes(r)
 
-	// Serve uploaded avatars as static files
+	// Serve uploaded avatars and web static files
 	r.Static("/uploads", "./uploads")
+	r.Static("/static", "./static")
+
+	// Web page routes (no auth required)
+	r.GET("/leaderboard", renderLeaderboard)
+	r.GET("/u/:username", renderProfile)
 
 	// Auth routes (no auth required)
 	auth := r.Group("/api/v1/auth")
@@ -83,7 +93,7 @@ func main() {
 		auth.POST("/refresh", refreshToken)
 	}
 
-	// API routes (auth required)
+	// API routes (auth required — personal data)
 	api := r.Group("/api/v1")
 	api.Use(authMiddleware())
 	{
@@ -98,15 +108,25 @@ func main() {
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)
 		api.PUT("/drives/:id", updateDrive)
+	}
 
-		// Social
-		api.GET("/users/search", searchUsers)
-		api.GET("/leaderboard", getLeaderboard)
-		api.GET("/users/:username", getPublicProfile)
-		api.POST("/users/:username/follow", followUser)
-		api.DELETE("/users/:username/follow", unfollowUser)
-		api.GET("/users/:username/followers", getFollowers)
-		api.GET("/users/:username/following", getFollowing)
+	// Social routes (optional auth — public data)
+	social := r.Group("/api/v1")
+	social.Use(optionalAuthMiddleware())
+	{
+		social.GET("/users/search", searchUsers)
+		social.GET("/leaderboard", getLeaderboard)
+		social.GET("/users/:username", getPublicProfile)
+		social.GET("/users/:username/followers", getFollowers)
+		social.GET("/users/:username/following", getFollowing)
+	}
+
+	// Social routes (auth required — mutating follows)
+	socialAuth := r.Group("/api/v1")
+	socialAuth.Use(authMiddleware())
+	{
+		socialAuth.POST("/users/:username/follow", followUser)
+		socialAuth.DELETE("/users/:username/follow", unfollowUser)
 	}
 
 	port := os.Getenv("PORT")

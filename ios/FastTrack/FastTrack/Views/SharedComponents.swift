@@ -218,6 +218,7 @@ struct StatCard: View {
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(color)
+                    .monospacedDigit()
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
@@ -236,6 +237,7 @@ struct StatCard: View {
                 Text(value)
                     .font(.title3)
                     .fontWeight(.semibold)
+                    .monospacedDigit()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()

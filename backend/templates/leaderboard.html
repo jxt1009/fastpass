@@ -1,0 +1,72 @@
+{{define "title"}}Leaderboard - FastTrack{{end}}
+
+{{define "meta"}}
+<meta property="og:title" content="FastTrack Leaderboard">
+<meta property="og:description" content="Top speed, 0-60, distance, and drive count rankings.">
+<meta name="twitter:card" content="summary">
+{{end}}
+
+{{define "content"}}
+<div class="leaderboard-header">
+  <h1>Leaderboard</h1>
+  <p>Top performers across all FastTrack drivers</p>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-pills" data-group="category">
+    <button class="filter-pill active-amber" data-filter="top_speed" data-group="category">Top Speed</button>
+    <button class="filter-pill" data-filter="best_060" data-group="category">0-60</button>
+    <button class="filter-pill" data-filter="total_distance" data-group="category">Distance</button>
+    <button class="filter-pill" data-filter="drive_count" data-group="category">Drives</button>
+  </div>
+  <div class="filter-pills">
+    <button class="filter-pill active" data-filter="global" data-group="scope">Global</button>
+    <button class="filter-pill" data-filter="following" data-group="scope">Following</button>
+  </div>
+  <div class="filter-pills">
+    <button class="filter-pill active" data-filter="all_time" data-group="period">All Time</button>
+    <button class="filter-pill" data-filter="week" data-group="period">This Week</button>
+  </div>
+  <select class="filter-select" data-filter-select="car_make">
+    <option value="">All Makes</option>
+    <option value="Audi">Audi</option>
+    <option value="BMW">BMW</option>
+    <option value="Chevrolet">Chevrolet</option>
+    <option value="Dodge">Dodge</option>
+    <option value="Ferrari">Ferrari</option>
+    <option value="Ford">Ford</option>
+    <option value="Honda">Honda</option>
+    <option value="Hyundai">Hyundai</option>
+    <option value="Lamborghini">Lamborghini</option>
+    <option value="Mazda">Mazda</option>
+    <option value="McLaren">McLaren</option>
+    <option value="Mercedes-Benz">Mercedes-Benz</option>
+    <option value="Nissan">Nissan</option>
+    <option value="Porsche">Porsche</option>
+    <option value="Subaru">Subaru</option>
+    <option value="Tesla">Tesla</option>
+    <option value="Toyota">Toyota</option>
+    <option value="Volkswagen">Volkswagen</option>
+    <option value="Volvo">Volvo</option>
+  </select>
+  <select class="filter-select" data-filter-select="car_model">
+    <option value="">All Models</option>
+  </select>
+</div>
+
+<table id="lb-table" class="lb-table">
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Driver</th>
+      <th>Car</th>
+      <th style="text-align:right">Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td colspan="4" class="lb-loading">Loading…</td></tr>
+  </tbody>
+</table>
+{{end}}
+
+{{template "layout" .}}
