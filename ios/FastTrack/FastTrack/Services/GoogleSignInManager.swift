@@ -70,6 +70,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
 
         let body: [String: String] = [
             "code":          code,
+            "client_id":     Self.clientID,
             "code_verifier": codeVerifier,
             "redirect_uri":  Self.redirectURI,
         ]

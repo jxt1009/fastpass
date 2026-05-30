@@ -78,6 +78,7 @@ type GoogleSignInRequest struct {
 	Code         string `json:"code" binding:"required"`
 	CodeVerifier string `json:"code_verifier" binding:"required"`
 	RedirectURI  string `json:"redirect_uri" binding:"required"`
+	ClientID     string `json:"client_id"`
 }
 
 type UserInfo struct {

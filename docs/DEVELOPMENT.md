@@ -190,6 +190,10 @@ export GOOGLE_CLIENT_ID="YOUR_CLIENT_ID.apps.googleusercontent.com"
 export GOOGLE_CLIENT_SECRET="YOUR_CLIENT_SECRET"
 ```
 
+The iOS app now sends its Google `client_id` to `/api/v1/auth/google`, and the backend
+tries that first during the PKCE code exchange. `GOOGLE_CLIENT_ID` remains the server-side
+fallback/allowlist value, and it can be a comma-separated list during client ID rotations.
+
 ### 3. iOS — Info.plist
 ```xml
 <key>GIDClientID</key>

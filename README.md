@@ -112,7 +112,7 @@ See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for full Xcode setup.
 | `APPLE_KEY_ID` | For Apple account revocation | Sign in with Apple key ID used to sign the Apple revocation client secret |
 | `APPLE_PRIVATE_KEY` | For Apple account revocation | Contents of the `.p8` Sign in with Apple key, with newlines escaped as `\n` |
 | `BASE_URL` | Yes | Public API base URL (e.g. `https://fast.toper.dev`) — used in auth callbacks |
-| `GOOGLE_CLIENT_ID` | For Google auth | Google OAuth client ID |
+| `GOOGLE_CLIENT_ID` | For Google auth | Google OAuth client ID fallback / allowlist (comma-separated allowed) |
 | `GOOGLE_CLIENT_SECRET` | For Google auth | Google OAuth client secret |
 | `PORT` | No | API listen port (default: `8080`) |
 

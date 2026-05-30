@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,36 +43,42 @@ func handleGoogleSignIn(c *gin.Context) {
 		return
 	}
 
-	clientID := os.Getenv("GOOGLE_CLIENT_ID")
-	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
-	if clientID == "" {
+	clientIDs := googleClientIDCandidates(req.ClientID)
+	if len(clientIDs) == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Google OAuth not configured"})
 		return
 	}
+	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 
-	// Exchange authorization code for tokens (PKCE — no client_secret required for iOS)
-	form := url.Values{}
-	form.Set("code", req.Code)
-	form.Set("client_id", clientID)
-	form.Set("code_verifier", req.CodeVerifier)
-	form.Set("redirect_uri", req.RedirectURI)
-	form.Set("grant_type", "authorization_code")
-	if clientSecret != "" {
-		form.Set("client_secret", clientSecret)
+	var (
+		tokenResp        googleTokenResponse
+		lastTokenBody    string
+		lastTokenErr     error
+		lastTokenStatus  int
+		selectedClientID string
+	)
+
+	for _, clientID := range clientIDs {
+		tokenResp, lastTokenBody, lastTokenStatus, lastTokenErr = exchangeGoogleCode(req, clientID, clientSecret)
+		if lastTokenErr == nil && tokenResp.IDToken != "" {
+			selectedClientID = clientID
+			break
+		}
+		logWithRequestID(c).Warn(
+			"google token exchange failed",
+			"status", lastTokenStatus,
+			"details", lastTokenBody,
+			"client_id", redactGoogleClientID(clientID),
+			"redirect_uri", req.RedirectURI,
+		)
 	}
 
-	resp, err := http.PostForm(googleTokenEndpoint, form)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reach Google: " + err.Error()})
-		return
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	var tokenResp googleTokenResponse
-	if err := json.Unmarshal(body, &tokenResp); err != nil || tokenResp.IDToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token exchange failed: " + string(body)})
+	if selectedClientID == "" {
+		if lastTokenErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reach Google: " + lastTokenErr.Error()})
+			return
+		}
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token exchange failed: " + lastTokenBody})
 		return
 	}
 
@@ -132,6 +139,66 @@ func handleGoogleSignIn(c *gin.Context) {
 		RefreshToken: refreshToken,
 		User:         user,
 	})
+}
+
+func exchangeGoogleCode(req GoogleSignInRequest, clientID, clientSecret string) (googleTokenResponse, string, int, error) {
+	form := url.Values{}
+	form.Set("code", req.Code)
+	form.Set("client_id", clientID)
+	form.Set("code_verifier", req.CodeVerifier)
+	form.Set("redirect_uri", req.RedirectURI)
+	form.Set("grant_type", "authorization_code")
+	if clientSecret != "" {
+		form.Set("client_secret", clientSecret)
+	}
+
+	resp, err := http.PostForm(googleTokenEndpoint, form)
+	if err != nil {
+		return googleTokenResponse{}, "", 0, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	var tokenResp googleTokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return googleTokenResponse{}, string(body), resp.StatusCode, nil
+	}
+	return tokenResp, string(body), resp.StatusCode, nil
+}
+
+func googleClientIDCandidates(requestClientID string) []string {
+	seen := map[string]struct{}{}
+	candidates := make([]string, 0, 2)
+
+	addCandidate := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		if _, ok := seen[value]; ok {
+			return
+		}
+		seen[value] = struct{}{}
+		candidates = append(candidates, value)
+	}
+
+	addCandidate(requestClientID)
+	for _, value := range strings.Split(os.Getenv("GOOGLE_CLIENT_ID"), ",") {
+		addCandidate(value)
+	}
+
+	return candidates
+}
+
+func redactGoogleClientID(clientID string) string {
+	if clientID == "" {
+		return ""
+	}
+	if len(clientID) <= 12 {
+		return clientID
+	}
+	return clientID[:6] + "..." + clientID[len(clientID)-6:]
 }
 
 // fetchGoogleUserInfo calls Google's userinfo endpoint with the access token
