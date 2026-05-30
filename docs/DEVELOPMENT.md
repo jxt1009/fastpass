@@ -149,7 +149,7 @@ go build -o fasttrack-api
 
 ### Development (personal team, free)
 1. Add Apple ID to Xcode: **Settings → Accounts → +**
-2. Add "Sign in with Apple" capability to the target
+2. Verify the FastTrack target still has the checked-in "Sign in with Apple" capability enabled
 3. Select your personal team
 4. Test on physical device
 
@@ -168,8 +168,8 @@ The backend verifies Apple's identity token using Apple's public JWKS endpoint. 
 
 | Error | Cause | Fix |
 |---|---|---|
-| `AKAuthenticationError -7026` | Missing capability | Add "Sign in with Apple" in Xcode |
-| `Code=1000` | Same as above | Add capability, test on device |
+| `AKAuthenticationError -7026` | Missing capability / stale provisioning | Confirm `FastTrack.entitlements` is present, then refresh the provisioning profile/team in Xcode |
+| `Code=1000` | Same as above | Re-enable the capability for the app ID and rebuild on device |
 | `Code=1001` | User cancelled | Normal — user backed out |
 | "Invalid Apple token" | Token expired / wrong bundle ID | Check `APPLE_APP_BUNDLE_ID` env var |
 

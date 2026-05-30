@@ -35,7 +35,7 @@ class AppleSignInManager: NSObject, ObservableObject {
             }
         case .failure(let err):
             if (err as? ASAuthorizationError)?.code == .canceled { return }
-            error = err.localizedDescription
+            error = message(for: err)
         }
     }
 
@@ -149,8 +149,34 @@ extension AppleSignInManager: ASAuthorizationControllerDelegate {
             deletionContinuation.resume(throwing: error)
             return
         }
-        self.error = error.localizedDescription
+        if (error as? ASAuthorizationError)?.code == .canceled {
+            self.error = nil
+            isSignedIn = false
+            return
+        }
+        self.error = message(for: error)
         isSignedIn = false
+    }
+
+    private func message(for error: Error) -> String {
+        let nsError = error as NSError
+
+        if nsError.domain == "AKAuthenticationError", nsError.code == -7026 {
+            return "Apple sign-in isn't enabled for this app ID yet. Turn on the Sign in with Apple capability for the FastTrack target and refresh the provisioning profile on your device."
+        }
+
+        if nsError.domain == "com.apple.AuthenticationServices.AuthorizationError" {
+            switch nsError.code {
+            case 1000:
+                return "Apple sign-in isn't enabled for this app ID yet. Turn on the Sign in with Apple capability for the FastTrack target and refresh the provisioning profile on your device."
+            case 1001:
+                return "Apple sign-in was canceled."
+            default:
+                break
+            }
+        }
+
+        return nsError.localizedDescription
     }
 }
 

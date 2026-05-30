@@ -89,14 +89,13 @@ go run .
 ## Quick Start — iOS
 
 1. Open `ios/FastTrack/FastTrack.xcodeproj` in Xcode
-2. In **Signing & Capabilities**, add:
+2. In **Signing & Capabilities**, select your team and confirm the checked-in capabilities are still enabled:
    - **Sign in with Apple**
-   - **Background Modes** → check **Location updates**
+   - **Background Modes** → **Location updates**
 3. In **Info** tab, add:
    - `Privacy - Location When In Use Usage Description`
    - `Privacy - Location Always and When In Use Usage Description`
-4. Select your team for signing
-5. Build and run on a physical device (`Cmd+R`)
+4. Build and run on a physical device (`Cmd+R`)
 
 See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for full Xcode setup.
 
