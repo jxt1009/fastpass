@@ -83,11 +83,23 @@ Deployment is workflow-driven: backend and website images are built separately, 
 ## Git and release workflow
 
 - `main` is branch-protected. Assume all repository changes go through pull requests; do not plan around direct pushes to `main`.
-- Prefer semantic PR titles (`feat: ...`, `fix(scope): ...`, etc.) and squash merges for human-authored changes so release automation gets clean conventional commits on `main`.
+- **Always use squash merges** for human-authored PRs. The `conventional-commits.yml` workflow lints every commit pushed to `main` via `@commitlint/config-conventional`. A merge-commit merge preserves all branch commits on `main`, and each one is subject to commitlint. Squash merges produce a single commit with the PR title as its message, so only the PR title needs to be valid.
+- **Commit message header must not exceed 100 characters.** `@commitlint/config-conventional` enforces `header-max-length: [2, 'always', 100]`. This applies to every commit that lands on `main` — whether it's the squash commit or individual commits from a merge-commit merge. The PR title action (`amannn/action-semantic-pull-request`) only validates the PR title, not individual branch commits; a commit that passes in the PR can still fail on `main` if merged via merge commit.
+- Prefer semantic PR titles (`feat: ...`, `fix(scope): ...`, etc.) so the resulting squash commit message is valid. Keep PR titles ≤ 100 characters.
 - `release-please` is the source of truth for release PRs and version bumps. It opens or updates the release PR from commits already merged to `main`, and merging that PR creates the `v*` tag.
 - The tag-triggered [`release.yml`](workflows/release.yml) workflow creates GitHub Release notes with `git-cliff`; it must not depend on pushing release artifacts back to protected `main`.
 - Historical or backfilled tags should be republished via the manual **Release** workflow dispatch with a `tag` input rather than by pushing an old tag again.
 - `RELEASE_PLEASE_TOKEN` must remain a PAT or GitHub App token instead of `GITHUB_TOKEN`, because downstream tag workflows need to trigger from the release tag push.
+
+### Fixing a commitlint failure on `main`
+
+If a commit with an invalid conventional commit message (e.g. header > 100 chars, bad type) lands on `main` via a merge-commit merge, the fix requires a PR that reverts the bad merge and re-introduces the changes with a clean commit:
+
+1. Create a branch from `main`.
+2. `git revert -m 1 <merge-hash> --no-edit` — revert the merge (use `-m 1` to keep main as the primary parent).
+3. `git commit --amend -m "revert: <description>"` — give the revert a valid message.
+4. Re-apply the original changes and commit with a valid conventional message (≤ 100 chars).
+5. Push the branch and open a PR. **Use squash merge** when merging the fix PR.
 
 ## Key conventions
 
