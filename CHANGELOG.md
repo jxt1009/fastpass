@@ -2,6 +2,12 @@
 
 All notable changes to FastTrack are documented here.
 
+## [0.0.4] - 2026-05-30
+
+### Bug Fixes
+
+- **ios**: Isolate sign out on main actor ([`f914d19`](https://github.com/jtoper/fasttrack/commit/f914d1927839157bb6fb09dc0041c144427817ae))
+
 ## [0.0.3] - 2026-05-30
 
 ### Bug Fixes
