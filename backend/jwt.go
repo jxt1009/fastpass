@@ -185,7 +185,7 @@ func verifyAppleIdentityToken(identityToken string) (*AppleIDTokenClaims, error)
 	// Verify the token with the public key
 	claims := jwt.MapClaims{}
 	token, err = jwt.ParseWithClaims(identityToken, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+		if !isSupportedAppleSigningMethod(token.Method) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return publicKey, nil
@@ -353,6 +353,11 @@ func unixTime(ts *jwt.NumericDate) int64 {
 		return 0
 	}
 	return ts.Time.Unix()
+}
+
+func isSupportedAppleSigningMethod(method jwt.SigningMethod) bool {
+	_, ok := method.(*jwt.SigningMethodRSA)
+	return ok
 }
 
 func getApplePublicKey(kid string) (*rsa.PublicKey, error) {

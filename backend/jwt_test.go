@@ -243,3 +243,12 @@ func TestClaimAudiences_SupportsStringAndArray(t *testing.T) {
 		}
 	}
 }
+
+func TestIsSupportedAppleSigningMethod_RequiresRSA(t *testing.T) {
+	if !isSupportedAppleSigningMethod(jwt.SigningMethodRS256) {
+		t.Fatal("expected RS256 to be accepted for Apple identity tokens")
+	}
+	if isSupportedAppleSigningMethod(jwt.SigningMethodES256) {
+		t.Fatal("expected ES256 to be rejected for Apple identity tokens")
+	}
+}
