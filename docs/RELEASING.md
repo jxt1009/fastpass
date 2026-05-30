@@ -70,7 +70,7 @@ For local development, prefer Keychain-backed secrets over plaintext `.env.fastl
 
 4. **Apple revocation key for account deletion** — Create a **Sign in with Apple** key in the Apple Developer portal. The same setup script can print the backend secrets you need to add later: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY`.
 
-5. **Xcode test target** — The shared `FastTrack` scheme already includes `FastTrackTests`; CI and Fastlane both run tests through the app scheme.
+5. **Xcode test target** — The shared `FastTrack` scheme already includes `FastTrackTests`; CI and Fastlane both run tests through the app scheme. GitHub Actions now runs the iOS workflows on `macos-26` with Xcode 26 so TestFlight uploads meet App Store Connect's minimum SDK requirement.
 
 ### TestFlight release (beta)
 
