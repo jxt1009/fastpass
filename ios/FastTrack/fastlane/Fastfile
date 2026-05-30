@@ -69,7 +69,8 @@ platform :ios do
       scheme: "FastTrack",
       configuration: "Release",
       export_method: "app-store",
-      xcargs: "CODE_SIGN_STYLE=Manual",
+      codesigning_identity: "Apple Distribution",
+      xcargs: "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution'",
       skip_profile_detection: true,
       export_options: {
         method: "app-store",
@@ -98,7 +99,8 @@ platform :ios do
       scheme: "FastTrack",
       configuration: "Release",
       export_method: "app-store",
-      xcargs: "CODE_SIGN_STYLE=Manual",
+      codesigning_identity: "Apple Distribution",
+      xcargs: "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution'",
       skip_profile_detection: true,
       export_options: {
         method: "app-store",
