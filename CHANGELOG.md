@@ -2,6 +2,12 @@
 
 All notable changes to FastTrack are documented here.
 
+## [0.0.3] - 2026-05-30
+
+### Bug Fixes
+
+- **ios**: Force distribution signing identity ([`a84cf51`](https://github.com/jtoper/fasttrack/commit/a84cf512e8960d683e082a3106eefbff0491db43))
+
 ## [0.0.2] - 2026-05-30
 
 ### Bug Fixes
