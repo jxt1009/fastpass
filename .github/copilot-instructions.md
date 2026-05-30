@@ -63,22 +63,14 @@ bundle exec fastlane test
 
 Always recreate `FastTrack/Secrets.swift` from `FastTrack/Secrets.swift.template` in ephemeral environments; `Secrets.swift` is gitignored and should not be committed.
 
-### Website (`website/`)
-
-```bash
-# Container build used by deploy workflow
-docker build -t fasttrack-web ./website
-```
-
 ## High-level architecture
 
-FastTrack is three deployable pieces in one repo:
+FastTrack is two deployable pieces in one repo:
 
-1. `backend/` is a Go API using Gin + GORM + PostgreSQL. `main.go` wires structured logging, request IDs, Prometheus metrics, avatar static file serving, JWT auth routes, and the authenticated `/api/v1` API. The data model is centered on `User`, `Drive`, and `Follow`, with GORM auto-migrations done at startup.
+1. `backend/` is a Go API using Gin + GORM + PostgreSQL. `main.go` wires structured logging, request IDs, Prometheus metrics, avatar static file serving, JWT auth routes, and the authenticated `/api/v1` API. The backend also serves the landing page, privacy policy, and terms of service via `public_pages.go`. The data model is centered on `User`, `Drive`, and `Follow`, with GORM auto-migrations done at startup.
 2. `ios/FastTrack/FastTrack/` is the SwiftUI app. `LocationManager` fuses GPS + IMU data, `DriveManager` owns the recording state machine and serializes route/stat payloads, and `APIService`/`AuthManager` handle backend sync and auth token lifecycle.
-3. `website/` is a static nginx container serving the landing page plus `/privacy` and `/terms`.
 
-Deployment is workflow-driven: backend and website images are built separately, then applied with Kubernetes manifests under `backend/k8s/` and the staging/production overlays in `backend/k8s/overlays/`. The production ingress is shared between the API and website deployment flow.
+The `website/` directory is vestigial — public pages are now served by the backend. Deployment is workflow-driven: the backend Docker image is built, then applied with Kubernetes manifests under `backend/k8s/` and the staging/production overlays in `backend/k8s/overlays/`.
 
 ## Git and release workflow
 

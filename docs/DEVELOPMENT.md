@@ -93,7 +93,6 @@ ios/FastTrack/FastTrack/
     ├── AchievementsView.swift       # Badges
     ├── CarPickerView.swift          # Car selection UI
     ├── CarSelectorView.swift        # Garage management
-    ├── MoreView.swift               # Tab bar overflow
     ├── SettingsView.swift           # App settings
     └── SharedComponents.swift       # Reusable UI components
 ```

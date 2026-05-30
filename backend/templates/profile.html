@@ -1,10 +1,10 @@
 {{define "meta"}}
-<meta property="og:title" content="@{{.user.Username}} on FastTrack">
+{{if not .not_found}}<meta property="og:title" content="@{{.user.Username}} on FastTrack">
 <meta property="og:description" content="{{if .stats.DriveCount}}{{.stats.DriveCount}} drives &middot; Top speed {{formatSpeed .stats.TopSpeed}} mph{{end}}">
 <meta property="og:type" content="profile">
 <meta property="og:url" content="/u/{{.user.Username}}">
 {{if .user.AvatarURL}}<meta property="og:image" content="{{.user.AvatarURL}}">{{end}}
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary">{{end}}
 {{end}}
 
 {{define "title"}}{{if .not_found}}User Not Found - FastTrack{{else}}@{{.user.Username}} - FastTrack{{end}}{{end}}
