@@ -59,7 +59,7 @@ For a named release:
 
 1. **App Store Connect API key** — Generate at [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users & Access → Integrations → App Store Connect API. Keep the `.p8` file locally for Fastlane, and store its contents in the `APP_STORE_CONNECT_API_KEY` GitHub secret along with `APP_STORE_CONNECT_KEY_ID` and `APP_STORE_CONNECT_ISSUER_ID`.
 
-2. **Fastlane local env file** — Run `./scripts/setup_apple_release_env.sh` from [`ios/FastTrack`](../ios/FastTrack/) once Apple finishes approving your account. That writes `ios/FastTrack/.env.fastlane` with non-secret identifiers/paths for local Fastlane runs, including `APPLE_ID`, `TEAM_ID`, and `ITC_TEAM_ID`, and stores `MATCH_PASSWORD` in your macOS Keychain under the `com.toper.FastTrack.fastlane` service.
+2. **Fastlane local env file** — Run `./scripts/setup_apple_release_env.sh` from [`ios/FastTrack`](../ios/FastTrack/) once Apple finishes approving your account. That writes `ios/FastTrack/.env.fastlane` with non-secret identifiers/paths for local Fastlane runs, including `APPLE_ID` and `TEAM_ID`, and stores `MATCH_PASSWORD` in your macOS Keychain under the `com.toper.FastTrack.fastlane` service.
 
 3. **Fastlane Match repo** — Create a private GitHub repo for certificates (e.g. `yourorg/fasttrack-certs`) and provide that URL to the setup script. Store the match encryption password as `MATCH_PASSWORD` and a base64-encoded `user:token` as `MATCH_GIT_BASIC_AUTHORIZATION` for CI.
 
@@ -166,9 +166,6 @@ The Apple ID email for the App Store Connect account that owns the app.
 **`TEAM_ID`**
 Your 10-character Apple Developer Team ID.
 
-**`ITC_TEAM_ID`**
-Your App Store Connect team identifier used by Fastlane/App Store Connect authentication.
-
 **`MATCH_PASSWORD`**
 A strong password you choose — Fastlane Match uses this to encrypt certificates stored in the certs repo. Pick something and save it in your password manager:
 ```sh
@@ -199,7 +196,6 @@ Paste the base64 output as the secret value.
 | `APP_STORE_CONNECT_API_KEY` | — | ios-release | ⏳ After Developer approval |
 | `APPLE_ID` | — | ios-release | ⏳ After Developer approval |
 | `TEAM_ID` | — | ios-release | ⏳ After Developer approval |
-| `ITC_TEAM_ID` | — | ios-release | ⏳ After Developer approval |
 | `MATCH_PASSWORD` | — | ios-release | ⏳ Choose now, set later |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | — | ios-release | ⏳ After Developer approval |
 

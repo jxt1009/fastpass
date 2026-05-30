@@ -6,5 +6,7 @@ load fastlane_env if fastlane_env
 
 app_identifier fastlane_env!("FASTTRACK_APP_IDENTIFIER")
 apple_id fastlane_env!("APPLE_ID")
-itc_team_id fastlane_env!("ITC_TEAM_ID")
 team_id fastlane_env!("TEAM_ID")
+
+optional_itc_team_id = ENV["ITC_TEAM_ID"].to_s
+itc_team_id optional_itc_team_id unless optional_itc_team_id.empty?

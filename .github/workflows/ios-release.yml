@@ -13,7 +13,6 @@ jobs:
       FASTTRACK_APP_IDENTIFIER: com.toper.FastTrack
       MATCH_GIT_URL: https://github.com/jxt1009/fasttrack-secrets.git
       APPLE_ID: ${{ secrets.APPLE_ID }}
-      ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
       TEAM_ID: ${{ secrets.TEAM_ID }}
       FASTLANE_KEYCHAIN_PASSWORD: fasttrack-fastlane
 
@@ -48,7 +47,6 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
-          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
           TEAM_ID: ${{ secrets.TEAM_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
@@ -59,7 +57,6 @@ jobs:
             APP_STORE_CONNECT_KEY_ID \
             APP_STORE_CONNECT_ISSUER_ID \
             APPLE_ID \
-            ITC_TEAM_ID \
             TEAM_ID \
             MATCH_PASSWORD \
             MATCH_GIT_BASIC_AUTHORIZATION

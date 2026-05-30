@@ -39,7 +39,6 @@ echo "Configuring FastTrack Apple release settings..."
 bundle_id="$(prompt "App bundle ID" "com.toper.FastTrack")"
 apple_id="$(prompt "Apple ID email" "${APPLE_ID:-}")"
 team_id="$(prompt "Apple Developer Team ID" "${TEAM_ID:-}")"
-itc_team_id="$(prompt "App Store Connect Team ID" "${ITC_TEAM_ID:-}")"
 match_repo_url="$(prompt "Match repo URL" "${MATCH_GIT_URL:-}")"
 match_password="$(prompt_secret "Match password")"
 app_store_connect_key_id="$(prompt "App Store Connect API key ID" "${APP_STORE_CONNECT_KEY_ID:-}")"
@@ -55,7 +54,6 @@ cat > "$env_file" <<EOF
 FASTTRACK_APP_IDENTIFIER=$bundle_id
 APPLE_ID=$apple_id
 TEAM_ID=$team_id
-ITC_TEAM_ID=$itc_team_id
 MATCH_GIT_URL=$match_repo_url
 MATCH_PASSWORD_KEYCHAIN_ACCOUNT=match_password
 APP_STORE_CONNECT_KEY_ID=$app_store_connect_key_id
