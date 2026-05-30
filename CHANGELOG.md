@@ -10,6 +10,7 @@ All notable changes to FastTrack are documented here.
 - **ci**: Make itc team id optional ([`9396597`](https://github.com/jtoper/fasttrack/commit/9396597c61e9cd9a4f52417daf2a6fb51d745c3c))
 - **ci**: Normalize app store key secret ([`bb87b43`](https://github.com/jtoper/fasttrack/commit/bb87b43acbef4db315a2ee6d6aeaabedd30354a5))
 - **ci**: Accept pasted key secret formats ([`3e3b022`](https://github.com/jtoper/fasttrack/commit/3e3b022cb7aeaeef9c6522c0fee4bbcd79b002e1))
+- **ios**: Use app store profiles for release ([`e9e052a`](https://github.com/jtoper/fasttrack/commit/e9e052a7e833de54e1e09fe20ed7aa9c8e45bed8))
 
 ### Documentation
 
