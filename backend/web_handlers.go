@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -133,13 +134,20 @@ func renderProfile(c *gin.Context) {
 		garage = []GarageCar{}
 	}
 
+	// Convert absolute avatar URL to relative for the template so the
+	// browser fetches from the same server that serves the page.
+	relativeAvatarURL := user.AvatarURL
+	if parsed, err := url.Parse(user.AvatarURL); err == nil && parsed.Host != "" {
+		relativeAvatarURL = parsed.Path
+	}
+
 	var buf bytes.Buffer
 	if err := profileTmpl.ExecuteTemplate(&buf, "profile.html", gin.H{
 		"user": gin.H{
 			"Username":  user.Username,
 			"FullName":  user.FullName,
 			"Country":   user.Country,
-			"AvatarURL": user.AvatarURL,
+			"AvatarURL": relativeAvatarURL,
 			"CreatedAt": user.CreatedAt.Format("Jan 2006"),
 			"Garage":    garage,
 		},

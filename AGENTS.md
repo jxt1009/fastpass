@@ -10,6 +10,12 @@ git worktree add ../fasttrack-<branch-name> <base-branch>
 
 Work in the worktree directory, commit there, and push from there. Remove the worktree after the PR is merged.
 
+Before pushing, always rebase the branch onto `main` (or the target base branch) to keep history linear:
+
+```bash
+git rebase main
+```
+
 ## 2. Conventional commits
 
 All commits must follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. This repo enforces it via commitlint.
