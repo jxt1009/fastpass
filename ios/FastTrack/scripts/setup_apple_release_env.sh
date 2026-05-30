@@ -70,10 +70,15 @@ echo
 echo "GitHub Actions secrets still need to be added separately for CI/TestFlight uploads."
 if [[ -n "$app_store_connect_key_path" && -f "$app_store_connect_key_path" ]]; then
   app_store_connect_key_content="$(sed ':a;N;$!ba;s/\n/\\n/g' "$app_store_connect_key_path")"
+  app_store_connect_key_base64="$(base64 < "$app_store_connect_key_path" | tr -d '\n')"
   echo "Add these GitHub Actions secrets for ios-release:"
-  echo "APP_STORE_CONNECT_API_KEY=$app_store_connect_key_content"
+  echo "APP_STORE_CONNECT_API_KEY=$app_store_connect_key_base64"
   echo "APP_STORE_CONNECT_KEY_ID=$app_store_connect_key_id"
   echo "APP_STORE_CONNECT_ISSUER_ID=$app_store_connect_issuer_id"
+  echo
+  echo "APP_STORE_CONNECT_API_KEY above is printed as base64 to avoid newline formatting issues."
+  echo "If you prefer, the escaped raw .p8 content is:"
+  echo "APP_STORE_CONNECT_API_KEY_ESCAPED=$app_store_connect_key_content"
 else
   echo "Warning: $app_store_connect_key_path was not found, so App Store Connect GitHub secret output was skipped." >&2
 fi
