@@ -103,12 +103,8 @@ class AuthManager: ObservableObject {
             body: request,
             requiresAuth: false
         )
-        
-        saveToken(response.token)
-        saveRefreshToken(response.refreshToken)
-        saveUser(response.user)
-        isAuthenticated = true
-        await restoreUserDataFromServer(serverUser: response.user)
+
+        await completeAuthentication(with: response)
     }
     
     func refreshTokenIfNeeded() async throws {
@@ -123,11 +119,17 @@ class AuthManager: ObservableObject {
             body: request,
             requiresAuth: false
         )
-        
+
+        await completeAuthentication(with: response)
+    }
+
+    func completeAuthentication(with response: AuthResponse) async {
         saveToken(response.token)
         saveRefreshToken(response.refreshToken)
         saveUser(response.user)
-        isAuthenticated = true
+        await MainActor.run {
+            isAuthenticated = true
+        }
         await restoreUserDataFromServer(serverUser: response.user)
     }
 

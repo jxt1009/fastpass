@@ -94,10 +94,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let authResponse = try decoder.decode(AuthResponse.self, from: data)
-            AuthManager.shared.saveToken(authResponse.token)
-            AuthManager.shared.saveRefreshToken(authResponse.refreshToken)
-            AuthManager.shared.saveUser(authResponse.user)
-            await MainActor.run { AuthManager.shared.isAuthenticated = true }
+            await AuthManager.shared.completeAuthentication(with: authResponse)
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }
