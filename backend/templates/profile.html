@@ -72,6 +72,9 @@
   <div class="social-row">
     <span class="social-stat" data-modal="followers-modal"><strong>{{.follower_count}}</strong> followers</span>
     <span class="social-stat" data-modal="following-modal"><strong>{{.following_count}}</strong> following</span>
+    {{if and .is_authenticated (not .is_own_profile)}}
+    <button class="follow-btn {{if .is_followed_by_me}}following{{end}}" data-username="{{.user.Username}}" data-jwt="{{.jwt_token}}">{{if .is_followed_by_me}}Following{{else}}Follow{{end}}</button>
+    {{end}}
   </div>
 </div>
 {{end}}

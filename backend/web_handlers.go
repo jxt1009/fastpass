@@ -35,6 +35,16 @@ func renderProfile(c *gin.Context) {
 		return
 	}
 
+	// Check for authenticated user via Authorization header
+	currentUserID, currentUsername, jwtToken := resolveWebAuth(c)
+	isOwnProfile := currentUsername == username
+	isFollowed := false
+	if currentUserID > 0 && !isOwnProfile {
+		var count int64
+		db.Model(&Follow{}).Where("follower_id = ? AND following_id = ?", currentUserID, user.ID).Count(&count)
+		isFollowed = count > 0
+	}
+
 	type driveStats struct {
 		TopSpeed      float64  `gorm:"column:top_speed"`
 		TotalDistance float64  `gorm:"column:total_distance"`
@@ -90,11 +100,42 @@ func renderProfile(c *gin.Context) {
 			"TotalDistance": math.Round(stats.TotalDistance*100) / 100,
 			"Best060Time":   stats.Best060Time,
 		},
-		"follower_count":  int(followerCount),
-		"following_count": int(followingCount),
-		"followers":       followers,
-		"following":       following,
+		"follower_count":       int(followerCount),
+		"following_count":      int(followingCount),
+		"followers":            followers,
+		"following":            following,
+		"is_authenticated":     currentUserID > 0,
+		"is_own_profile":       isOwnProfile,
+		"is_followed_by_me":    isFollowed,
+		"current_user":         currentUsername,
+		"jwt_token":            jwtToken,
 	})
+}
+
+// resolveWebAuth attempts to authenticate the current user from the Authorization
+// header. Returns the user ID, username, and raw JWT token string (or zero/empty).
+func resolveWebAuth(c *gin.Context) (uint, string, string) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return 0, "", ""
+	}
+	tokenString, err := extractBearerToken(authHeader)
+	if err != nil {
+		return 0, "", ""
+	}
+	claims, err := validateJWT(tokenString)
+	if err != nil {
+		return 0, "", ""
+	}
+	if err := requireTokenType(claims, tokenTypeAccess); err != nil {
+		return 0, "", ""
+	}
+
+	var user User
+	if err := db.First(&user, claims.UserID).Error; err != nil {
+		return 0, "", ""
+	}
+	return user.ID, user.Username, tokenString
 }
 
 func renderLeaderboard(c *gin.Context) {

@@ -93,67 +93,65 @@ struct DriveDetailView: View {
 
                 // Extended Stats Grid
                 if drive.leftTurns > 0 || drive.rightTurns > 0 || drive.brakeEvents > 0 {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Driving Stats")
-                            .font(.headline)
+                    InstrumentCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Driving Stats")
+                                .font(.headline)
 
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                            StatCard(title: "Left Turns",    value: "\(drive.leftTurns)",   icon: "arrow.turn.up.left",   info: StatInfo.leftTurns)
-                            StatCard(title: "Right Turns",   value: "\(drive.rightTurns)",  icon: "arrow.turn.up.right",  info: StatInfo.rightTurns)
-                            StatCard(title: "Brake Events",  value: "\(drive.brakeEvents)", icon: "hand.raised.fill",     info: StatInfo.brakeEvents)
-                            StatCard(title: "Lane Changes",  value: "\(drive.laneChanges)", icon: "arrow.left.arrow.right", info: StatInfo.laneChanges)
-                        }
-
-                        if drive.maxAcceleration > 0 {
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                                StatCard(title: "Max Accel", value: String(format: "%.1f m/s²", drive.maxAcceleration), icon: "arrow.up.circle",   info: StatInfo.maxAcceleration)
-                                StatCard(title: "Max Decel", value: String(format: "%.1f m/s²", drive.maxDeceleration), icon: "arrow.down.circle", info: StatInfo.maxDeceleration)
+                                StatCard(title: "Left Turns",    value: "\(drive.leftTurns)",   icon: "arrow.turn.up.left",   info: StatInfo.leftTurns)
+                                StatCard(title: "Right Turns",   value: "\(drive.rightTurns)",  icon: "arrow.turn.up.right",  info: StatInfo.rightTurns)
+                                StatCard(title: "Brake Events",  value: "\(drive.brakeEvents)", icon: "hand.raised.fill",     info: StatInfo.brakeEvents)
+                                StatCard(title: "Lane Changes",  value: "\(drive.laneChanges)", icon: "arrow.left.arrow.right", info: StatInfo.laneChanges)
                             }
-                        }
 
-                        if drive.peakGForce > 0 {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                                StatCard(title: "Peak G-Force", value: String(format: "%.2f G", drive.peakGForce), icon: "circle.circle", info: StatInfo.peakGForce)
-                                if let best060 = drive.best060Time {
-                                    StatCard(title: "0-60 Time", value: String(format: "%.1f sec", best060), icon: "timer", info: StatInfo.zeroToSixty)
+                            if drive.maxAcceleration > 0 {
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                    StatCard(title: "Max Accel", value: String(format: "%.1f m/s²", drive.maxAcceleration), icon: "arrow.up.circle",   info: StatInfo.maxAcceleration)
+                                    StatCard(title: "Max Decel", value: String(format: "%.1f m/s²", drive.maxDeceleration), icon: "arrow.down.circle", info: StatInfo.maxDeceleration)
+                                }
+                            }
+
+                            if drive.peakGForce > 0 {
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                    StatCard(title: "Peak G-Force", value: String(format: "%.2f G", drive.peakGForce), icon: "circle.circle", info: StatInfo.peakGForce)
+                                    if let best060 = drive.best060Time {
+                                        StatCard(title: "0-60 Time", value: String(format: "%.1f sec", best060), icon: "timer", info: StatInfo.zeroToSixty)
+                                    }
                                 }
                             }
                         }
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
                 }
 
                 // Trip Details
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Trip Details")
-                        .font(.headline)
+                InstrumentCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Trip Details")
+                            .font(.headline)
 
-                    DetailRow(label: "Start Time", value: drive.startTime.formatted(date: .long, time: .shortened))
-                    DetailRow(label: "End Time",   value: drive.endTime.formatted(date: .long, time: .shortened))
+                        DetailRow(label: "Start Time", value: drive.startTime.formatted(date: .long, time: .shortened))
+                        DetailRow(label: "End Time",   value: drive.endTime.formatted(date: .long, time: .shortened))
 
-                    // Editable car row
-                    HStack {
-                        Text("Car").fontWeight(.medium)
-                        Spacer()
-                        Button { showingCarPicker = true } label: {
-                            HStack(spacing: 4) {
-                                Text(drive.carDisplayString).foregroundColor(.primary)
-                                Image(systemName: "pencil").font(.caption).foregroundColor(.blue)
+                        // Editable car row
+                        HStack {
+                            Text("Car").fontWeight(.medium)
+                            Spacer()
+                            Button { showingCarPicker = true } label: {
+                                HStack(spacing: 4) {
+                                    Text(drive.carDisplayString).foregroundColor(.primary)
+                                    Image(systemName: "pencil").font(.caption).foregroundColor(.blue)
+                                }
                             }
                         }
-                    }
 
-                    DetailRow(label: "Start Location", value: String(format: "%.4f, %.4f", drive.startLatitude, drive.startLongitude))
-                    DetailRow(label: "End Location",   value: String(format: "%.4f, %.4f", drive.endLatitude,   drive.endLongitude))
-                    if drive.stoppedTime > 0 {
-                        DetailRow(label: "Stopped Time", value: formatDuration(drive.stoppedTime))
+                        DetailRow(label: "Start Location", value: String(format: "%.4f, %.4f", drive.startLatitude, drive.startLongitude))
+                        DetailRow(label: "End Location",   value: String(format: "%.4f, %.4f", drive.endLatitude,   drive.endLongitude))
+                        if drive.stoppedTime > 0 {
+                            DetailRow(label: "Stopped Time", value: formatDuration(drive.stoppedTime))
+                        }
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
             }
             .padding()
         }
@@ -209,7 +207,7 @@ struct DriveDetailView: View {
                 }
         } else {
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(Color.ftCardBg)
                 .frame(height: 260)
                 .overlay(
                     VStack(spacing: 8) {
@@ -320,7 +318,7 @@ struct DriveDetailView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.ftCardBg)
         .cornerRadius(12)
     }
 

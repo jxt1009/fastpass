@@ -105,11 +105,11 @@ struct SocialView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color.ftCardBg, in: RoundedRectangle(cornerRadius: 8))
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
-        .background(Color(.systemGroupedBackground))
+        .background(Color.ftSurfaceBg)
     }
 
     // MARK: - Content
@@ -161,12 +161,12 @@ struct SocialView: View {
                             .listRowBackground(
                                 entry.username == currentUsername
                                     ? Color.blue.opacity(0.08)
-                                    : Color(.systemBackground)
+                                    : Color.ftCardBg
                             )
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
+                .listStyle(.inset)
                 .opacity(isLoading ? 0.5 : 1.0)
                 .animation(.easeInOut(duration: 0.2), value: isLoading)
 
