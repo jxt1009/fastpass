@@ -5,7 +5,6 @@
       "release-type": "simple",
       "version-file": "VERSION",
       "skip-changelog": true,
-      "skip-github-release": true,
       "include-component-in-tag": false
     }
   }

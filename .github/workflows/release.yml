@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -13,7 +12,7 @@ on:
 
 jobs:
   release:
-    name: Create GitHub Release
+    name: Update GitHub Release notes
     runs-on: ubuntu-latest
 
     permissions:
@@ -22,24 +21,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
-          fetch-depth: 0  # full history needed for git-cliff
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          fetch-depth: 0
 
       - name: Install git-cliff
         uses: kenji-miyake/setup-git-cliff@v2
 
       - name: Generate release notes
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: |
           git cliff --tag "$RELEASE_TAG" --strip header > RELEASE_NOTES.md
           cat RELEASE_NOTES.md
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
-          body_path: RELEASE_NOTES.md
-          name: FastTrack ${{ inputs.tag || github.ref_name }}
-          draft: false
-          prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
+      - name: Update GitHub Release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          gh release edit "$RELEASE_TAG" --notes-file RELEASE_NOTES.md --title "FastTrack $RELEASE_TAG"
