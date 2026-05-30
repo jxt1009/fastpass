@@ -350,3 +350,87 @@ struct StatCardSkeleton: View {
         .cornerRadius(12)
     }
 }
+
+// MARK: - Instrument-Cluster Reusables
+
+struct InstrumentStatCell: View {
+    let icon: String
+    let iconColor: Color
+    let label: String
+    let value: String
+    let unit: String
+    var info: StatInfoEntry? = nil
+
+    var body: some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Image(systemName: icon).foregroundColor(iconColor).font(.title3)
+                    Spacer()
+                    if let info { StatInfoButton(entry: info).colorScheme(.dark) }
+                }
+                Text(label).font(.caption).foregroundColor(.secondary)
+                HStack(alignment: .lastTextBaseline, spacing: 3) {
+                    Text(value).font(.title2).fontWeight(.bold).foregroundColor(.primary)
+                    if !unit.isEmpty {
+                        Text(unit).font(.caption).foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+struct MetricGauge: View {
+    let title: String
+    let value: String
+    let unit: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(.title3, design: .monospaced)).fontWeight(.bold)
+                .foregroundColor(color)
+            HStack(spacing: 2) {
+                Text(title).font(.system(size: 9, weight: .semibold)).foregroundColor(.secondary)
+                Text(unit).font(.system(size: 8)).foregroundColor(.secondary.opacity(0.6))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(Color.ftCardBg)
+        .cornerRadius(8)
+    }
+}
+
+struct InstrumentButtonStyle: ButtonStyle {
+    let color: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .fontWeight(.semibold)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(color)
+            .cornerRadius(12)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+struct SectionHeader: View {
+    let title: String
+    var info: StatInfoEntry? = nil
+
+    var body: some View {
+        HStack {
+            Text(title).font(.title3).fontWeight(.bold)
+            if let info { StatInfoButton(entry: info) }
+        }
+        .padding(.top, 8)
+    }
+}

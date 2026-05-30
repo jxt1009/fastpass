@@ -1,57 +1,5 @@
 import SwiftUI
 
-// MARK: - Dark Card Wrapper
-
-private struct DarkCard<Content: View>: View {
-    @ViewBuilder let content: Content
-    var body: some View {
-        content
-            .padding()
-            .background(Color(red: 0.17, green: 0.17, blue: 0.18))
-            .cornerRadius(12)
-    }
-}
-
-// MARK: - Profile Stat Cell (matches screenshot style)
-
-private struct ProfileStatCell: View {
-    let icon: String
-    let iconColor: Color
-    let label: String
-    let value: String
-    let unit: String
-    var info: StatInfoEntry? = nil
-
-    var body: some View {
-        DarkCard {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Image(systemName: icon)
-                        .foregroundColor(iconColor)
-                        .font(.title3)
-                    Spacer()
-                    if let info { StatInfoButton(entry: info).colorScheme(.dark) }
-                }
-                Text(label)
-                    .font(.caption)
-                    .foregroundColor(Color(white: 0.6))
-                HStack(alignment: .lastTextBaseline, spacing: 3) {
-                    Text(value)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                    if !unit.isEmpty {
-                        Text(unit)
-                            .font(.caption)
-                            .foregroundColor(Color(white: 0.5))
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
 // MARK: - Turn Preference Bar
 
 private struct TurnPreferenceBar: View {
@@ -61,7 +9,7 @@ private struct TurnPreferenceBar: View {
     var rightPct: Int { 100 - leftPct }
 
     var body: some View {
-        DarkCard {
+        InstrumentCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Turn Preference")
                     .font(.headline)
@@ -92,25 +40,6 @@ private struct TurnPreferenceBar: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Section Header
-
-private struct DarkSectionHeader: View {
-    let title: String
-    var info: StatInfoEntry? = nil
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.title3).fontWeight(.bold)
-                .foregroundColor(.white)
-            if let info {
-                StatInfoButton(entry: info)
-                    .colorScheme(.dark)
-            }
-        }
-        .padding(.top, 8)
     }
 }
 
@@ -147,18 +76,18 @@ struct ProfileView: View {
                             mainStatsGrid
                             topSpeedCard
                             best060Card
-                            DarkSectionHeader(title: "Maneuvers", info: StatInfo.maneuversSection)
+                            SectionHeader(title: "Maneuvers", info: StatInfo.maneuversSection)
                             maneuvorsGrid
                             TurnPreferenceBar(leftFraction: stats.turnPreferencePct)
-                            DarkSectionHeader(title: "Performance", info: StatInfo.performanceSection)
+                            SectionHeader(title: "Performance", info: StatInfo.performanceSection)
                             performanceGrid
-                            DarkSectionHeader(title: "More Stats")
+                            SectionHeader(title: "More Stats")
                             moreStatsGrid
                         }
                         privacyToggleCard
-                        DarkSectionHeader(title: "Achievements")
+                        SectionHeader(title: "Achievements")
                         achievementsSection
-                        DarkSectionHeader(title: "Settings")
+                        SectionHeader(title: "Settings")
                         settingsSection
                         deleteAccountButton
                         signOutButton
@@ -218,7 +147,7 @@ struct ProfileView: View {
     // MARK: Profile Header
 
     private var profileHeader: some View {
-        DarkCard {
+        InstrumentCard {
             HStack(spacing: 14) {
                 // Avatar
                 ZStack {
@@ -320,7 +249,7 @@ struct ProfileView: View {
                     }
                 }
             } else {
-                DarkCard {
+                InstrumentCard {
                     VStack(spacing: 12) {
                         Image(systemName: "car")
                             .font(.title2)
@@ -344,25 +273,25 @@ struct ProfileView: View {
 
     private var mainStatsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "location.fill", iconColor: .cyan,
                 label: "Total Distance",
                 value: String(format: "%.1f", settings.distanceValue(stats.totalDistance)),
                 unit: settings.distanceUnit
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "clock.fill", iconColor: .orange,
                 label: "Total Duration",
                 value: formatDuration(stats.totalDuration),
                 unit: ""
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "pause.fill", iconColor: .purple,
                 label: "Stopped Time",
                 value: formatDuration(stats.totalStoppedTime),
                 unit: ""
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "flag.fill", iconColor: .green,
                 label: "Total Trips",
                 value: "\(stats.totalTrips)",
@@ -374,7 +303,7 @@ struct ProfileView: View {
     // MARK: Top Speed (full-width card)
 
     private var topSpeedCard: some View {
-        DarkCard {
+        InstrumentCard {
             HStack {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.yellow)
@@ -400,7 +329,7 @@ struct ProfileView: View {
     // MARK: Best 0-60
 
     private var best060Card: some View {
-        DarkCard {
+        InstrumentCard {
             HStack {
                 Image(systemName: "timer")
                     .foregroundColor(Color.orange)
@@ -434,22 +363,22 @@ struct ProfileView: View {
 
     private var maneuvorsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "arrow.turn.up.left", iconColor: .blue,
                 label: "Left Turns", value: "\(stats.totalLeftTurns)", unit: "",
                 info: StatInfo.leftTurns
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "arrow.turn.up.right", iconColor: .orange,
                 label: "Right Turns", value: "\(stats.totalRightTurns)", unit: "",
                 info: StatInfo.rightTurns
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "hand.raised.fill", iconColor: .red,
                 label: "Brake Events", value: "\(stats.totalBrakeEvents)", unit: "",
                 info: StatInfo.brakeEvents
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "arrow.left.arrow.right", iconColor: .green,
                 label: "Lane Changes", value: "\(stats.totalLaneChanges)", unit: "",
                 info: StatInfo.laneChanges
@@ -461,28 +390,28 @@ struct ProfileView: View {
 
     private var performanceGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "arrow.down.circle.fill", iconColor: .red,
                 label: "Max Deceleration",
                 value: String(format: "%.1f", stats.overallMaxDeceleration),
                 unit: "m/s²",
                 info: StatInfo.maxDeceleration
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "arrow.up.circle.fill", iconColor: .green,
                 label: "Max Acceleration",
                 value: String(format: "%.1f", stats.overallMaxAcceleration),
                 unit: "m/s²",
                 info: StatInfo.maxAcceleration
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "circle.circle.fill", iconColor: .orange,
                 label: "Peak G-Force",
                 value: String(format: "%.2f", stats.overallPeakGForce),
                 unit: "G",
                 info: StatInfo.peakGForce
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "arrow.triangle.2.circlepath", iconColor: .cyan,
                 label: "Top Corner Speed",
                 value: String(format: "%.0f", settings.speedValue(stats.overallTopCornerSpeed)),
@@ -496,21 +425,21 @@ struct ProfileView: View {
 
     private var moreStatsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "car.fill", iconColor: .blue,
                 label: "Total Trips", value: "\(stats.totalTrips)", unit: ""
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "stop.circle.fill", iconColor: Color(white: 0.6),
                 label: "Total Stops", value: "\(stats.totalStops)", unit: ""
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "road.lanes", iconColor: .green,
                 label: "Avg Trip Length",
                 value: String(format: "%.1f", settings.distanceValue(stats.avgTripLengthMeters)),
                 unit: settings.distanceUnit
             )
-            ProfileStatCell(
+            InstrumentStatCell(
                 icon: "clock.arrow.circlepath", iconColor: .orange,
                 label: "Total Duration",
                 value: formatDuration(stats.totalDuration),
@@ -522,7 +451,7 @@ struct ProfileView: View {
     // MARK: Privacy Toggle
 
     private var privacyToggleCard: some View {
-        DarkCard {
+        InstrumentCard {
             VStack(alignment: .leading, spacing: 10) {
                 Toggle(isOn: Binding(
                     get: { profileManager.profile?.isPublic ?? true },
@@ -549,7 +478,7 @@ struct ProfileView: View {
     // MARK: Achievements Section
 
     private var achievementsSection: some View {
-        DarkCard {
+        InstrumentCard {
             VStack(spacing: 12) {
                 // Summary row
                 HStack(spacing: 16) {
@@ -610,7 +539,7 @@ struct ProfileView: View {
     // MARK: Settings Section
 
     private var settingsSection: some View {
-        DarkCard {
+        InstrumentCard {
             VStack(spacing: 0) {
                 // Keep Screen On
                 Toggle(isOn: $settings.keepScreenOn) {
@@ -766,7 +695,7 @@ struct CarGarageCard: View {
     }
     
     var body: some View {
-        DarkCard {
+        InstrumentCard {
             VStack(spacing: 8) {
                 // Main car info
                 HStack {

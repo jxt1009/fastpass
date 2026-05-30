@@ -116,6 +116,7 @@ func main() {
 		social.GET("/users/:username", getPublicProfile)
 		social.GET("/users/:username/followers", getFollowers)
 		social.GET("/users/:username/following", getFollowing)
+		social.GET("/cars/models", getCarModels)
 	}
 
 	// Social routes (auth required — mutating follows)

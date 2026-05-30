@@ -10,6 +10,7 @@ struct DriveHistoryView: View {
                     List {
                         ForEach(0..<6, id: \.self) { _ in
                             DriveRowSkeleton()
+                                .listRowBackground(Color.ftSurfaceBg)
                         }
                     }
                 } else if driveManager.drives.isEmpty {
@@ -24,6 +25,7 @@ struct DriveHistoryView: View {
                             NavigationLink(destination: DriveDetailView(drive: drive)) {
                                 DriveRowView(drive: drive)
                             }
+                            .listRowBackground(Color.ftSurfaceBg)
                         }
                     }
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))

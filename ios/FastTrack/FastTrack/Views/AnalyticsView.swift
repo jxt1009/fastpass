@@ -19,7 +19,7 @@ struct AnalyticsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 if driveManager.isLoadingDrives {
                     analyticsSkeleton
@@ -143,51 +143,50 @@ struct AnalyticsView: View {
     // MARK: - Chart Section
     
     private var chartSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Performance Trends")
-                    .font(.headline)
-                Spacer()
-                
-                Picker("Metric", selection: $selectedMetric) {
-                    ForEach(AnalyticsMetric.allCases, id: \.self) { metric in
-                        Text(metric.displayName).tag(metric)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-            }
-            
-            if #available(iOS 16.0, *), !filteredDrives.isEmpty {
-                Chart(filteredDrives) { drive in
-                    LineMark(
-                        x: .value("Date", drive.startTime),
-                        y: .value(selectedMetric.displayName, selectedMetric.getValue(from: drive))
-                    )
-                    .foregroundStyle(selectedMetric.color)
-                    .interpolationMethod(.catmullRom)
-                }
-                .frame(height: 200)
-                .chartYAxisLabel(selectedMetric.unit)
-                .chartXAxisLabel("Date")
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .frame(height: 200)
-                    .overlay(
-                        VStack(spacing: 8) {
-                            Image(systemName: "chart.line.uptrend.xyaxis")
-                                .font(.title2)
-                                .foregroundColor(.secondary)
-                            Text("No data available")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Performance Trends")
+                        .font(.headline)
+                    Spacer()
+                    
+                    Picker("Metric", selection: $selectedMetric) {
+                        ForEach(AnalyticsMetric.allCases, id: \.self) { metric in
+                            Text(metric.displayName).tag(metric)
                         }
-                    )
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
+                
+                if #available(iOS 16.0, *), !filteredDrives.isEmpty {
+                    Chart(filteredDrives) { drive in
+                        LineMark(
+                            x: .value("Date", drive.startTime),
+                            y: .value(selectedMetric.displayName, selectedMetric.getValue(from: drive))
+                        )
+                        .foregroundStyle(selectedMetric.color)
+                        .interpolationMethod(.catmullRom)
+                    }
+                    .frame(height: 200)
+                    .chartYAxisLabel(selectedMetric.unit)
+                    .chartXAxisLabel("Date")
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.ftCardBg)
+                        .frame(height: 200)
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary)
+                                Text("No data available")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        )
+                }
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
     }
     
     // MARK: - Performance Breakdown
@@ -272,29 +271,28 @@ struct AnalyticsCard: View {
     var info: StatInfoEntry? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(iconColor)
-                    .font(.title3)
-                Spacer()
-                if let trend = trend {
-                    TrendIndicator(trend: trend)
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(iconColor)
+                        .font(.title3)
+                    Spacer()
+                    if let trend = trend {
+                        TrendIndicator(trend: trend)
+                    }
+                    if let info { StatInfoButton(entry: info) }
                 }
-                if let info { StatInfoButton(entry: info) }
+
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
     }
 }
 
@@ -320,33 +318,32 @@ struct PerformanceBreakdownCard: View {
     let color: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(color)
+                        .font(.title3)
+                    Spacer()
+                }
+                
+                Text(value)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(category)
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.2))
                     .foregroundColor(color)
-                    .font(.title3)
-                Spacer()
+                    .cornerRadius(4)
             }
-            
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Text(category)
-                .font(.caption2)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(color.opacity(0.2))
-                .foregroundColor(color)
-                .cornerRadius(4)
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
     }
 }
 
@@ -354,40 +351,39 @@ struct RecentBestCard: View {
     let drive: Drive
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Image(systemName: "trophy.fill")
-                        .foregroundColor(.yellow)
-                    Text("Best Max Speed")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Spacer()
-                    Text(AppSettings.shared.speedDisplay(drive.maxSpeed))
-                        .font(.headline)
-                        .fontWeight(.bold)
-                }
-                
-                Text(drive.startTime.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                if !drive.carDisplayString.isEmpty {
-                    Text(drive.carDisplayString)
+        InstrumentCard {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "trophy.fill")
+                            .foregroundColor(.yellow)
+                        Text("Best Max Speed")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text(AppSettings.shared.speedDisplay(drive.maxSpeed))
+                            .font(.headline)
+                            .fontWeight(.bold)
+                    }
+                    
+                    Text(drive.startTime.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.secondary)
+                    
+                    if !drive.carDisplayString.isEmpty {
+                        Text(drive.carDisplayString)
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
                 }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-                .font(.caption)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
     }
 }
 
@@ -697,24 +693,23 @@ struct DrivePerformanceDetailView: View {
                         // Smoothness score
                         let smoothness = AnalyticsData.smoothnessScore(for: drive)
                         if smoothness > 0 {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Driving Style Score")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    Text(String(format: "%.0f / 100", smoothness))
-                                        .font(.title3)
-                                        .fontWeight(.bold)
+                            InstrumentCard {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Driving Style Score")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        Text(String(format: "%.0f / 100", smoothness))
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                    }
+                                    Spacer()
+                                    ProgressView(value: smoothness / 100)
+                                        .progressViewStyle(.linear)
+                                        .tint(smoothness > 75 ? .green : smoothness > 50 ? .orange : .red)
+                                        .frame(width: 100)
                                 }
-                                Spacer()
-                                ProgressView(value: smoothness / 100)
-                                    .progressViewStyle(.linear)
-                                    .tint(smoothness > 75 ? .green : smoothness > 50 ? .orange : .red)
-                                    .frame(width: 100)
                             }
-                            .padding()
-                            .background(Color(.systemBackground))
-                            .cornerRadius(12)
                         }
                     }
                 }
@@ -744,23 +739,22 @@ struct PerformanceStatCard: View {
     let icon: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.blue)
-                Spacer()
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(.blue)
+                    Spacer()
+                }
+                
+                Text(value)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
     }
 }

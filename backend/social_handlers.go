@@ -286,6 +286,30 @@ func getPublicProfile(c *gin.Context) {
 	})
 }
 
+// ─── Car Models by Make ──────────────────────────────────────────────────────
+
+// getCarModels handles GET /api/v1/cars/models?make=XXX
+// Returns distinct car models for a given make from the drives table.
+func getCarModels(c *gin.Context) {
+	make := strings.TrimSpace(c.Query("make"))
+	if make == "" {
+		c.JSON(http.StatusOK, []string{})
+		return
+	}
+
+	var models []string
+	db.Raw(`
+		SELECT DISTINCT car_model FROM drives
+		WHERE LOWER(car_make) = LOWER(?)
+		  AND car_model != ''
+		ORDER BY car_model`, make).Scan(&models)
+
+	if models == nil {
+		models = []string{}
+	}
+	c.JSON(http.StatusOK, models)
+}
+
 // ─── Follow / Unfollow ────────────────────────────────────────────────────────
 
 // followUser handles POST /api/v1/users/:username/follow
