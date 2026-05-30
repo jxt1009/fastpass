@@ -69,6 +69,7 @@ class AppleSignInManager: NSObject, ObservableObject {
         }
     }
     
+    @MainActor
     func signOut() {
         authManager.signOut()
         isSignedIn = false
