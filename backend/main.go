@@ -1,7 +1,6 @@
 package main
 
 import (
-	"html/template"
 	"log/slog"
 	"os"
 
@@ -54,8 +53,7 @@ func main() {
 	// Since privacy is a new feature, safely default all existing accounts to public.
 	db.Exec("UPDATE users SET is_public = true WHERE NOT is_public")
 
-	// Load HTML templates with formatting functions
-	tmpl := template.Must(template.New("").Funcs(template.FuncMap(formatTemplateFuncMap())).ParseGlob("templates/*.html"))
+	initWebTemplates()
 
 	// Setup router
 	r := gin.New()
@@ -63,7 +61,6 @@ func main() {
 	r.Use(requestIDMiddleware())
 	r.Use(requestLoggerMiddleware())
 	r.Use(metricsMiddleware())
-	r.SetHTMLTemplate(tmpl)
 	// Limit request bodies to 12 MB (avatar upload is the largest expected payload)
 	r.MaxMultipartMemory = 12 << 20
 
@@ -81,7 +78,7 @@ func main() {
 	r.Static("/uploads", "./uploads")
 	r.Static("/static", "./static")
 
-	// Web page routes (no auth required)
+	// Public web page routes (no auth required)
 	r.GET("/leaderboard", renderLeaderboard)
 	r.GET("/u/:username", renderProfile)
 
