@@ -7,8 +7,10 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
+# Copy source code and web assets
 COPY *.go ./
+COPY templates/ ./templates/
+COPY static/ ./static/
 
 # Build with version info injected
 ARG VERSION=dev
@@ -25,6 +27,8 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /fasttrack .
+COPY --from=builder /app/templates/ ./templates/
+COPY --from=builder /app/static/ ./static/
 
 EXPOSE 8080
 

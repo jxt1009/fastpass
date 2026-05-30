@@ -1,0 +1,33 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07070B">
+<meta name="color-scheme" content="dark">
+{{block "meta" .}}{{end}}
+<title>{{block "title" .}}FastTrack{{end}}</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="/">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    FastTrack
+  </a>
+  <div class="nav-links">
+    <a href="/leaderboard">Leaderboard</a>
+    <a href="/privacy">Privacy</a>
+  </div>
+</nav>
+<main class="container">
+{{block "content" .}}{{end}}
+</main>
+{{block "extra" .}}{{end}}
+<footer class="container">
+  <span>&copy; FastTrack</span>
+  <span><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></span>
+</footer>
+<script src="/static/js/app.js"></script>
+</body>
+</html>{{end}}

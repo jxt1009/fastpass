@@ -1,0 +1,125 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+)
+
+type GarageCar struct {
+	ID       string `json:"id"`
+	Make     string `json:"make"`
+	Model    string `json:"model"`
+	Year     int    `json:"year"`
+	Trim     string `json:"trim"`
+	Nickname string `json:"nickname"`
+}
+
+type SocialEntry struct {
+	Username string `json:"username"`
+	Country  string `json:"country"`
+}
+
+func renderProfile(c *gin.Context) {
+	username := c.Param("username")
+
+	var user User
+	if err := db.Where("username = ? AND is_public = true", username).First(&user).Error; err != nil {
+		c.HTML(http.StatusNotFound, "profile.html", gin.H{
+			"not_found": true,
+		})
+		return
+	}
+
+	type driveStats struct {
+		TopSpeed      float64  `gorm:"column:top_speed"`
+		TotalDistance float64  `gorm:"column:total_distance"`
+		DriveCount    int      `gorm:"column:drive_count"`
+		Best060Time   *float64 `gorm:"column:best_060_time"`
+	}
+	var stats driveStats
+	db.Raw(`
+		SELECT COALESCE(MAX(max_speed),0) AS top_speed,
+		       COALESCE(SUM(distance),0)  AS total_distance,
+		       COUNT(id)                  AS drive_count,
+		       MIN(best_060_time)         AS best_060_time
+		FROM drives WHERE user_id = ?`, user.ID).Scan(&stats)
+
+	var followerCount, followingCount int64
+	db.Model(&Follow{}).Where("following_id = ?", user.ID).Count(&followerCount)
+	db.Model(&Follow{}).Where("follower_id = ?", user.ID).Count(&followingCount)
+
+	var followers []SocialEntry
+	db.Raw(`
+		SELECT u.username, u.country FROM follows f
+		JOIN users u ON u.id = f.follower_id
+		WHERE f.following_id = ?
+		ORDER BY f.created_at DESC LIMIT 100`, user.ID).Scan(&followers)
+
+	var following []SocialEntry
+	db.Raw(`
+		SELECT u.username, u.country FROM follows f
+		JOIN users u ON u.id = f.following_id
+		WHERE f.follower_id = ?
+		ORDER BY f.created_at DESC LIMIT 100`, user.ID).Scan(&following)
+
+	var garage []GarageCar
+	if user.Garage != "" {
+		json.Unmarshal([]byte(user.Garage), &garage)
+	}
+	if garage == nil {
+		garage = []GarageCar{}
+	}
+
+	c.HTML(http.StatusOK, "profile.html", gin.H{
+		"user": gin.H{
+			"Username":  user.Username,
+			"FullName":  user.FullName,
+			"Country":   user.Country,
+			"AvatarURL": user.AvatarURL,
+			"CreatedAt": user.CreatedAt.Format("Jan 2006"),
+			"Garage":    garage,
+		},
+		"stats": gin.H{
+			"TopSpeed":      math.Round(stats.TopSpeed*100) / 100,
+			"DriveCount":    stats.DriveCount,
+			"TotalDistance": math.Round(stats.TotalDistance*100) / 100,
+			"Best060Time":   stats.Best060Time,
+		},
+		"follower_count":  int(followerCount),
+		"following_count": int(followingCount),
+		"followers":       followers,
+		"following":       following,
+	})
+}
+
+func renderLeaderboard(c *gin.Context) {
+	c.HTML(http.StatusOK, "leaderboard.html", nil)
+}
+
+func formatTemplateFuncMap() map[string]interface{} {
+	return map[string]interface{}{
+		"formatSpeed": func(ms float64) string {
+			return fmt.Sprintf("%.1f", ms*2.23694)
+		},
+		"formatDistance": func(m float64) string {
+			return fmt.Sprintf("%.1f", m/1609.34)
+		},
+		"format060": func(s *float64) string {
+			if s == nil {
+				return "—"
+			}
+			return fmt.Sprintf("%.1fs", *s)
+		},
+		"upper": func(s string) string {
+			if len(s) == 0 {
+				return ""
+			}
+			return strings.ToUpper(s[:1]) + s[1:]
+		},
+	}
+}

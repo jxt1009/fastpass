@@ -80,11 +80,15 @@ struct DriveDetailView: View {
                 }
 
                 // Stats Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                    StatCard(title: "Distance", value: settings.distanceDisplay(drive.distance, decimals: 2), icon: "map")
-                    StatCard(title: "Duration", value: drive.durationString, icon: "clock")
-                    StatCard(title: "Max Speed", value: settings.speedDisplay(drive.maxSpeed), icon: "speedometer")
-                    StatCard(title: "Avg Speed", value: settings.speedDisplay(drive.avgSpeed), icon: "gauge")
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    DashboardGauge(value: settings.speedDisplay(drive.maxSpeed), label: "Top Speed", color: .ftAmber)
+                    DashboardGauge(value: settings.distanceDisplay(drive.distance, decimals: 1), label: "Distance", color: .ftBlue)
+                    DashboardGauge(value: drive.durationString, label: "Duration", color: .ftBlue)
+                    if let best = drive.best060Time {
+                        DashboardGauge(value: String(format: "%.1fs", best), label: "0-60", color: .ftGreen)
+                    } else {
+                        DashboardGauge(value: settings.speedDisplay(drive.avgSpeed), label: "Avg Speed", color: .secondary)
+                    }
                 }
 
                 // Extended Stats Grid
