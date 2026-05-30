@@ -112,10 +112,8 @@ func getLeaderboard(c *gin.Context) {
 
 	// Period filter
 	periodWhere := ""
-	subPeriodWhere := ""
 	if period == "week" {
 		periodWhere = "AND d.start_time >= ?"
-		subPeriodWhere = "AND d2.start_time >= ?"
 		args = append(args, startOfCurrentWeek())
 	}
 
@@ -136,15 +134,12 @@ func getLeaderboard(c *gin.Context) {
 	carMakeFilter := strings.TrimSpace(c.Query("car_make"))
 	carModelFilter := strings.TrimSpace(c.Query("car_model"))
 	carWhere := ""
-	subCarWhere := ""
 	if carMakeFilter != "" {
 		carWhere += " AND LOWER(d.car_make) = LOWER(?)"
-		subCarWhere += " AND LOWER(d2.car_make) = LOWER(?)"
 		args = append(args, carMakeFilter)
 	}
 	if carModelFilter != "" {
 		carWhere += " AND LOWER(d.car_model) = LOWER(?)"
-		subCarWhere += " AND LOWER(d2.car_model) = LOWER(?)"
 		args = append(args, carModelFilter)
 	}
 
@@ -157,9 +152,6 @@ func getLeaderboard(c *gin.Context) {
 		CarMake   string  `gorm:"column:car_make"`
 		CarModel  string  `gorm:"column:car_model"`
 	}
-
-	// Build subquery-specific WHERE clauses (use d2. alias for inner table)
-	subExtraWhere := strings.ReplaceAll(agg.extraWhere, "d.", "d2.")
 
 	// For each user, also surface which car achieved their best value.
 	// We use a subquery to find the drive that produced the aggregate value.
@@ -184,13 +176,14 @@ func getLeaderboard(c *gin.Context) {
 		LIMIT 50`,
 		agg.expr,
 		// subquery for car_make
-		subExtraWhere, subPeriodWhere, subCarWhere, agg.subColOrder,
+		agg.extraWhere, periodWhere, carWhere, agg.subColOrder,
 		// subquery for car_model
-		subExtraWhere, subPeriodWhere, subCarWhere, agg.subColOrder,
+		agg.extraWhere, periodWhere, carWhere, agg.subColOrder,
 		// main WHERE
 		agg.extraWhere, periodWhere, scopeWhere, carWhere,
 		agg.order)
 
+	// args are reused for main query; subqueries need same period/car args
 	// Build full args: [subquery1 args] + [subquery2 args] + [main args]
 	subArgs := []interface{}{}
 	if period == "week" {
