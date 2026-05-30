@@ -30,6 +30,7 @@ a:hover{color:#5EACFF}
 /* ─── NAV ─────────────────────────────────────────── */
 nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:rgba(7,7,11,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);position:sticky;top:0;z-index:100}
 .nav-brand{display:flex;align-items:center;gap:10px;font-size:1.1rem;font-weight:700;color:var(--text)}
+.nav-brand img{width:24px;height:24px;border-radius:6px;flex-shrink:0}
 .nav-brand svg{width:24px;height:24px;fill:var(--blue)}
 .nav-links{display:flex;gap:20px;font-size:.9rem}
 .nav-links a{color:var(--muted);padding:4px 0;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
@@ -111,7 +112,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .lb-table tr:last-child td{border-bottom:none}
 .lb-table tr{transition:background .1s}
 .lb-table tbody tr:hover{background:var(--surface)}
-.lb-table tbody.lb-loading tr{opacity:.4;pointer-events:none;transition:opacity .2s}
+.lb-table tbody{transition:opacity .2s ease}
+.lb-table tbody.lb-loading{opacity:.3;pointer-events:none}
 .lb-table tbody tr{transition:opacity .2s}
 .lb-row{cursor:pointer}
 .lb-rank{font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,Consolas,monospace;font-weight:700;color:var(--muted);width:32px}
@@ -127,8 +129,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .lb-value.speed{color:var(--amber)}
 .lb-value.performance{color:var(--green)}
 .lb-unit{font-weight:400;font-size:.75rem;color:var(--muted);margin-left:2px}
-.lb-empty{text-align:center;padding:40px;color:var(--muted)}
-.lb-loading{text-align:center;padding:40px;color:var(--muted)}
+.lb-empty,.lb-loading-row{text-align:center;padding:40px;color:var(--muted)}
 
 /* Leaderboard stats popover */
 .stats-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .15s ease}

@@ -119,7 +119,16 @@ function fetchLeaderboard() {
       if (!r.ok) throw new Error('Failed to fetch')
       return r.json()
     })
-    .then(data => renderLeaderboard(data))
+    .then(data => {
+      renderLeaderboard(data)
+      // Double rAF to let the browser paint new rows at 0.3 opacity,
+      // then remove loading class so they transition smoothly to 1.0.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          tbody.classList.remove('lb-loading')
+        })
+      })
+    })
     .catch(() => {
       tbody.innerHTML = '<tr><td colspan="4" class="lb-empty">Failed to load leaderboard</td></tr>'
       tbody.classList.remove('lb-loading')

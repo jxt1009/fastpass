@@ -19,7 +19,7 @@ const homePageHTML = `<!DOCTYPE html>
 <meta property="og:title" content="FastTrack — Performance Driving App">
 <meta property="og:description" content="Track 0-60, quarter mile, and G-force with your iPhone.">
 <meta name="twitter:card" content="summary">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏎️</text></svg>">
+<link rel="icon" href="/static/img/app-icon.png">
 <title>FastTrack — Performance Driving App</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -29,6 +29,7 @@ a{color:var(--blue);text-decoration:none;transition:color .15s}
 a:hover{color:#5EACFF}
 nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:rgba(7,7,11,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);position:sticky;top:0;z-index:100}
 .nav-brand{display:flex;align-items:center;gap:10px;font-size:1.1rem;font-weight:700;color:var(--text)}
+.nav-brand img{width:24px;height:24px;border-radius:6px;flex-shrink:0}
 .nav-brand svg{width:24px;height:24px;fill:var(--blue);flex-shrink:0}
 .nav-links{display:flex;gap:20px;font-size:.9rem}
 .nav-links a{color:var(--muted);padding:4px 0;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
@@ -85,7 +86,7 @@ footer a:hover{color:var(--text)}
 <body>
 <nav>
   <a class="nav-brand" href="/">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    <img src="/static/img/app-icon.png" alt="" width="24" height="24">
     FastTrack
   </a>
   <div class="nav-links">
@@ -103,20 +104,23 @@ footer a:hover{color:var(--text)}
 </section>
 <div class="strip">
   <div class="strip-grid">
-    <div class="strip-card">
-      <div class="strip-value amber">2.7s</div>
+    <div class="strip-card" id="stat-top-speed">
+      <div class="strip-value amber">—</div>
+      <div class="strip-divider"></div>
+      <div class="strip-label">Top Speed</div>
+      <div class="strip-driver" style="font-size:.7rem;color:var(--muted);margin-top:4px"></div>
+    </div>
+    <div class="strip-card" id="stat-best-060">
+      <div class="strip-value green">—</div>
       <div class="strip-divider"></div>
       <div class="strip-label">Best 0-60</div>
+      <div class="strip-driver" style="font-size:.7rem;color:var(--muted);margin-top:4px"></div>
     </div>
-    <div class="strip-card">
-      <div class="strip-value blue">119.9</div>
+    <div class="strip-card" id="stat-total-drives">
+      <div class="strip-value blue">—</div>
       <div class="strip-divider"></div>
-      <div class="strip-label">Top Speed (mph)</div>
-    </div>
-    <div class="strip-card">
-      <div class="strip-value green">1.6G</div>
-      <div class="strip-divider"></div>
-      <div class="strip-label">Peak G-Force</div>
+      <div class="strip-label">Total Drives</div>
+      <div class="strip-driver" style="font-size:.7rem;color:var(--muted);margin-top:4px"></div>
     </div>
   </div>
 </div>
@@ -167,6 +171,45 @@ footer a:hover{color:var(--text)}
   <span>&copy; FastTrack</span>
   <span><a href="/leaderboard">Leaderboard</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></span>
 </footer>
+<script>
+const LB = '/api/v1/leaderboard'
+function fmtSpeed(ms) { return (ms * 2.23694).toFixed(1) + '<span style="font-weight:400;font-size:.75rem;color:var(--muted);margin-left:2px"> mph</span>' }
+function fmtTime(s) { return s.toFixed(1) + '<span style="font-weight:400;font-size:.75rem;color:var(--muted);margin-left:2px">s</span>' }
+function fmtNum(n) { return n.toLocaleString() }
+
+function setStrip(id, valueHtml, driverLabel) {
+  const card = document.getElementById(id)
+  if (!card) return
+  card.querySelector('.strip-value').innerHTML = valueHtml
+  const drv = card.querySelector('.strip-driver')
+  if (drv && driverLabel) drv.textContent = driverLabel
+}
+
+fetch(LB + '?category=top_speed&scope=global&period=all_time')
+  .then(r => r.ok ? r.json() : [])
+  .then(entries => {
+    if (entries.length) {
+      const e = entries[0]
+      setStrip('stat-top-speed', fmtSpeed(e.value), e.car_make ? e.username + ' \u00b7 ' + e.car_make + (e.car_model ? ' ' + e.car_model : '') : e.username)
+    }
+  })
+fetch(LB + '?category=best_060&scope=global&period=all_time')
+  .then(r => r.ok ? r.json() : [])
+  .then(entries => {
+    if (entries.length) {
+      const e = entries[0]
+      setStrip('stat-best-060', fmtTime(e.value), e.car_make ? e.username + ' \u00b7 ' + e.car_make + (e.car_model ? ' ' + e.car_model : '') : e.username)
+    }
+  })
+fetch(LB + '?category=drive_count&scope=global&period=all_time')
+  .then(r => r.ok ? r.json() : [])
+  .then(entries => {
+    if (entries.length) {
+      const e = entries[0]
+      setStrip('stat-total-drives', fmtNum(e.value), e.username)
+    }
+  })
+</script>
 </body>
 </html>`
 
