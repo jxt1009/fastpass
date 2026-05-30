@@ -125,6 +125,14 @@ jobs:
             except UnicodeDecodeError:
               return None
 
+          for candidate in list(candidates):
+            for value in (candidate.strip(), normalize(candidate).strip()):
+              if "=" not in value:
+                continue
+              prefix, suffix = value.split("=", 1)
+              if prefix in {"APP_STORE_CONNECT_API_KEY", "APP_STORE_CONNECT_API_KEY_BASE64"}:
+                candidates.append(suffix)
+
           pem = None
           for candidate in candidates:
             normalized = normalize(candidate)
@@ -132,12 +140,13 @@ jobs:
               pem = normalized
               break
 
-            decoded = decode_base64(candidate)
-            if decoded:
-              normalized = normalize(decoded)
-              if looks_like_pem(normalized):
-                pem = normalized
-                break
+            for value in (candidate, normalized.strip()):
+              decoded = decode_base64(value)
+              if decoded:
+                normalized = normalize(decoded)
+                if looks_like_pem(normalized):
+                  pem = normalized
+                  break
             if pem:
               break
 
