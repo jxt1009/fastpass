@@ -28,6 +28,7 @@ func appleSignIn(c *gin.Context) {
 	// Verify Apple's identity token
 	claims, err := verifyAppleIdentityToken(req.IdentityToken)
 	if err != nil {
+		logWithRequestID(c).Warn("apple sign-in failed", "details", err.Error())
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Apple token", "details": err.Error()})
 		return
 	}

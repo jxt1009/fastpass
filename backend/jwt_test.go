@@ -212,7 +212,34 @@ func TestIsAllowedAppleAudience_AcceptsLegacyBundleID(t *testing.T) {
 	if !isAllowedAppleAudience(legacyAppleAppID) {
 		t.Fatal("expected legacy FastPass audience to be accepted")
 	}
+	if !isAllowedAppleAudience("com.toper.fasttrack") {
+		t.Fatal("expected case-insensitive canonical audience to be accepted")
+	}
 	if isAllowedAppleAudience("com.example.Unknown") {
 		t.Fatal("expected unknown audience to be rejected")
+	}
+}
+
+func TestClaimAudiences_SupportsStringAndArray(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  any
+		want []string
+	}{
+		{name: "string", raw: "com.toper.FastTrack", want: []string{"com.toper.FastTrack"}},
+		{name: "array", raw: []any{"com.toper.FastTrack", "com.toper.FastPass"}, want: []string{"com.toper.FastTrack", "com.toper.FastPass"}},
+		{name: "empty", raw: []any{"", 1}, want: nil},
+	}
+
+	for _, tt := range tests {
+		got := claimAudiences(tt.raw)
+		if len(got) != len(tt.want) {
+			t.Fatalf("%s: expected %d audiences, got %d (%v)", tt.name, len(tt.want), len(got), got)
+		}
+		for i, audience := range tt.want {
+			if got[i] != audience {
+				t.Fatalf("%s: expected audience %d to be %q, got %q", tt.name, i, audience, got[i])
+			}
+		}
 	}
 }
