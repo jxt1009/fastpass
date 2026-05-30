@@ -158,7 +158,7 @@ struct SplashView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color.ftSectionBg.ignoresSafeArea()
 
             VStack(spacing: 24) {
                 Spacer()
@@ -166,11 +166,11 @@ struct SplashView: View {
                 // Icon
                 ZStack {
                     Circle()
-                        .fill(Color(white: 0.12))
+                        .fill(Color(.systemGray5))
                         .frame(width: 110, height: 110)
                     Image(systemName: "speedometer")
                         .font(.system(size: 52, weight: .medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 .scaleEffect(iconScale)
                 .opacity(iconOpacity)
@@ -179,10 +179,10 @@ struct SplashView: View {
                 VStack(spacing: 6) {
                     Text("FastTrack")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Every drive. Every detail.")
                         .font(.subheadline)
-                        .foregroundStyle(Color(white: 0.5))
+                        .foregroundStyle(.secondary)
                 }
                 .opacity(textOpacity)
 
@@ -192,7 +192,7 @@ struct SplashView: View {
                 HStack(spacing: 6) {
                     ForEach(0..<3) { i in
                         Circle()
-                            .fill(Color(white: 0.4))
+                            .fill(Color(.systemGray3))
                             .frame(width: 7, height: 7)
                             .scaleEffect(dotOffset == CGFloat(i) ? 1.4 : 1.0)
                             .animation(
