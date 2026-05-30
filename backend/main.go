@@ -81,7 +81,7 @@ func main() {
 	r.Static("/uploads", "./uploads")
 	r.Static("/static", "./static")
 
-	// Web page routes (no auth required)
+	// Public web page routes (no auth required)
 	r.GET("/leaderboard", renderLeaderboard)
 	r.GET("/u/:username", renderProfile)
 
