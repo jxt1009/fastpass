@@ -84,9 +84,11 @@ platform :ios do
     )
 
     # Upload to TestFlight (no submit for review)
+    changelog = ENV["FL_WHATS_NEW"].to_s.empty? ? nil : ENV["FL_WHATS_NEW"]
     upload_to_testflight(
       skip_waiting_for_build_processing: true,
-      notify_external_testers: false
+      notify_external_testers: false,
+      changelog: changelog
     )
   end
 
