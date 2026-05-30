@@ -2,6 +2,18 @@
 
 ---
 
+## Implementation plans
+
+For multi-step features, behavior changes, or investigations that are likely to touch several files, add a short implementation plan under `docs/plans/` and commit it with the work.
+
+- Use a date-prefixed filename such as `docs/plans/2026-05-30-speed-data-quality.md`.
+- Keep the plan practical: problem, scope, implementation steps, and validation.
+- Update the plan when scope materially changes so the rationale stays version controlled with the code.
+
+Small one-file fixes do not need a dedicated plan, but significant work should leave behind versioned documentation.
+
+---
+
 ## iOS — Xcode Setup
 
 ### 1. Open the project

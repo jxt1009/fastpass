@@ -17,6 +17,7 @@ class SpeedFusion {
     private(set) var speed: Double = 0          // m/s
     private var P: Double = 4.0                  // variance (m/s)²
     private(set) var isZeroLocked: Bool = false  // true when GPS confirms we're stopped
+    private(set) var stationaryConfidence: Double = 1.0
 
     // Noise tuning
     private let Q: Double = 0.5   // process noise variance per second — higher = more responsive to IMU changes
@@ -24,18 +25,29 @@ class SpeedFusion {
     // Zero-speed lock threshold: GPS must report < this with good accuracy to lock
     private let zeroSpeedThreshold: Double = 0.3   // m/s (~0.7 mph)
     private let zeroAccuracyThreshold: Double = 2.5 // m/s — relaxed from 1.5 to handle urban GPS (~2-4 m/s accuracy)
+    private let zeroUnlockThreshold: Double = 0.55 // m/s (~1.2 mph)
+    private let stationarySpeedThreshold: Double = 0.35
+    private let stationaryLockThreshold: Double = 0.18
+    private let stationaryAccelThresholdG: Double = 0.03
+    private let stationaryHoldTime: Double = 0.35
+    private let lowSpeedDampingThreshold: Double = 0.8
 
     // Course tracking for longitudinal projection
     private var lastCourse: Double = -1   // degrees, -1 = invalid
     private var lastGPSSpeed: Double = 0
+    private var stationaryDuration: Double = 0
 
     // MARK: - Predict (called at 25 Hz from CMDeviceMotion)
     /// `longAccelG` = longitudinal acceleration in **g** units, from IMU projected onto travel direction
     func predict(longAccelG: Double, dt: Double) {
         // While zero-locked (GPS confirmed stopped), only break lock on meaningful forward acceleration
         if isZeroLocked {
+            stationaryDuration = stationaryHoldTime
+            stationaryConfidence = 1.0
             guard longAccelG > 0.05 else { return }  // < ~0.05g of noise: stay at zero
             isZeroLocked = false
+            stationaryDuration = 0
+            stationaryConfidence = 0
         }
         let a = longAccelG * 9.81          // convert to m/s²
         speed += a * dt
@@ -43,10 +55,11 @@ class SpeedFusion {
         P += Q * dt                        // grow uncertainty over time
 
         // Drain IMU drift in the near-zero zone — prevents stuck-at-1-mph after deceleration
-        // 0.85 drains 0.5 m/s to ~0.1 m/s in ~6 IMU steps (~0.24s at 25 Hz)
-        if speed < 0.5 {
-            speed *= 0.85
+        if speed < lowSpeedDampingThreshold {
+            speed *= abs(longAccelG) < stationaryAccelThresholdG ? 0.72 : 0.86
         }
+
+        updateStationaryEstimate(absLongAccelG: abs(longAccelG), dt: dt)
     }
 
     // MARK: - Update (called at ~1 Hz when GPS fires)
@@ -57,16 +70,16 @@ class SpeedFusion {
         // Zero-speed lock: GPS confidently reports stopped — snap to zero and hold
         let accuracyKnown = gpsSpeedAccuracy > 0
         if gpsSpeed < zeroSpeedThreshold && accuracyKnown && gpsSpeedAccuracy < zeroAccuracyThreshold {
-            speed = 0
-            P = R_min
-            isZeroLocked = true
+            engageZeroLock()
             lastGPSSpeed = 0
             return
         }
 
         // Leaving zero: clear lock
-        if isZeroLocked && gpsSpeed >= zeroSpeedThreshold {
+        if isZeroLocked && gpsSpeed >= zeroUnlockThreshold {
             isZeroLocked = false
+            stationaryDuration = 0
+            stationaryConfidence = 0
         }
 
         let sigma = gpsSpeedAccuracy > 0 ? gpsSpeedAccuracy : 1.5
@@ -79,12 +92,16 @@ class SpeedFusion {
             // Just accept the GPS value wholesale — we've drifted badly
             speed = gpsSpeed
             P = R
+            refreshStationaryEstimateAfterGPS(gpsSpeed: gpsSpeed, accuracyKnown: accuracyKnown, gpsSpeedAccuracy: gpsSpeedAccuracy)
+            lastGPSSpeed = gpsSpeed
             return
         }
         speed = speed + K * residual
         speed = max(0, speed)
         P = (1 - K) * P
         P = max(P, 0.001)                 // floor variance
+
+        refreshStationaryEstimateAfterGPS(gpsSpeed: gpsSpeed, accuracyKnown: accuracyKnown, gpsSpeedAccuracy: gpsSpeedAccuracy)
 
         lastGPSSpeed = gpsSpeed
     }
@@ -97,8 +114,58 @@ class SpeedFusion {
         speed = 0
         P = 4.0
         isZeroLocked = false
+        stationaryConfidence = 1.0
         lastCourse = -1
         lastGPSSpeed = 0
+        stationaryDuration = 0
+    }
+
+    private func updateStationaryEstimate(absLongAccelG: Double, dt: Double) {
+        let lowMotion = absLongAccelG < stationaryAccelThresholdG
+        let nearZero = speed < stationarySpeedThreshold
+
+        if nearZero && lowMotion {
+            stationaryDuration = min(stationaryHoldTime, stationaryDuration + dt)
+        } else if speed >= zeroUnlockThreshold {
+            stationaryDuration = 0
+        } else {
+            stationaryDuration = max(0, stationaryDuration - (dt * 1.5))
+        }
+
+        stationaryConfidence = min(1.0, stationaryDuration / stationaryHoldTime)
+        if !isZeroLocked && speed < stationaryLockThreshold && stationaryDuration >= stationaryHoldTime {
+            engageZeroLock()
+        }
+    }
+
+    private func refreshStationaryEstimateAfterGPS(gpsSpeed: Double, accuracyKnown: Bool, gpsSpeedAccuracy: Double) {
+        if speed >= zeroUnlockThreshold || gpsSpeed >= zeroUnlockThreshold {
+            stationaryDuration = 0
+            stationaryConfidence = 0
+            return
+        }
+
+        if speed < stationarySpeedThreshold
+            && gpsSpeed < zeroUnlockThreshold
+            && (!accuracyKnown || gpsSpeedAccuracy < 4.0) {
+            stationaryDuration = max(stationaryDuration, stationaryHoldTime * 0.7)
+            stationaryConfidence = min(1.0, stationaryDuration / stationaryHoldTime)
+            if speed < stationaryLockThreshold && stationaryDuration >= stationaryHoldTime {
+                engageZeroLock()
+            }
+            return
+        }
+
+        stationaryDuration = max(0, stationaryDuration - (stationaryHoldTime * 0.5))
+        stationaryConfidence = min(1.0, stationaryDuration / stationaryHoldTime)
+    }
+
+    private func engageZeroLock() {
+        speed = 0
+        P = R_min
+        isZeroLocked = true
+        stationaryDuration = stationaryHoldTime
+        stationaryConfidence = 1.0
     }
 }
 

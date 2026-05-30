@@ -14,6 +14,41 @@ final class DriveCalculationTests: XCTestCase {
         return readings.reduce(0, +) / Double(readings.count)
     }
 
+    private func makeDrive(routeData: String, maxSpeed: Double, avgSpeed: Double, best060Time: Double?) -> Drive {
+        Drive(
+            id: nil,
+            userID: 1,
+            startTime: Date(timeIntervalSince1970: 1_700_000_000),
+            endTime: Date(timeIntervalSince1970: 1_700_000_010),
+            startLatitude: 37.0,
+            startLongitude: -122.0,
+            endLatitude: 37.001,
+            endLongitude: -122.0,
+            distance: 100,
+            duration: 10,
+            maxSpeed: maxSpeed,
+            minSpeed: 0,
+            avgSpeed: avgSpeed,
+            routeData: routeData,
+            carId: nil,
+            carMake: nil,
+            carModel: nil,
+            carYear: nil,
+            carTrim: nil,
+            carNickname: nil,
+            stoppedTime: 0,
+            leftTurns: 0,
+            rightTurns: 0,
+            brakeEvents: 0,
+            laneChanges: 0,
+            maxAcceleration: 0,
+            maxDeceleration: 0,
+            peakGForce: 0,
+            topCornerSpeed: 0,
+            best060Time: best060Time
+        )
+    }
+
     func testAvgSpeed_EmptyReadings() {
         XCTAssertEqual(avgSpeed(readings: []), 0.0)
     }
@@ -141,5 +176,115 @@ final class DriveCalculationTests: XCTestCase {
         ]
         let result = best060(speedSamples: samples)
         XCTAssertNil(result)
+    }
+
+    func testSpeedFusion_ZeroLockEngagesQuicklyNearStop() {
+        let fusion = SpeedFusion()
+
+        fusion.update(gpsSpeed: 0.4, gpsSpeedAccuracy: 1.0)
+        XCTAssertFalse(fusion.isZeroLocked)
+
+        for _ in 0..<15 {
+            fusion.predict(longAccelG: 0, dt: 1.0 / 25.0)
+        }
+
+        XCTAssertTrue(fusion.isZeroLocked)
+        XCTAssertEqual(fusion.speed, 0, accuracy: 0.01)
+        XCTAssertGreaterThanOrEqual(fusion.stationaryConfidence, 0.99)
+    }
+
+    func testSpeedFusion_MovingGPSUpdateClearsStationaryConfidenceImmediately() {
+        let fusion = SpeedFusion()
+
+        fusion.update(gpsSpeed: 0.4, gpsSpeedAccuracy: 1.0)
+        fusion.predict(longAccelG: 0, dt: 1.0 / 25.0)
+
+        XCTAssertFalse(fusion.isZeroLocked)
+        XCTAssertGreaterThan(fusion.stationaryConfidence, 0.5)
+
+        fusion.update(gpsSpeed: 2.2, gpsSpeedAccuracy: 0.8)
+
+        XCTAssertFalse(fusion.isZeroLocked)
+        XCTAssertEqual(fusion.stationaryConfidence, 0, accuracy: 0.001)
+        XCTAssertGreaterThanOrEqual(fusion.speed, 0.55)
+    }
+
+    func testLaunchTracker_InterpolatesFastZeroToSixty() {
+        var tracker = LaunchTracker()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+
+        let samples = [
+            SpeedSample(speed: 0.0, rawGPSSpeed: 0.0, speedAccuracy: 0.5, timestamp: start, isZeroLocked: true, stationaryConfidence: 1.0),
+            SpeedSample(speed: 0.9, rawGPSSpeed: 0.8, speedAccuracy: 0.5, timestamp: start.addingTimeInterval(0.04), isZeroLocked: false, stationaryConfidence: 0.0),
+            SpeedSample(speed: 25.85, rawGPSSpeed: 25.5, speedAccuracy: 0.5, timestamp: start.addingTimeInterval(2.92), isZeroLocked: false, stationaryConfidence: 0.0),
+            SpeedSample(speed: 27.15, rawGPSSpeed: 27.0, speedAccuracy: 0.5, timestamp: start.addingTimeInterval(2.96), isZeroLocked: false, stationaryConfidence: 0.0)
+        ]
+
+        var result: Double?
+        for sample in samples {
+            result = tracker.ingest(sample) ?? result
+        }
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result ?? 0, 2.91, accuracy: 0.03)
+        XCTAssertEqual(tracker.best060Time ?? 0, 2.91, accuracy: 0.03)
+    }
+
+    func testLaunchTracker_RejectsRollingStart() {
+        var tracker = LaunchTracker()
+        let start = Date(timeIntervalSince1970: 1_700_000_100)
+
+        let samples = [
+            SpeedSample(speed: 6.0, rawGPSSpeed: 6.0, speedAccuracy: 0.5, timestamp: start, isZeroLocked: false, stationaryConfidence: 0.0),
+            SpeedSample(speed: 20.0, rawGPSSpeed: 20.0, speedAccuracy: 0.5, timestamp: start.addingTimeInterval(1.5), isZeroLocked: false, stationaryConfidence: 0.0),
+            SpeedSample(speed: 27.0, rawGPSSpeed: 27.0, speedAccuracy: 0.5, timestamp: start.addingTimeInterval(2.5), isZeroLocked: false, stationaryConfidence: 0.0)
+        ]
+
+        var result: Double?
+        for sample in samples {
+            result = tracker.ingest(sample) ?? result
+        }
+
+        XCTAssertNil(result)
+        XCTAssertNil(tracker.best060Time)
+    }
+
+    func testPerformanceMetrics_ParsesV2RoutePayloadAndUsesStoredBest060() throws {
+        var points: [[String: Any]] = []
+        for index in 0..<10 {
+            points.append([
+                "lat": 37.0 + Double(index) * 0.0001,
+                "lng": -122.0,
+                "speed": Double(index) * 3.0,
+                "ts": 1_700_000_000.0 + Double(index)
+            ])
+        }
+        let payload: [String: Any] = ["v": 2, "points": points, "events": []]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        let routeData = try XCTUnwrap(String(data: data, encoding: .utf8))
+
+        let drive = makeDrive(routeData: routeData, maxSpeed: 27.0, avgSpeed: 13.5, best060Time: 2.91)
+
+        let metrics = try XCTUnwrap(drive.calculatePerformanceMetrics())
+        let zeroToSixty = try XCTUnwrap(metrics.accelerationMetrics.zeroToSixty)
+        XCTAssertEqual(zeroToSixty, 2.91, accuracy: 0.001)
+    }
+
+    func testPerformanceMetrics_ParsesLegacyRouteArray() throws {
+        var points: [[String: Any]] = []
+        for index in 0..<10 {
+            points.append([
+                "lat": 37.0 + Double(index) * 0.0001,
+                "lng": -122.0,
+                "speed": Double(index),
+                "timestamp": 1_700_000_000.0 + Double(index)
+            ])
+        }
+        let data = try JSONSerialization.data(withJSONObject: points)
+        let routeData = try XCTUnwrap(String(data: data, encoding: .utf8))
+
+        let drive = makeDrive(routeData: routeData, maxSpeed: 9, avgSpeed: 4.5, best060Time: nil)
+
+        XCTAssertNotNil(drive.calculatePerformanceMetrics())
     }
 }
