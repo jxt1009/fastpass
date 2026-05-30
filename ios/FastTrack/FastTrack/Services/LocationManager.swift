@@ -12,6 +12,8 @@ class LocationManager: NSObject, ObservableObject {
     @Published var rawGPSSpeed: Double = 0.0
     /// GPS speed accuracy from CLLocation (m/s std dev). -1 = unavailable.
     @Published var speedAccuracy: Double = -1
+    /// Rich fused speed sample, published on IMU ticks and GPS updates.
+    @Published var currentSpeedSample: SpeedSample?
     @Published var currentLocation: CLLocation?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     /// Fires with the timestamp of the moment zero-lock broke (car started moving from confirmed stop).
@@ -26,7 +28,6 @@ class LocationManager: NSObject, ObservableObject {
 
     /// Latest GPS course (degrees clockwise from true north). -1 = unavailable.
     private var currentCourse: Double = -1
-    private var wasZeroLocked = false
 
     // MARK: - Init
 
@@ -84,8 +85,11 @@ class LocationManager: NSObject, ObservableObject {
         clManager.stopUpdatingLocation()
         stopIMU()
         fusion.reset()
-        wasZeroLocked = false
+        currentSpeed = 0
+        rawGPSSpeed = 0
+        speedAccuracy = -1
         zeroLockBrokeAt = nil
+        currentSpeedSample = nil
     }
 
     // MARK: - CoreMotion at 25 Hz
@@ -117,6 +121,7 @@ class LocationManager: NSObject, ObservableObject {
 
     private func handleMotionUpdate(_ motion: CMDeviceMotion) {
         let dt = 1.0 / 25.0
+        let timestamp = measurementDate(forMotionTimestamp: motion.timestamp)
         fusion.updateCourse(currentCourse)
 
         // Project IMU acceleration onto travel direction
@@ -135,15 +140,30 @@ class LocationManager: NSObject, ObservableObject {
         // Detect zero-lock break: the moment the car starts moving from a confirmed stop.
         // Publish the timestamp so DriveManager can anchor the 0-60 timer here.
         if wasLocked && !fusion.isZeroLocked {
-            zeroLockBrokeAt = Date()
+            zeroLockBrokeAt = timestamp
         }
-        wasZeroLocked = fusion.isZeroLocked
+        publishSpeedState(at: timestamp)
+    }
 
-        // Publish fused speed — threshold 0.03 m/s (~0.07 mph) to zero out promptly
-        let fused = fusion.speed
-        if abs(fused - currentSpeed) > 0.03 {
+    private func publishSpeedState(at timestamp: Date, forceSpeedUpdate: Bool = false) {
+        let sample = SpeedSample(
+            speed: fusion.speed,
+            rawGPSSpeed: rawGPSSpeed,
+            speedAccuracy: speedAccuracy,
+            timestamp: timestamp,
+            isZeroLocked: fusion.isZeroLocked,
+            stationaryConfidence: fusion.stationaryConfidence
+        )
+        currentSpeedSample = sample
+
+        let fused = sample.speed
+        if forceSpeedUpdate || abs(fused - currentSpeed) > 0.03 || fused == 0 || sample.isZeroLocked {
             currentSpeed = fused
         }
+    }
+
+    private func measurementDate(forMotionTimestamp motionTimestamp: TimeInterval) -> Date {
+        Date().addingTimeInterval(motionTimestamp - ProcessInfo.processInfo.systemUptime)
     }
 }
 
@@ -172,8 +192,12 @@ extension LocationManager: CLLocationManagerDelegate {
         speedAccuracy = location.speedAccuracy  // m/s std dev (iOS 10+)
 
         // Feed GPS into Kalman filter
+        let wasLocked = fusion.isZeroLocked
         fusion.update(gpsSpeed: location.speed, gpsSpeedAccuracy: location.speedAccuracy)
-        currentSpeed = fusion.speed
+        if wasLocked && !fusion.isZeroLocked {
+            zeroLockBrokeAt = location.timestamp
+        }
+        publishSpeedState(at: location.timestamp, forceSpeedUpdate: true)
         
         #if DEBUG
         print("🔄 Speed updated: GPS=\(location.speed), Fused=\(fusion.speed)")
@@ -204,6 +228,14 @@ extension LocationManager {
         m.rawGPSSpeed = 25.0
         m.currentLocation = CLLocation(latitude: 37.7749, longitude: -122.4194)
         m.authorizationStatus = .authorizedAlways
+        m.currentSpeedSample = SpeedSample(
+            speed: 25.0,
+            rawGPSSpeed: 25.0,
+            speedAccuracy: 0.5,
+            timestamp: Date(),
+            isZeroLocked: false,
+            stationaryConfidence: 0
+        )
         return m
     }
 }

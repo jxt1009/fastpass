@@ -151,16 +151,31 @@ extension Drive {
     private func parseRoutePoints() -> [GPSPoint] {
         guard let routeData = routeData,
               let data = routeData.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+              let json = try? JSONSerialization.jsonObject(with: data) else {
             return []
         }
-        
-        return json.compactMap { point in
+
+        if let points = json as? [[String: Any]] {
+            return decodeRoutePoints(from: points)
+        }
+
+        if let payload = json as? [String: Any],
+           let points = payload["points"] as? [[String: Any]] {
+            return decodeRoutePoints(from: points)
+        }
+
+        return []
+    }
+
+    private func decodeRoutePoints(from points: [[String: Any]]) -> [GPSPoint] {
+        points.compactMap { point in
             guard let lat = point["lat"] as? Double,
                   let lng = point["lng"] as? Double,
                   let speed = point["speed"] as? Double,
-                  let timestamp = point["timestamp"] as? Double else { return nil }
-            
+                  let timestamp = (point["timestamp"] as? Double) ?? (point["ts"] as? Double) else {
+                return nil
+            }
+
             return GPSPoint(
                 latitude: lat,
                 longitude: lng,
@@ -174,7 +189,7 @@ extension Drive {
     }
     
     private func calculateAcceleration(from points: [GPSPoint]) -> AccelerationMetrics {
-        var zeroToSixty: Double?
+        var zeroToSixty: Double? = best060Time
         var zeroToHundred: Double?
         var quarterMileTime: Double?
         var quarterMileTrapSpeed: Double?

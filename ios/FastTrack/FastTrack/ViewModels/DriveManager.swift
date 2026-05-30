@@ -16,6 +16,7 @@ class DriveManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var recordingLocations: [CLLocation] = []
     private var speedReadings: [Double] = []
+    private var latestSpeedSample: SpeedSample?
     private var pollTimer: Timer?
 
     // Rich route data: each point stores speed+timestamp alongside lat/lng
@@ -24,8 +25,7 @@ class DriveManager: ObservableObject {
     private var recordedRouteEvents: [(type: String, lat: Double, lng: Double, ts: Double)] = []
 
     // Extended tracking state
-    private var stoppedSince: Date?
-    private var totalStoppedTime: Double = 0
+    private var stoppedTimeTracker = StoppedTimeTracker()
     private var leftTurns: Int = 0
     private var rightTurns: Int = 0
     private var brakeEvents: Int = 0
@@ -36,14 +36,13 @@ class DriveManager: ObservableObject {
     @Published var currentGForce: Double = 0  // Live value for UI / Live Activity updates
     private var topCornerSpeed: Double = 0
     private var best060Time: Double?
-    private var currentMaxSpeed: Double = 0  // For real-time UI updates
+    private var currentMaxSpeed: Double = 0  // m/s for real-time UI updates
+    private var launchTracker = LaunchTracker()
 
     // Sub-state for detection algorithms
     private var headingWindow: (course: Double, time: Date)?
     private var lastTurnOrLaneTime: Date?
     private var lastBrakeTime: Date?
-    private var zeroStart: Date?
-    private var best060Active = false
     /// Rolling 10-second heading history used to detect sustained curves/ramps.
     private var headingHistory: [(course: Double, time: Date)] = []
 
@@ -60,17 +59,11 @@ class DriveManager: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Subscribe to zero-lock break events — the authoritative "car started from stopped" signal.
-        // This is more reliable than a 5 mph GPS threshold for anchoring the 0-60 timer.
-        manager.$zeroLockBrokeAt
+        manager.$currentSpeedSample
             .compactMap { $0 }
-            .sink { [weak self] startDate in
+            .sink { [weak self] sample in
                 guard let self, self.isRecording else { return }
-                self.zeroStart = startDate
-                self.best060Active = false
-                #if DEBUG
-                print("🏁 0-60 timer anchored from zero-lock break at \(startDate)")
-                #endif
+                self.processSpeedSample(sample)
             }
             .store(in: &cancellables)
     }
@@ -96,16 +89,17 @@ class DriveManager: ObservableObject {
         #endif
 
         // Reset extended stats
-        stoppedSince = nil
-        totalStoppedTime = 0
+        stoppedTimeTracker.reset()
         leftTurns = 0; rightTurns = 0
         brakeEvents = 0; laneChanges = 0
         maxAcceleration = 0; maxDeceleration = 0
         peakGForce = 0; topCornerSpeed = 0
-        best060Time = nil; best060Active = false
+        best060Time = nil
+        launchTracker.reset()
         currentMaxSpeed = 0  // Reset max speed for new recording
         headingWindow = nil; lastTurnOrLaneTime = nil
-        lastBrakeTime = nil; zeroStart = nil
+        lastBrakeTime = nil
+        latestSpeedSample = nil
         headingHistory = []
 
         locationManager?.startUpdatingLocation()
@@ -176,14 +170,10 @@ class DriveManager: ObservableObject {
         // Re-enable normal screen sleep
         UIApplication.shared.isIdleTimerDisabled = false
 
-        // Finalize stopped time
-        if let stopStart = stoppedSince {
-            totalStoppedTime += Date().timeIntervalSince(stopStart)
-            stoppedSince = nil
-        }
-
         guard var drive = currentDrive, !recordingLocations.isEmpty else { return }
-        drive.endTime = Date()
+        let endTime = Date()
+        stoppedTimeTracker.finalize(at: endTime)
+        drive.endTime = endTime
 
         // Serialize route as v2 format: {v:2, points:[{lat,lng,speed,ts}], events:[{type,lat,lng,ts}]}
         let pointDicts = richRoutePoints.map { p -> [String: Any] in
@@ -199,7 +189,7 @@ class DriveManager: ObservableObject {
         }
 
         // Final extended stats
-        drive.stoppedTime = totalStoppedTime
+        drive.stoppedTime = stoppedTimeTracker.totalStoppedTime
         drive.leftTurns = leftTurns; drive.rightTurns = rightTurns
         drive.brakeEvents = brakeEvents; drive.laneChanges = laneChanges
         drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
@@ -244,29 +234,28 @@ class DriveManager: ObservableObject {
         #endif
         
         // Basic processing on main thread for UI updates
-        let speed = max(location.speed, 0)
+        let speed = routePointSpeed(for: location)
         let speedMph = speed * 2.23694
         
         recordingLocations.append(location)
         routeCoordinates.append(location.coordinate)
-        // Track rich route point: use raw GPS speed (non-negative)
+        // Track rich route point with the latest fused speed where possible.
         richRoutePoints.append((
             lat: location.coordinate.latitude,
             lng: location.coordinate.longitude,
-            speed: max(location.speed, 0),
+            speed: speed,
             ts: location.timestamp.timeIntervalSince1970
         ))
-        speedReadings.append(speed)
         
         #if DEBUG
         print("📊 Recorded \(recordingLocations.count) locations, current speed: \(speedMph) mph")
         #endif
         
         // Update basic stats immediately for UI responsiveness
-        if speedMph > currentMaxSpeed {
-            currentMaxSpeed = speedMph
+        if speed > currentMaxSpeed {
+            currentMaxSpeed = speed
             #if DEBUG
-            print("🏁 New max speed: \(currentMaxSpeed) mph")
+            print("🏁 New max speed: \(currentMaxSpeed * 2.23694) mph")
             #endif
         }
         
@@ -279,64 +268,69 @@ class DriveManager: ObservableObject {
         updateCurrentDrive()
         updateLiveActivity(speedMph: speedMph, distanceMiles: currentDrive?.distance.metersToMiles ?? 0)
     }
+
+    private func processSpeedSample(_ sample: SpeedSample) {
+        latestSpeedSample = sample
+        speedReadings.append(sample.speed)
+        stoppedTimeTracker.ingest(sample)
+
+        if sample.speed > currentMaxSpeed {
+            currentMaxSpeed = sample.speed
+        }
+
+        if let newBest = launchTracker.ingest(sample) {
+            best060Time = newBest
+            #if DEBUG
+            print("🏁 New best 0-60 time: \(newBest)s")
+            #endif
+        }
+
+        guard var drive = currentDrive else { return }
+        drive.stoppedTime = stoppedTimeTracker.totalStoppedTime(at: sample.timestamp)
+        drive.best060Time = best060Time
+        currentDrive = drive
+    }
+
+    private func routePointSpeed(for location: CLLocation) -> Double {
+        guard let latestSpeedSample,
+              abs(latestSpeedSample.timestamp.timeIntervalSince(location.timestamp)) <= 1.0 else {
+            return max(location.speed, 0)
+        }
+
+        return latestSpeedSample.speed
+    }
     
     private func processLocationHeavy(_ location: CLLocation, speed: Double, speedMph: Double) async {
         let ts = location.timestamp
         
         // Perform heavy calculations on background thread
         var updates: (
-            stoppedTime: Double?,
             acceleration: Double?,
             deceleration: Double?,
             brakeCount: Int,
             gForce: Double?,
             cornerSpeed: Double?,
-            zeroToSixtyTime: Double?,
             turnData: (left: Int, right: Int, lanes: Int)?
-        ) = (nil, nil, nil, 0, nil, nil, nil, nil)
-        
-        // Stopped time calculation
-        var newStoppedTime: Double? = nil
-        if speedMph < 1.0 {
-            // Will be handled on main thread
-        } else if let stoppedStart = await MainActor.run(body: { self.stoppedSince }) {
-            newStoppedTime = ts.timeIntervalSince(stoppedStart)
-        }
+        ) = (nil, nil, 0, nil, nil, nil)
         
         // Get recording data safely
         let recordingCount = await MainActor.run { self.recordingLocations.count }
         guard recordingCount >= 2 else { 
-            // Apply updates on main thread
-            await MainActor.run {
-                if let newTime = newStoppedTime {
-                    self.totalStoppedTime += newTime
-                    self.stoppedSince = nil
-                }
-                if speedMph < 1.0 && self.stoppedSince == nil {
-                    self.stoppedSince = ts
-                }
-            }
             return 
         }
         
-        let (prev, _) = await MainActor.run { 
-            (self.recordingLocations[recordingCount - 2], Array(self.recordingLocations))
+        let (prev, prevRecordedSpeed) = await MainActor.run {
+            (
+                self.recordingLocations[recordingCount - 2],
+                self.richRoutePoints[recordingCount - 2].speed
+            )
         }
         
         let dt = ts.timeIntervalSince(prev.timestamp)
-        let prevSpeed = max(prev.speed, 0)
+        let prevSpeed = prevRecordedSpeed
         
         // Only process if time delta is reasonable (background calculation)
         guard dt > 0 && dt < 5 else { 
-            await MainActor.run {
-                if let newTime = newStoppedTime {
-                    self.totalStoppedTime += newTime
-                    self.stoppedSince = nil
-                }
-                if speedMph < 1.0 && self.stoppedSince == nil {
-                    self.stoppedSince = ts
-                }
-            }
             return 
         }
 
@@ -389,23 +383,6 @@ class DriveManager: ObservableObject {
             }
         }
         
-        // 0-60 timing: detect 60 mph crossing.
-        // The zero start is now anchored by the zero-lock break event (set in setLocationManager),
-        // not by a 5 mph GPS threshold — this avoids rolling-start false positives.
-        if speedMph >= 60 {
-            let zeroStart = await MainActor.run { self.zeroStart }
-            let best060Active = await MainActor.run { self.best060Active }
-            if let start = zeroStart, !best060Active {
-                let elapsed = Date().timeIntervalSince(start)  // use wall clock, not GPS timestamp
-                if elapsed > 1.0 && elapsed < 30 {
-                    let currentBest = await MainActor.run { self.best060Time }
-                    if currentBest == nil || elapsed < currentBest! {
-                        updates.zeroToSixtyTime = elapsed
-                    }
-                }
-            }
-        }
-        
         // Turn detection (background processing)
         if location.course >= 0 && speed > 2.2 {
             updates.turnData = await processHeadingBackground(course: location.course, speed: speed, timestamp: ts)
@@ -413,15 +390,6 @@ class DriveManager: ObservableObject {
         
         // Apply all updates atomically on main thread
         await MainActor.run {
-            // Stopped time
-            if let newTime = newStoppedTime {
-                self.totalStoppedTime += newTime
-                self.stoppedSince = nil
-            }
-            if speedMph < 1.0 && self.stoppedSince == nil {
-                self.stoppedSince = ts
-            }
-            
             // Performance metrics
             if let accel = updates.acceleration {
                 self.maxAcceleration = accel
@@ -446,14 +414,7 @@ class DriveManager: ObservableObject {
             if let cornerSpeed = updates.cornerSpeed {
                 self.topCornerSpeed = cornerSpeed
             }
-            
-            // 0-60 timing: only completion signals remain (zero-start is handled by zero-lock subscription)
-            if let zeroSixty = updates.zeroToSixtyTime {
-                self.best060Time = zeroSixty
-                self.best060Active = true
-                self.zeroStart = nil
-            }
-            
+
             // Turns
             if let turnData = updates.turnData {
                 self.leftTurns += turnData.left
@@ -652,11 +613,11 @@ class DriveManager: ObservableObject {
 
         if !speedReadings.isEmpty {
             drive.maxSpeed = speedReadings.max() ?? 0
-            drive.minSpeed = speedReadings.min() ?? 0
+            drive.minSpeed = speedReadings.filter { $0 > 0 }.min() ?? 0
             drive.avgSpeed = speedReadings.reduce(0, +) / Double(speedReadings.count)
         }
 
-        drive.stoppedTime = totalStoppedTime
+        drive.stoppedTime = stoppedTimeTracker.totalStoppedTime(at: Date())
         drive.leftTurns = leftTurns; drive.rightTurns = rightTurns
         drive.brakeEvents = brakeEvents; drive.laneChanges = laneChanges
         drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
@@ -712,10 +673,10 @@ class DriveManager: ObservableObject {
         recordingStartTime = nil
         recordingLocations = []
         speedReadings = []
+        latestSpeedSample = nil
         richRoutePoints = []
         recordedRouteEvents = []
-        stoppedSince = nil
-        totalStoppedTime = 0
+        stoppedTimeTracker.reset()
         leftTurns = 0
         rightTurns = 0
         brakeEvents = 0
@@ -726,12 +687,11 @@ class DriveManager: ObservableObject {
         currentGForce = 0
         topCornerSpeed = 0
         best060Time = nil
+        launchTracker.reset()
         currentMaxSpeed = 0
         headingWindow = nil
         lastTurnOrLaneTime = nil
         lastBrakeTime = nil
-        zeroStart = nil
-        best060Active = false
         headingHistory = []
     }
 }
