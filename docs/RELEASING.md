@@ -21,9 +21,9 @@ Enforced types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, `perf`
 GitHub Actions enforces this in two places:
 
 1. Pull requests must use a semantic PR title (`feat: ...`, `fix(api): ...`, etc.), which keeps squash merges release-friendly.
-2. Direct pushes to `main` have their commit messages linted with `commitlint`.
+2. `main` is branch-protected, so changes should land through pull requests rather than direct pushes.
 
-If you rely on PRs for release notes, prefer **Squash and merge** so the PR title becomes the commit that lands on `main`.
+If you rely on PRs for release notes, prefer **Squash and merge** for human-authored changes so the PR title becomes the commit that lands on `main`.
 
 ---
 
@@ -48,7 +48,7 @@ The backend deploy pipeline has **two stages** that run automatically on every p
 | Staging | `https://staging.fast.toper.dev` | `fasttrack-staging` | Auto |
 | Production | `https://fast.toper.dev` | `fasttrack-production` | Manual gate |
 
-For a named release:
+For a named release from the protected `main` branch:
 1. Merge conventional commits into `main`
 2. Wait for the **Release Please** workflow to open or update the release PR
 3. Merge the release PR
