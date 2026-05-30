@@ -1,0 +1,31 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Open release PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release token
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_PLEASE_TOKEN" ]; then
+            echo "::error::Missing required GitHub Actions secret: RELEASE_PLEASE_TOKEN"
+            echo "::error::Use a PAT or GitHub App token so release tags trigger downstream workflows."
+            exit 1
+          fi
+
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

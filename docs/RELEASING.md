@@ -18,18 +18,20 @@ docs(api): document /health endpoint
 
 Enforced types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, `perf`, `revert`
 
+GitHub Actions enforces this in two places:
+
+1. Pull requests must use a semantic PR title (`feat: ...`, `fix(api): ...`, etc.), which keeps squash merges release-friendly.
+2. Direct pushes to `main` have their commit messages linted with `commitlint`.
+
+If you rely on PRs for release notes, prefer **Squash and merge** so the PR title becomes the commit that lands on `main`.
+
 ---
 
 ## Versioning
 
 The current version lives in [`VERSION`](../VERSION) at the repo root. Both the iOS build and backend Docker image pick this up automatically.
 
-Update it before tagging a release:
-```sh
-echo "1.2.0" > VERSION
-git add VERSION
-git commit -m "chore(release): bump version to 1.2.0"
-```
+`release-please` now owns the version bump PR and tag creation. It updates `VERSION` for you from the conventional commits that have landed on `main`.
 
 ---
 
@@ -47,9 +49,11 @@ The backend deploy pipeline has **two stages** that run automatically on every p
 | Production | `https://fast.toper.dev` | `fasttrack-production` | Manual gate |
 
 For a named release:
-1. Update `VERSION`
-2. Push a git tag: `git tag v1.2.0 && git push origin v1.2.0`
-3. The [release workflow](.github/workflows/release.yml) will auto-generate the changelog and create a GitHub Release
+1. Merge conventional commits into `main`
+2. Wait for the **Release Please** workflow to open or update the release PR
+3. Merge the release PR
+4. The release PR merge pushes a `vX.Y.Z` tag automatically
+5. The [release workflow](../.github/workflows/release.yml) auto-generates the changelog and creates the GitHub Release
 
 ---
 
@@ -74,19 +78,7 @@ For local development, prefer Keychain-backed secrets over plaintext `.env.fastl
 
 ### TestFlight release (beta)
 
-Push a version tag to trigger automatic TestFlight upload:
-```sh
-# 1. Update version
-echo "1.2.0" > VERSION
-git add VERSION
-git commit -m "chore(release): bump to 1.2.0"
-
-# 2. Tag and push
-git tag v1.2.0
-git push origin main --tags
-```
-
-The [ios-release workflow](.github/workflows/ios-release.yml) runs `fastlane beta` automatically.
+Merge the release PR to trigger automatic TestFlight upload. The release PR creates the version tag, and the [ios-release workflow](../.github/workflows/ios-release.yml) runs `fastlane beta` automatically for stable `v*` tags.
 
 ### Manual TestFlight upload (local)
 ```sh
@@ -110,6 +102,9 @@ This archives, exports, and submits for App Review. Automatic release is **off**
 ## Required GitHub Secrets
 
 Add these at: **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**
+
+**`RELEASE_PLEASE_TOKEN`**
+A Personal Access Token (classic) or GitHub App token with permission to open release PRs and push tags. Do **not** use the default `GITHUB_TOKEN` here; tags created with `GITHUB_TOKEN` will not trigger the downstream `release.yml` and `ios-release.yml` workflows.
 
 ### ✅ Available Now (Backend — set these first)
 
@@ -198,6 +193,7 @@ Paste the base64 output as the secret value.
 | `DATABASE_URL` | staging + production | backend-deploy | ✅ Set now (different DB per env) |
 | `APPLE_APP_BUNDLE_ID` | staging + production | backend-deploy | ✅ Set now (`com.toper.FastTrack`) |
 | `BASE_URL` | staging + production | backend-deploy | ✅ Set now (different URL per env) |
+| `RELEASE_PLEASE_TOKEN` | — | release-please | ✅ Set now |
 | `APP_STORE_CONNECT_KEY_ID` | — | ios-release | ⏳ After Developer approval |
 | `APP_STORE_CONNECT_ISSUER_ID` | — | ios-release | ⏳ After Developer approval |
 | `APP_STORE_CONNECT_API_KEY` | — | ios-release | ⏳ After Developer approval |
@@ -210,7 +206,7 @@ Paste the base64 output as the secret value.
 
 ## Changelog
 
-The [CHANGELOG.md](../CHANGELOG.md) is auto-updated by the release workflow using [git-cliff](https://git-cliff.org/). Configuration is in [`cliff.toml`](../cliff.toml).
+The [CHANGELOG.md](../CHANGELOG.md) is auto-updated by the tag-triggered release workflow using [git-cliff](https://git-cliff.org/). Configuration is in [`cliff.toml`](../cliff.toml). `release-please` intentionally skips changelog generation in this repo so `git-cliff` remains the single source of truth for release notes formatting.
 
 To preview the next release notes locally:
 ```sh

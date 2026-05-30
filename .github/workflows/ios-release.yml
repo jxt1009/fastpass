@@ -8,6 +8,7 @@ on:
 jobs:
   testflight:
     name: Upload to TestFlight
+    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: macos-26
     env:
       FASTTRACK_APP_IDENTIFIER: com.toper.FastTrack
