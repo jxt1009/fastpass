@@ -77,7 +77,83 @@ jobs:
         run: |
           key_path="$HOME/.fastlane/AuthKey.p8"
           mkdir -p "$(dirname "$key_path")" "$HOME/.fastlane/spaceship"
-          printf '%b' "$APP_STORE_CONNECT_API_KEY" > "$key_path"
+
+          KEY_PATH="$key_path" python3 <<'PY'
+          import base64
+          import json
+          import os
+          import pathlib
+          import sys
+
+          raw = os.environ["APP_STORE_CONNECT_API_KEY"]
+          key_path = pathlib.Path(os.environ["KEY_PATH"])
+
+          candidates = [raw, raw.strip()]
+
+          stripped = raw.strip()
+          if stripped.startswith("{"):
+            try:
+              payload = json.loads(stripped)
+            except json.JSONDecodeError:
+              payload = None
+            if isinstance(payload, dict):
+              for field in ("key", "key_content", "api_key"):
+                value = payload.get(field)
+                if isinstance(value, str):
+                  candidates.append(value)
+
+          def normalize(value: str) -> str:
+            value = value.strip().replace("\r\n", "\n").replace("\r", "\n")
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+              value = value[1:-1]
+            value = value.replace("\\n", "\n")
+            return value.strip() + "\n"
+
+          def looks_like_pem(value: str) -> bool:
+            return value.startswith("-----BEGIN PRIVATE KEY-----\n") and "-----END PRIVATE KEY-----" in value
+
+          def decode_base64(value: str) -> str | None:
+            compact = "".join(value.split())
+            if not compact:
+              return None
+            try:
+              decoded = base64.b64decode(compact, validate=True)
+            except Exception:
+              return None
+            try:
+              return decoded.decode("utf-8")
+            except UnicodeDecodeError:
+              return None
+
+          pem = None
+          for candidate in candidates:
+            normalized = normalize(candidate)
+            if looks_like_pem(normalized):
+              pem = normalized
+              break
+
+            decoded = decode_base64(candidate)
+            if decoded:
+              normalized = normalize(decoded)
+              if looks_like_pem(normalized):
+                pem = normalized
+                break
+            if pem:
+              break
+
+          if pem is None:
+            print("::error::APP_STORE_CONNECT_API_KEY is not recognizable as an App Store Connect .p8 private key.", file=sys.stderr)
+            print("::error::Paste the raw .p8 contents, the same contents with \\\\n escapes, a JSON payload containing `key`, or a base64-encoded .p8 file.", file=sys.stderr)
+            sys.exit(1)
+
+          key_path.write_text(pem, encoding="utf-8")
+          PY
+
+          openssl pkey -in "$key_path" -noout >/dev/null 2>&1 || {
+            echo "::error::APP_STORE_CONNECT_API_KEY did not decode to a valid EC private key. Re-copy the downloaded AuthKey_*.p8 contents into the repository secret."
+            exit 1
+          }
+
           echo "APP_STORE_CONNECT_API_KEY_PATH=$key_path" >> "$GITHUB_ENV"
 
       - name: Extract version from tag

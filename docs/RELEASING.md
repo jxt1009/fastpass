@@ -57,7 +57,7 @@ For a named release:
 
 ### Prerequisites (one-time setup)
 
-1. **App Store Connect API key** — Generate at [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users & Access → Integrations → App Store Connect API. Keep the `.p8` file locally for Fastlane, and store its contents in the `APP_STORE_CONNECT_API_KEY` GitHub secret along with `APP_STORE_CONNECT_KEY_ID` and `APP_STORE_CONNECT_ISSUER_ID`.
+1. **App Store Connect API key** — Generate at [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users & Access → Integrations → App Store Connect API. Keep the `.p8` file locally for Fastlane, and store its contents in the `APP_STORE_CONNECT_API_KEY` GitHub secret along with `APP_STORE_CONNECT_KEY_ID` and `APP_STORE_CONNECT_ISSUER_ID`. The workflow accepts the raw `.p8` contents, the same contents with `\n` escapes, or a base64-encoded `.p8` file.
 
 2. **Fastlane local env file** — Run `./scripts/setup_apple_release_env.sh` from [`ios/FastTrack`](../ios/FastTrack/) once Apple finishes approving your account. That writes `ios/FastTrack/.env.fastlane` with non-secret identifiers/paths for local Fastlane runs, including `APPLE_ID` and `TEAM_ID`, and stores `MATCH_PASSWORD` in your macOS Keychain under the `com.toper.FastTrack.fastlane` service.
 
