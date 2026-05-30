@@ -2,6 +2,12 @@
 
 All notable changes to FastTrack are documented here.
 
+## [0.0.2] - 2026-05-30
+
+### Bug Fixes
+
+- **ci**: Validate release secrets ([`bd1b720`](https://github.com/jtoper/fasttrack/commit/bd1b720b14e2f8382e53d578e94c0c966483de20))
+
 ## [0.0.1] - 2026-05-30
 
 ### Bug Fixes
