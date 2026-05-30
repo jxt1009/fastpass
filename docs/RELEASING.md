@@ -54,6 +54,7 @@ For a named release:
 3. Merge the release PR
 4. The release PR merge pushes a `vX.Y.Z` tag automatically
 5. The [release workflow](../.github/workflows/release.yml) generates the GitHub Release notes from that tag and, when the tag points at the current `main` head, refreshes `CHANGELOG.md` on `main`
+6. If you need to publish an existing tag with the latest workflow logic, run the **Release** workflow manually and provide the tag name (for example `v0.1.1`)
 
 ---
 
@@ -212,6 +213,8 @@ Paste the base64 output as the secret value.
 The [CHANGELOG.md](../CHANGELOG.md) is refreshed by the tag-triggered release workflow using [git-cliff](https://git-cliff.org/) when that tag was created from the current `main` head. Configuration is in [`cliff.toml`](../cliff.toml). `release-please` intentionally skips changelog generation in this repo so `git-cliff` remains the single source of truth for release notes formatting.
 
 If you backfill or recreate an older tag after `main` has already moved on, the workflow still creates the GitHub Release, but it skips the `CHANGELOG.md` commit to avoid rebasing a historical release onto newer changelog content.
+
+Historical tag pushes still use the workflow file that existed on that tagged commit, so a fix to `release.yml` on `main` does not retroactively change an already-failed historical run. Use the manual **Release** workflow dispatch to publish those older tags with the current workflow instead.
 
 To preview the next release notes locally:
 ```sh
