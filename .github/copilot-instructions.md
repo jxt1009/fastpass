@@ -80,6 +80,15 @@ FastTrack is three deployable pieces in one repo:
 
 Deployment is workflow-driven: backend and website images are built separately, then applied with Kubernetes manifests under `backend/k8s/` and the staging/production overlays in `backend/k8s/overlays/`. The production ingress is shared between the API and website deployment flow.
 
+## Git and release workflow
+
+- `main` is branch-protected. Assume all repository changes go through pull requests; do not plan around direct pushes to `main`.
+- Prefer semantic PR titles (`feat: ...`, `fix(scope): ...`, etc.) and squash merges for human-authored changes so release automation gets clean conventional commits on `main`.
+- `release-please` is the source of truth for release PRs and version bumps. It opens or updates the release PR from commits already merged to `main`, and merging that PR creates the `v*` tag.
+- The tag-triggered [`release.yml`](workflows/release.yml) workflow creates the GitHub Release notes with `git-cliff`. It only commits `CHANGELOG.md` back to `main` when the tag points at the current `main` head.
+- Historical or backfilled tags should be republished via the manual **Release** workflow dispatch with a `tag` input rather than by pushing an old tag again.
+- `RELEASE_PLEASE_TOKEN` must remain a PAT or GitHub App token instead of `GITHUB_TOKEN`, because downstream tag workflows need to trigger from the release tag push.
+
 ## Key conventions
 
 - The backend JSON contract is snake_case, and the iOS models mirror it with explicit `CodingKeys`. When adding or renaming API fields, update both sides together.
