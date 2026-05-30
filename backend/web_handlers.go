@@ -40,13 +40,13 @@ func initWebTemplates() {
 	}
 
 	leaderboardTmpl = template.Must(
-		template.New("layout.html").Funcs(funcMap).ParseFiles(
+		template.New("leaderboard.html").Funcs(funcMap).ParseFiles(
 			"templates/layout.html",
 			"templates/leaderboard.html",
 		),
 	)
 	profileTmpl = template.Must(
-		template.New("layout.html").Funcs(funcMap).ParseFiles(
+		template.New("profile.html").Funcs(funcMap).ParseFiles(
 			"templates/layout.html",
 			"templates/profile.html",
 		),
@@ -73,7 +73,7 @@ func renderProfile(c *gin.Context) {
 	var user User
 	if err := db.Where("username = ? AND is_public = true", username).First(&user).Error; err != nil {
 		var buf bytes.Buffer
-		if err := profileTmpl.ExecuteTemplate(&buf, "layout.html", gin.H{
+		if err := profileTmpl.ExecuteTemplate(&buf, "profile.html", gin.H{
 			"not_found": true,
 		}); err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -124,7 +124,7 @@ func renderProfile(c *gin.Context) {
 	}
 
 	var buf bytes.Buffer
-	if err := profileTmpl.ExecuteTemplate(&buf, "layout.html", gin.H{
+	if err := profileTmpl.ExecuteTemplate(&buf, "profile.html", gin.H{
 		"user": gin.H{
 			"Username":  user.Username,
 			"FullName":  user.FullName,
@@ -152,7 +152,7 @@ func renderProfile(c *gin.Context) {
 
 func renderLeaderboard(c *gin.Context) {
 	var buf bytes.Buffer
-	if err := leaderboardTmpl.ExecuteTemplate(&buf, "layout.html", nil); err != nil {
+	if err := leaderboardTmpl.ExecuteTemplate(&buf, "leaderboard.html", nil); err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
