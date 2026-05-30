@@ -8,6 +8,7 @@ All notable changes to FastTrack are documented here.
 
 - **ci**: Validate release secrets ([`bd1b720`](https://github.com/jtoper/fasttrack/commit/bd1b720b14e2f8382e53d578e94c0c966483de20))
 - **ci**: Make itc team id optional ([`9396597`](https://github.com/jtoper/fasttrack/commit/9396597c61e9cd9a4f52417daf2a6fb51d745c3c))
+- **ci**: Normalize app store key secret ([`bb87b43`](https://github.com/jtoper/fasttrack/commit/bb87b43acbef4db315a2ee6d6aeaabedd30354a5))
 
 ## [0.0.1] - 2026-05-30
 
