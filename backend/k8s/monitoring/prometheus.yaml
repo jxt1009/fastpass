@@ -22,7 +22,7 @@ data:
       # FastTrack API
       - job_name: fasttrack-api
         static_configs:
-          - targets: ["fastpass-api.default.svc.cluster.local:8080"]
+          - targets: ["fasttrack-api.default.svc.cluster.local:8080"]
         metrics_path: /metrics
 
       # Node Exporter (server hardware metrics)
