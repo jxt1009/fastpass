@@ -16,6 +16,11 @@ if File.exist?(env_file)
 end
 
 app_store_connect_key_path = ENV["APP_STORE_CONNECT_API_KEY_PATH"].to_s
+if !app_store_connect_key_path.empty?
+  app_store_connect_key_path = File.expand_path(app_store_connect_key_path)
+  ENV["APP_STORE_CONNECT_API_KEY_PATH"] = app_store_connect_key_path
+end
+
 if !app_store_connect_key_path.empty? && File.extname(app_store_connect_key_path) == ".p8"
   ENV["APP_STORE_CONNECT_P8_PATH"] ||= app_store_connect_key_path
   File.write(

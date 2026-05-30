@@ -42,14 +42,46 @@ jobs:
       - name: Create Secrets.swift from template
         run: cp FastTrack/Secrets.swift.template FastTrack/Secrets.swift
 
-      - name: Set App Store Connect API key
+      - name: Validate release secrets
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
-          mkdir -p ~/.fastlane/spaceship
-          printf '%b' "$APP_STORE_CONNECT_API_KEY" > ~/.fastlane/AuthKey.p8
+          missing=0
+          for key in \
+            APP_STORE_CONNECT_API_KEY \
+            APP_STORE_CONNECT_KEY_ID \
+            APP_STORE_CONNECT_ISSUER_ID \
+            APPLE_ID \
+            ITC_TEAM_ID \
+            TEAM_ID \
+            MATCH_PASSWORD \
+            MATCH_GIT_BASIC_AUTHORIZATION
+          do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing required GitHub Actions secret: $key"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Set App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          key_path="$HOME/.fastlane/AuthKey.p8"
+          mkdir -p "$(dirname "$key_path")" "$HOME/.fastlane/spaceship"
+          printf '%b' "$APP_STORE_CONNECT_API_KEY" > "$key_path"
+          echo "APP_STORE_CONNECT_API_KEY_PATH=$key_path" >> "$GITHUB_ENV"
 
       - name: Extract version from tag
         id: version
@@ -61,6 +93,5 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_PATH: ~/.fastlane/AuthKey.p8
           FL_VERSION_NUMBER: ${{ steps.version.outputs.version }}
         run: bundle exec fastlane beta
