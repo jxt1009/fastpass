@@ -287,7 +287,7 @@ func TestPublicPages_AreServedByBackend(t *testing.T) {
 		path        string
 		wantSnippet string
 	}{
-		{path: "/", wantSnippet: "<title>FastTrack</title>"},
+		{path: "/", wantSnippet: "<title>FastTrack — Performance Driving App</title>"},
 		{path: "/privacy", wantSnippet: "<title>FastTrack Privacy Policy</title>"},
 		{path: "/terms", wantSnippet: "<title>FastTrack Terms of Service</title>"},
 	}
