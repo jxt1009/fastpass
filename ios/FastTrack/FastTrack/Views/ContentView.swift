@@ -266,7 +266,7 @@ struct LiveMapView: View {
             Annotation("", coordinate: userLocation) {
                 ZStack {
                     Circle()
-                        .stroke(.white, lineWidth: 3)
+                        .stroke(Color(.systemBackground), lineWidth: 3)
                         .frame(width: 22, height: 22)
                     Circle()
                         .fill(Color.blue)
@@ -279,7 +279,7 @@ struct LiveMapView: View {
                     .stroke(Color.ftAmber, lineWidth: 4)
             }
 
-            if let first = routeCoordinates.first {
+            if routeCoordinates.count > 1, let first = routeCoordinates.first {
                 Annotation("", coordinate: first) {
                     Image(systemName: "flag.checkered")
                         .foregroundColor(.ftGreen)
