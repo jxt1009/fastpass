@@ -131,6 +131,7 @@ class AuthManager: ObservableObject {
         await restoreUserDataFromServer(serverUser: response.user)
     }
 
+    @MainActor
     func signOut() {
         clearSessionData()
     }
