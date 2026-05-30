@@ -2,6 +2,12 @@
 
 All notable changes to FastTrack are documented here.
 
+## [0.0.6] - 2026-05-30
+
+### Bug Fixes
+
+- **ci**: Build iOS with Xcode 26 ([`2ae2bea`](https://github.com/jtoper/fasttrack/commit/2ae2beaa7c94a0bd2455372f4da9195670f5babe))
+
 ## [0.0.5] - 2026-05-30
 
 ### Bug Fixes
