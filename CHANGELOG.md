@@ -2,7 +2,7 @@
 
 All notable changes to FastTrack are documented here.
 
-## [0.0.1] - 2026-04-07
+## [0.0.1] - 2026-05-30
 
 ### Bug Fixes
 
