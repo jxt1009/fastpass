@@ -23,9 +23,21 @@ struct FastTrackApp: App {
     
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(locationManager)
-                .environmentObject(driveManager)
+            Group {
+#if DEBUG
+                if AppStoreScreenshotMode.isEnabled {
+                    AppStoreScreenshotRootView()
+                } else {
+                    RootView()
+                        .environmentObject(locationManager)
+                        .environmentObject(driveManager)
+                }
+#else
+                RootView()
+                    .environmentObject(locationManager)
+                    .environmentObject(driveManager)
+#endif
+            }
         }
     }
 }
@@ -58,12 +70,20 @@ struct RootView: View {
                 do {
                     try await AuthManager.shared.refreshTokenIfNeeded()
                 } catch {
-                    AuthManager.shared.clearTokens()
+                    AuthManager.shared.signOut()
                 }
             }
             // Small minimum display time so the splash doesn't flash on fast devices
             try? await Task.sleep(nanoseconds: 800_000_000)
             isInitializing = false
+        }
+        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                Task { @MainActor in
+                    driveManager.clearLocalData()
+                    selectedTab = 0
+                }
+            }
         }
     }
 

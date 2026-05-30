@@ -1,14 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func appleSignIn(c *gin.Context) {
@@ -31,10 +38,12 @@ func appleSignIn(c *gin.Context) {
 
 	if result.Error != nil {
 		// Create new user
+		appleUserID := claims.Sub
 		user = User{
-			AppleUserID: claims.Sub,
-			Email:       claims.Email,
-			FullName:    req.FullName,
+			AppleUserID:  &appleUserID,
+			Email:        claims.Email,
+			FullName:     req.FullName,
+			AuthProvider: "apple",
 		}
 
 		// Use email from request if provided (first time sign in)
@@ -49,6 +58,12 @@ func appleSignIn(c *gin.Context) {
 		// Business metric: new Apple Sign-In signup
 		userSignupsTotal.WithLabelValues("apple").Inc()
 		logWithRequestID(c).Info("user signed up", "provider", "apple", "user_id", user.ID)
+	} else if user.AuthProvider == "" {
+		user.AuthProvider = "apple"
+		if err := db.Model(&user).Update("auth_provider", user.AuthProvider).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+			return
+		}
 	}
 
 	// Generate JWT tokens
@@ -81,6 +96,10 @@ func refreshToken(c *gin.Context) {
 	// Validate refresh token
 	claims, err := validateJWT(req.RefreshToken)
 	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+	if err := requireTokenType(claims, tokenTypeRefresh); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
 	}
@@ -179,7 +198,7 @@ func updateProfile(c *gin.Context) {
 }
 
 // uploadAvatar handles PUT /api/v1/profile/avatar
-// Accepts {"image_data": "<base64 JPEG>"} and saves to disk.
+// Accepts {"image_data": "<base64 image>"} and saves a validated image to disk.
 func uploadAvatar(c *gin.Context) {
 	userID, exists := getUserID(c)
 	if !exists {
@@ -207,13 +226,24 @@ func uploadAvatar(c *gin.Context) {
 		return
 	}
 
+	ext, err := detectAvatarExtension(data)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	dir := filepath.Join("uploads", "avatars")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage error"})
 		return
 	}
 
-	filename := fmt.Sprintf("%d.jpg", userID)
+	if err := deleteAvatarFiles(userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage error"})
+		return
+	}
+
+	filename := fmt.Sprintf("%d%s", userID, ext)
 	dst := filepath.Join(dir, filename)
 	if err := os.WriteFile(dst, data, 0o644); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "write error"})
@@ -229,6 +259,40 @@ func uploadAvatar(c *gin.Context) {
 	db.Model(&User{}).Where("id = ?", userID).Update("avatar_url", avatarURL)
 
 	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL})
+}
+
+func detectAvatarExtension(data []byte) (string, error) {
+	config, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return "", errors.New("invalid image data")
+	}
+	if config.Width <= 0 || config.Height <= 0 {
+		return "", errors.New("invalid image dimensions")
+	}
+
+	switch format {
+	case "jpeg":
+		return ".jpg", nil
+	case "png":
+		return ".png", nil
+	case "gif":
+		return ".gif", nil
+	default:
+		return "", errors.New("unsupported image format")
+	}
+}
+
+func deleteAvatarFiles(userID uint) error {
+	matches, err := filepath.Glob(filepath.Join("uploads", "avatars", fmt.Sprintf("%d.*", userID)))
+	if err != nil {
+		return err
+	}
+	for _, match := range matches {
+		if err := os.Remove(match); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
 }
 
 // getCarStats returns the stored car stats JSON blob for the authenticated user.
@@ -295,5 +359,70 @@ func putDisplaySettings(c *gin.Context) {
 	if len(updates) > 0 {
 		db.Model(&User{}).Where("id = ?", userID).Updates(updates)
 	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func deleteCurrentUser(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var req DeleteAccountRequest
+	if c.Request.Body != nil && c.Request.ContentLength != 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	var user User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	authProvider := user.AuthProvider
+	if authProvider == "" && user.AppleUserID != nil && *user.AppleUserID != "" {
+		authProvider = "apple"
+	}
+
+	if authProvider == "apple" {
+		if req.AppleAuthorizationCode == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "apple_authorization_code is required for Apple account deletion"})
+			return
+		}
+		if err := revokeAppleAuthorizationCode(req.AppleAuthorizationCode); err != nil {
+			status := http.StatusBadGateway
+			if errors.Is(err, errAppleRevocationNotConfigured) {
+				status = http.StatusServiceUnavailable
+			}
+			c.JSON(status, gin.H{"error": "Failed to revoke Apple authorization", "details": err.Error()})
+			return
+		}
+	}
+
+	if err := deleteAvatarFiles(userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account"})
+		return
+	}
+
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("follower_id = ? OR following_id = ?", userID, userID).Delete(&Follow{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&Drive{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&User{}, userID).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

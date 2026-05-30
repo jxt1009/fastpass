@@ -93,6 +93,20 @@ class APIService {
         guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
     }
 
+    func delete<T: Encodable>(endpoint: String, body: T) async throws {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = AuthManager.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try encoder.encode(body)
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
+    }
+
     // MARK: - Drive Methods
 
     func createDrive(_ drive: Drive) async throws -> Drive {
@@ -191,13 +205,15 @@ class APIService {
 
     func fetchCarStats() async throws -> String {
         // Returns raw JSON string of the stats blob
-        let url = URL(string: baseURL + "/api/v1/stats")!
+        let url = URL(string: "\(baseURL)/stats")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         if let token = AuthManager.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else { throw APIError.serverError(httpResponse.statusCode) }
         return String(data: data, encoding: .utf8) ?? "{}"
     }
 
@@ -258,6 +274,11 @@ class APIService {
         return try await get(endpoint: "/users/search?q=\(encoded)")
     }
 
+    func deleteAccount(appleAuthorizationCode: String?) async throws {
+        let request = DeleteAccountPayload(appleAuthorizationCode: appleAuthorizationCode)
+        try await delete(endpoint: "/me", body: request)
+    }
+
     func uploadAvatar(imageData: Data) async throws {
         struct Req: Encodable { let imageData: String; enum CodingKeys: String, CodingKey { case imageData = "image_data" } }
         struct Res: Decodable { let avatarURL: String; enum CodingKeys: String, CodingKey { case avatarURL = "avatar_url" } }
@@ -266,6 +287,14 @@ class APIService {
 }
 
 private struct _EmptyBody: Encodable {}
+
+private struct DeleteAccountPayload: Encodable {
+    let appleAuthorizationCode: String?
+
+    enum CodingKeys: String, CodingKey {
+        case appleAuthorizationCode = "apple_authorization_code"
+    }
+}
 
 enum APIError: Error, LocalizedError {
     case invalidURL

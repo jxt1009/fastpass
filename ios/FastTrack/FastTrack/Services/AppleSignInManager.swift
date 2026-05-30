@@ -7,6 +7,7 @@ class AppleSignInManager: NSObject, ObservableObject {
     @Published var error: String?
     
     private let authManager = AuthManager.shared
+    private var deletionContinuation: CheckedContinuation<String, Error>?
     
     func handleSignInResult(_ result: Result<ASAuthorization, Error>) {
         switch result {
@@ -69,14 +70,41 @@ class AppleSignInManager: NSObject, ObservableObject {
     }
     
     func signOut() {
-        authManager.clearTokens()
+        authManager.signOut()
         isSignedIn = false
+    }
+
+    func reauthorizeForAccountDeletion() async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            deletionContinuation = continuation
+
+            let request = ASAuthorizationAppleIDProvider().createRequest()
+            request.requestedScopes = []
+
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = self
+            controller.presentationContextProvider = self
+            controller.performRequests()
+        }
     }
 }
 
 extension AppleSignInManager: ASAuthorizationControllerDelegate {
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+            return
+        }
+
+        if let deletionContinuation {
+            guard let authCodeData = appleIDCredential.authorizationCode,
+                  let authCode = String(data: authCodeData, encoding: .utf8),
+                  !authCode.isEmpty else {
+                self.deletionContinuation = nil
+                deletionContinuation.resume(throwing: AuthError.invalidToken)
+                return
+            }
+            self.deletionContinuation = nil
+            deletionContinuation.resume(returning: authCode)
             return
         }
         
@@ -115,6 +143,11 @@ extension AppleSignInManager: ASAuthorizationControllerDelegate {
     }
     
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        if let deletionContinuation {
+            self.deletionContinuation = nil
+            deletionContinuation.resume(throwing: error)
+            return
+        }
         self.error = error.localizedDescription
         isSignedIn = false
     }

@@ -134,6 +134,12 @@ class CarStatsManager: ObservableObject {
         saveCarStats()
     }
 
+    @MainActor
+    func clearLocalData() {
+        carStats.removeAll()
+        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+    }
+
     /// Rebuilds all per-car stats from scratch using the provided drive list.
     /// Call this after a drive's car assignment changes so counts stay accurate.
     func rebuildStats(from drives: [Drive]) {

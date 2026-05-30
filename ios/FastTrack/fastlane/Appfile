@@ -1,4 +1,10 @@
-app_identifier "dev.toper.FastTrack"
-apple_id "YOUR_APPLE_ID@example.com"  # Replace with your Apple ID
-itc_team_id "YOUR_ITC_TEAM_ID"        # Replace with App Store Connect team ID
-team_id "YOUR_TEAM_ID"                 # Replace with Developer Portal team ID
+fastlane_env = [
+  File.expand_path("FastlaneEnv.rb", __dir__),
+  File.expand_path("fastlane/FastlaneEnv.rb", Dir.pwd)
+].find { |path| File.exist?(path) }
+load fastlane_env if fastlane_env
+
+app_identifier fastlane_env!("FASTTRACK_APP_IDENTIFIER")
+apple_id fastlane_env!("APPLE_ID")
+itc_team_id fastlane_env!("ITC_TEAM_ID")
+team_id fastlane_env!("TEAM_ID")

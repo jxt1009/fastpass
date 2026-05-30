@@ -131,6 +131,17 @@ class AuthManager: ObservableObject {
         await restoreUserDataFromServer(serverUser: response.user)
     }
 
+    func signOut() {
+        clearSessionData()
+    }
+
+    func deleteAccount(appleAuthorizationCode: String?) async throws {
+        try await APIService.shared.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
+        await MainActor.run {
+            self.clearSessionData()
+        }
+    }
+
     /// Syncs profile, garage, car stats, and display settings from the server into local storage.
     func restoreUserDataFromServer(serverUser: User) async {
         await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
@@ -139,6 +150,15 @@ class AuthManager: ObservableObject {
             unitSystem: serverUser.unitSystem,
             colorScheme: serverUser.colorScheme
         )
+    }
+
+    @MainActor
+    private func clearSessionData() {
+        ProfileManager.shared.clearProfile()
+        CarStatsManager.shared.clearLocalData()
+        AchievementManager.shared.resetProgress()
+        AppSettings.shared.resetAccountScopedPreferences()
+        clearTokens()
     }
     
 }
@@ -164,6 +184,14 @@ struct RefreshTokenRequest: Codable {
     
     enum CodingKeys: String, CodingKey {
         case refreshToken = "refresh_token"
+    }
+
+    struct DeleteAccountRequest: Codable {
+        let appleAuthorizationCode: String?
+
+        enum CodingKeys: String, CodingKey {
+            case appleAuthorizationCode = "apple_authorization_code"
+        }
     }
 }
 

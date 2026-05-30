@@ -247,6 +247,13 @@ class AchievementManager: ObservableObject {
     func clearRecentUnlocks() {
         recentUnlocks.removeAll()
     }
+
+    @MainActor
+    func resetProgress() {
+        recentUnlocks.removeAll()
+        achievements = createDefaultAchievements()
+        saveAchievements()
+    }
 }
 
 // MARK: - Default Achievements

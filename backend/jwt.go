@@ -18,6 +18,12 @@ import (
 
 var jwtSecret []byte
 
+const (
+	tokenTypeAccess  = "access"
+	tokenTypeRefresh = "refresh"
+	legacyRefreshTTL = 6 * 24 * time.Hour
+)
+
 func initJWTSecret() {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
@@ -31,6 +37,7 @@ type JWTClaims struct {
 	UserID      uint   `json:"user_id"`
 	AppleUserID string `json:"apple_user_id"`
 	Email       string `json:"email"`
+	TokenType   string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
@@ -61,10 +68,16 @@ type AppleIDTokenClaims struct {
 }
 
 func generateJWT(user User) (string, error) {
+	appleUserID := ""
+	if user.AppleUserID != nil {
+		appleUserID = *user.AppleUserID
+	}
+
 	claims := JWTClaims{
 		UserID:      user.ID,
-		AppleUserID: user.AppleUserID,
+		AppleUserID: appleUserID,
 		Email:       user.Email,
+		TokenType:   tokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -77,10 +90,16 @@ func generateJWT(user User) (string, error) {
 }
 
 func generateRefreshToken(user User) (string, error) {
+	appleUserID := ""
+	if user.AppleUserID != nil {
+		appleUserID = *user.AppleUserID
+	}
+
 	claims := JWTClaims{
 		UserID:      user.ID,
-		AppleUserID: user.AppleUserID,
+		AppleUserID: appleUserID,
 		Email:       user.Email,
+		TokenType:   tokenTypeRefresh,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 7 days
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -109,6 +128,29 @@ func validateJWT(tokenString string) (*JWTClaims, error) {
 	}
 
 	return nil, errors.New("invalid token")
+}
+
+func requireTokenType(claims *JWTClaims, expectedType string) error {
+	if claims.TokenType == "" {
+		if expectedType == tokenTypeAccess {
+			return nil
+		}
+		if expectedType == tokenTypeRefresh && isLegacyRefreshToken(claims) {
+			return nil
+		}
+		return errors.New("token type missing")
+	}
+	if claims.TokenType != expectedType {
+		return fmt.Errorf("unexpected token type: %s", claims.TokenType)
+	}
+	return nil
+}
+
+func isLegacyRefreshToken(claims *JWTClaims) bool {
+	if claims.ExpiresAt == nil || claims.IssuedAt == nil {
+		return false
+	}
+	return claims.ExpiresAt.Time.Sub(claims.IssuedAt.Time) >= legacyRefreshTTL
 }
 
 func verifyAppleIdentityToken(identityToken string) (*AppleIDTokenClaims, error) {
@@ -148,7 +190,7 @@ func verifyAppleIdentityToken(identityToken string) (*AppleIDTokenClaims, error)
 		// Verify audience matches the app bundle ID
 		expectedAud := os.Getenv("APPLE_APP_BUNDLE_ID")
 		if expectedAud == "" {
-			expectedAud = "dev.toper.FastTrack"
+			expectedAud = "com.toper.FastTrack"
 		}
 		if claims.Aud != expectedAud {
 			return nil, fmt.Errorf("invalid audience: got %q, expected %q", claims.Aud, expectedAud)

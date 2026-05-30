@@ -119,12 +119,16 @@ private struct DarkSectionHeader: View {
 struct ProfileView: View {
     @StateObject private var profileManager = ProfileManager.shared
     @StateObject private var achievementManager = AchievementManager.shared
+    @StateObject private var appleSignInManager = AppleSignInManager()
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var locationManager: LocationManager
     @ObservedObject private var settings = AppSettings.shared
     @State private var showingSetup = false
     @State private var showingAddCar = false
     @State private var showingSettings = false
+    @State private var showingDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
+    @State private var deleteAccountError: String?
     private var stats: UserStats {
         UserStats.from(drives: driveManager.drives)
     }
@@ -156,6 +160,7 @@ struct ProfileView: View {
                         achievementsSection
                         DarkSectionHeader(title: "Settings")
                         settingsSection
+                        deleteAccountButton
                         signOutButton
                     }
                     .padding()
@@ -179,6 +184,23 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingAddCar) {
                 AddCarView()
+            }
+            .alert("Delete Account?", isPresented: $showingDeleteAccountConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button(isDeletingAccount ? "Deleting..." : "Delete", role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+                .disabled(isDeletingAccount)
+            } message: {
+                Text("This permanently deletes your FastTrack account and recorded drive data.")
+            }
+            .alert("Unable to Delete Account", isPresented: Binding(
+                get: { deleteAccountError != nil },
+                set: { if !$0 { deleteAccountError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deleteAccountError ?? "Unknown error")
             }
             .onAppear {
                 if !profileManager.isProfileComplete {
@@ -649,10 +671,31 @@ struct ProfileView: View {
 
     // MARK: Sign Out
 
+    private var deleteAccountButton: some View {
+        Button(role: .destructive) {
+            showingDeleteAccountConfirmation = true
+        } label: {
+            HStack {
+                if isDeletingAccount {
+                    ProgressView()
+                        .tint(.red)
+                }
+                Text("Delete Account")
+                    .fontWeight(.semibold)
+            }
+            .foregroundColor(.red)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color(red: 0.17, green: 0.17, blue: 0.18))
+            .cornerRadius(12)
+        }
+        .disabled(isDeletingAccount)
+        .padding(.top, 8)
+    }
+
     private var signOutButton: some View {
         Button(role: .destructive) {
-            ProfileManager.shared.clearProfile()
-            AuthManager.shared.clearTokens()
+            AuthManager.shared.signOut()
         } label: {
             Text("Sign Out")
                 .fontWeight(.semibold)
@@ -678,6 +721,33 @@ struct ProfileView: View {
         guard var profile = profileManager.profile else { return }
         profile.selectCar(id: carId)
         profileManager.saveProfile(profile)
+    }
+
+    @MainActor
+    private func deleteAccount() async {
+        guard !isDeletingAccount else { return }
+
+        isDeletingAccount = true
+        defer { isDeletingAccount = false }
+
+        do {
+            let authProvider = AuthManager.shared.getUser()?.authProvider?.lowercased()
+            let isAppleUser =
+                authProvider == "apple" ||
+                (authProvider == nil && AuthManager.shared.getUser()?.appleUserID != nil)
+
+            let appleAuthorizationCode: String?
+            if isAppleUser {
+                appleAuthorizationCode = try await appleSignInManager.reauthorizeForAccountDeletion()
+            } else {
+                appleAuthorizationCode = nil
+            }
+
+            try await AuthManager.shared.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
+            driveManager.clearLocalData()
+        } catch {
+            deleteAccountError = error.localizedDescription
+        }
     }
 }
 

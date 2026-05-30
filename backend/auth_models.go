@@ -5,32 +5,32 @@ import (
 )
 
 type User struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	AppleUserID  string  `gorm:"uniqueIndex" json:"apple_user_id,omitempty"`
+	ID           uint    `gorm:"primaryKey" json:"id"`
+	AppleUserID  *string `gorm:"uniqueIndex" json:"apple_user_id,omitempty"`
 	GoogleUserID *string `gorm:"uniqueIndex" json:"google_user_id,omitempty"`
-	Email        string    `json:"email"`
-	FullName     string    `json:"full_name"`
-	Username     string    `gorm:"uniqueIndex;size:50" json:"username"`
-	Country      string    `gorm:"size:100" json:"country"`
-	
-	// Legacy single car fields (kept for backward compatibility)
-	CarMake      string    `gorm:"size:100" json:"car_make"`
-	CarModel     string    `gorm:"size:100" json:"car_model"`
-	CarYear      *int      `json:"car_year"`
-	CarTrim      string    `gorm:"size:100" json:"car_trim"`
-	
-	// New garage support
-	Garage       string `gorm:"type:text" json:"garage"`           // JSON array of cars
-	SelectedCarID *string `gorm:"size:100" json:"selected_car_id"`  // ID of selected car
+	Email        string  `json:"email"`
+	FullName     string  `json:"full_name"`
+	Username     string  `gorm:"uniqueIndex;size:50" json:"username"`
+	Country      string  `gorm:"size:100" json:"country"`
 
-	IsPublic     bool   `gorm:"default:true" json:"is_public"`
-	AvatarURL    string `gorm:"size:500" json:"avatar_url"`
+	// Legacy single car fields (kept for backward compatibility)
+	CarMake  string `gorm:"size:100" json:"car_make"`
+	CarModel string `gorm:"size:100" json:"car_model"`
+	CarYear  *int   `json:"car_year"`
+	CarTrim  string `gorm:"size:100" json:"car_trim"`
+
+	// New garage support
+	Garage        string  `gorm:"type:text" json:"garage"`         // JSON array of cars
+	SelectedCarID *string `gorm:"size:100" json:"selected_car_id"` // ID of selected car
+
+	IsPublic  bool   `gorm:"default:true" json:"is_public"`
+	AvatarURL string `gorm:"size:500" json:"avatar_url"`
 	// CarStatsData stores a JSON blob of per-car aggregated stats so they
 	// survive reinstall and device switches.
 	CarStatsData string `gorm:"type:text" json:"car_stats_data"`
 	// User display preferences — synced from the app so they restore on new devices.
-	UnitSystem   string `gorm:"size:20;default:'imperial'" json:"unit_system"`
-	ColorScheme  string `gorm:"size:20;default:'system'" json:"color_scheme"`
+	UnitSystem  string `gorm:"size:20;default:'imperial'" json:"unit_system"`
+	ColorScheme string `gorm:"size:20;default:'system'" json:"color_scheme"`
 
 	AuthProvider string    `json:"auth_provider"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -38,19 +38,19 @@ type User struct {
 }
 
 type UpdateProfileRequest struct {
-	Username      string `json:"username" binding:"required,min=3,max=20"`
-	Country       string `json:"country"`
-	
+	Username string `json:"username" binding:"required,min=3,max=20"`
+	Country  string `json:"country"`
+
 	// Legacy fields (still supported)
-	CarMake       string `json:"car_make"`
-	CarModel      string `json:"car_model"`
-	CarYear       *int   `json:"car_year"`
-	CarTrim       string `json:"car_trim"`
-	
+	CarMake  string `json:"car_make"`
+	CarModel string `json:"car_model"`
+	CarYear  *int   `json:"car_year"`
+	CarTrim  string `json:"car_trim"`
+
 	// New garage fields
 	Garage        string  `json:"garage"`          // JSON array of cars
 	SelectedCarID *string `json:"selected_car_id"` // ID of selected car
-	IsPublic      *bool   `json:"is_public"`        // nil = don't change
+	IsPublic      *bool   `json:"is_public"`       // nil = don't change
 }
 
 type AuthResponse struct {
@@ -68,6 +68,10 @@ type AppleSignInRequest struct {
 
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type DeleteAccountRequest struct {
+	AppleAuthorizationCode string `json:"apple_authorization_code"`
 }
 
 type GoogleSignInRequest struct {

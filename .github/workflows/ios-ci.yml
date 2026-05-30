@@ -60,12 +60,12 @@ jobs:
         run: |
           xcodebuild test \
             -project FastTrack.xcodeproj \
-            -scheme FastTrackTests \
-            -destination "platform=iOS Simulator,name=iPhone 16" \
+            -scheme FastTrack \
+            -destination "platform=iOS Simulator,name=iPhone 17 Pro" \
             CODE_SIGNING_ALLOWED=NO \
             | xcpretty --color || xcodebuild test \
               -project FastTrack.xcodeproj \
-              -scheme FastTrackTests \
-              -destination "platform=iOS Simulator,name=iPhone 16" \
+              -scheme FastTrack \
+              -destination "platform=iOS Simulator,name=iPhone 17 Pro" \
               CODE_SIGNING_ALLOWED=NO
         continue-on-error: false

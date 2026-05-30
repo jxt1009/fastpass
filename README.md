@@ -109,6 +109,9 @@ See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for full Xcode setup.
 | `DATABASE_URL` | Yes | PostgreSQL DSN (e.g. `host=... user=fasttrack password=... dbname=fasttrack port=5432 sslmode=disable`) |
 | `JWT_SECRET` | Yes | Random secret for signing JWTs. Generate: `openssl rand -base64 32` |
 | `APPLE_APP_BUNDLE_ID` | Yes | Bundle ID for Apple token verification (e.g. `com.toper.FastTrack`) |
+| `APPLE_TEAM_ID` | For Apple account revocation | Apple Developer Team ID used to revoke Sign in with Apple credentials during account deletion |
+| `APPLE_KEY_ID` | For Apple account revocation | Sign in with Apple key ID used to sign the Apple revocation client secret |
+| `APPLE_PRIVATE_KEY` | For Apple account revocation | Contents of the `.p8` Sign in with Apple key, with newlines escaped as `\n` |
 | `BASE_URL` | Yes | Public API base URL (e.g. `https://fast.toper.dev`) — used in auth callbacks |
 | `GOOGLE_CLIENT_ID` | For Google auth | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | For Google auth | Google OAuth client secret |

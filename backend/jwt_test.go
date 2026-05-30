@@ -13,7 +13,8 @@ func init() {
 }
 
 func TestGenerateAndValidateJWT(t *testing.T) {
-	user := User{Email: "test@example.com", AppleUserID: "apple.123"}
+	appleUserID := "apple.123"
+	user := User{Email: "test@example.com", AppleUserID: &appleUserID}
 	user.ID = 42
 
 	tokenString, err := generateJWT(user)
@@ -34,6 +35,9 @@ func TestGenerateAndValidateJWT(t *testing.T) {
 	if claims.Email != "test@example.com" {
 		t.Errorf("expected email test@example.com, got %s", claims.Email)
 	}
+	if claims.TokenType != tokenTypeAccess {
+		t.Errorf("expected access token type, got %s", claims.TokenType)
+	}
 }
 
 func TestValidateJWT_ExpiredToken(t *testing.T) {
@@ -42,7 +46,8 @@ func TestValidateJWT_ExpiredToken(t *testing.T) {
 
 	// Manually create an already-expired token
 	claims := JWTClaims{
-		UserID: 1,
+		UserID:    1,
+		TokenType: tokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
@@ -76,7 +81,8 @@ func TestValidateJWT_WrongSecret(t *testing.T) {
 	// Sign with a different secret
 	otherSecret := []byte("completely-different-secret-key-here-64-chars-plus")
 	claims := JWTClaims{
-		UserID: 99,
+		UserID:    99,
+		TokenType: tokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 		},
@@ -104,11 +110,43 @@ func TestGenerateRefreshToken(t *testing.T) {
 		t.Fatalf("validateJWT on refresh token failed: %v", err)
 	}
 
-	// Refresh token should expire ~30 days from now
+	if claims.TokenType != tokenTypeRefresh {
+		t.Fatalf("expected refresh token type, got %s", claims.TokenType)
+	}
+
+	// Refresh token should expire ~7 days from now
 	expiry := claims.ExpiresAt.Time
 	daysUntilExpiry := time.Until(expiry).Hours() / 24
-	if daysUntilExpiry < 25 || daysUntilExpiry > 32 {
-		t.Errorf("expected refresh token to expire in ~30 days, got %.1f days", daysUntilExpiry)
+	if daysUntilExpiry < 6 || daysUntilExpiry > 8 {
+		t.Errorf("expected refresh token to expire in ~7 days, got %.1f days", daysUntilExpiry)
+	}
+}
+
+func TestRequireTokenType_AcceptsLegacyRefreshToken(t *testing.T) {
+	claims := &JWTClaims{
+		UserID: 1,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+		},
+	}
+
+	if err := requireTokenType(claims, tokenTypeRefresh); err != nil {
+		t.Fatalf("expected legacy refresh token to be accepted, got %v", err)
+	}
+}
+
+func TestRequireTokenType_RejectsLegacyAccessTokenOnRefresh(t *testing.T) {
+	claims := &JWTClaims{
+		UserID: 1,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
+		},
+	}
+
+	if err := requireTokenType(claims, tokenTypeRefresh); err == nil {
+		t.Fatal("expected legacy access token to be rejected for refresh")
 	}
 }
 

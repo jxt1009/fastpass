@@ -57,13 +57,17 @@ For a named release:
 
 ### Prerequisites (one-time setup)
 
-1. **App Store Connect API key** — Generate at [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users & Access → Integrations → App Store Connect API. Store the `.p8` key file content as the `APP_STORE_CONNECT_API_KEY` GitHub secret, along with `APP_STORE_CONNECT_KEY_ID` and `APP_STORE_CONNECT_ISSUER_ID`.
+1. **App Store Connect API key** — Generate at [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users & Access → Integrations → App Store Connect API. Keep the `.p8` file locally for Fastlane, and store its contents in the `APP_STORE_CONNECT_API_KEY` GitHub secret along with `APP_STORE_CONNECT_KEY_ID` and `APP_STORE_CONNECT_ISSUER_ID`.
 
-2. **Fastlane Match repo** — Create a private GitHub repo for certificates (e.g. `yourorg/fasttrack-certs`). Update [`fastlane/Matchfile`](../ios/FastTrack/fastlane/Matchfile) with its URL. Store the match encryption password as `MATCH_PASSWORD` and a base64-encoded `user:token` as `MATCH_GIT_BASIC_AUTHORIZATION`.
+2. **Fastlane local env file** — Run `./scripts/setup_apple_release_env.sh` from [`ios/FastTrack`](../ios/FastTrack/) once Apple finishes approving your account. That writes `ios/FastTrack/.env.fastlane` with non-secret identifiers/paths for local Fastlane runs, including `APPLE_ID`, `TEAM_ID`, and `ITC_TEAM_ID`, and stores `MATCH_PASSWORD` in your macOS Keychain under the `com.toper.FastTrack.fastlane` service.
 
-3. **Appfile** — Fill in your Apple ID, team ID, and ITC team ID in [`fastlane/Appfile`](../ios/FastTrack/fastlane/Appfile).
+3. **Fastlane Match repo** — Create a private GitHub repo for certificates (e.g. `yourorg/fasttrack-certs`) and provide that URL to the setup script. Store the match encryption password as `MATCH_PASSWORD` and a base64-encoded `user:token` as `MATCH_GIT_BASIC_AUTHORIZATION` for CI.
 
-4. **Xcode test target** — Open the project in Xcode, go to **File → New → Target → Unit Testing Bundle**, name it `FastTrackTests`, set Host Application to `FastTrack`. The test files in `FastTrackTests/` will be picked up automatically.
+For local development, prefer Keychain-backed secrets over plaintext `.env.fastlane` entries. The setup script already stores `MATCH_PASSWORD` in Keychain; keep `.p8` files outside the repo with restrictive permissions like `chmod 600`.
+
+4. **Apple revocation key for account deletion** — Create a **Sign in with Apple** key in the Apple Developer portal. The same setup script can print the backend secrets you need to add later: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY`.
+
+5. **Xcode test target** — The shared `FastTrack` scheme already includes `FastTrackTests`; CI and Fastlane both run tests through the app scheme.
 
 ### TestFlight release (beta)
 
@@ -85,12 +89,14 @@ The [ios-release workflow](.github/workflows/ios-release.yml) runs `fastlane bet
 ```sh
 cd ios/FastTrack
 bundle install
+./scripts/setup_apple_release_env.sh
 bundle exec fastlane beta
 ```
 
 ### App Store submission
 ```sh
 cd ios/FastTrack
+./scripts/setup_apple_release_env.sh
 bundle exec fastlane release
 ```
 
@@ -133,7 +139,7 @@ postgres://fasttrack:PASSWORD@localhost:5432/fasttrack?sslmode=disable
 ```
 
 **`APPLE_APP_BUNDLE_ID`**
-Value: `dev.toper.FastTrack`
+Value: `com.toper.FastTrack`
 
 **`BASE_URL`**
 - Staging: `https://staging.fast.toper.dev`
@@ -152,15 +158,16 @@ Shown at the top of the same App Store Connect API page.
 It's a UUID: `69a6de70-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
 
 **`APP_STORE_CONNECT_API_KEY`**
-Download the `.p8` file when you create the key (only downloadable once). Format as JSON:
-```json
-{
-  "key_id": "ABC1234DEF",
-  "issuer_id": "69a6de70-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "key": "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMG...\n-----END PRIVATE KEY-----"
-}
-```
-The `key` value is the `.p8` file contents with actual newlines replaced by `\n`.
+Download the `.p8` file when you create the key (only downloadable once). Store the raw file contents in the GitHub secret, with real newlines escaped as `\n`.
+
+**`APPLE_ID`**
+The Apple ID email for the App Store Connect account that owns the app.
+
+**`TEAM_ID`**
+Your 10-character Apple Developer Team ID.
+
+**`ITC_TEAM_ID`**
+Your App Store Connect team identifier used by Fastlane/App Store Connect authentication.
 
 **`MATCH_PASSWORD`**
 A strong password you choose — Fastlane Match uses this to encrypt certificates stored in the certs repo. Pick something and save it in your password manager:
@@ -185,11 +192,14 @@ Paste the base64 output as the secret value.
 | `KUBECONFIG` | staging + production | backend-deploy | ✅ Set now |
 | `JWT_SECRET` | staging + production | backend-deploy | ✅ Set now |
 | `DATABASE_URL` | staging + production | backend-deploy | ✅ Set now (different DB per env) |
-| `APPLE_APP_BUNDLE_ID` | staging + production | backend-deploy | ✅ Set now (`dev.toper.FastTrack`) |
+| `APPLE_APP_BUNDLE_ID` | staging + production | backend-deploy | ✅ Set now (`com.toper.FastTrack`) |
 | `BASE_URL` | staging + production | backend-deploy | ✅ Set now (different URL per env) |
 | `APP_STORE_CONNECT_KEY_ID` | — | ios-release | ⏳ After Developer approval |
 | `APP_STORE_CONNECT_ISSUER_ID` | — | ios-release | ⏳ After Developer approval |
 | `APP_STORE_CONNECT_API_KEY` | — | ios-release | ⏳ After Developer approval |
+| `APPLE_ID` | — | ios-release | ⏳ After Developer approval |
+| `TEAM_ID` | — | ios-release | ⏳ After Developer approval |
+| `ITC_TEAM_ID` | — | ios-release | ⏳ After Developer approval |
 | `MATCH_PASSWORD` | — | ios-release | ⏳ Choose now, set later |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | — | ios-release | ⏳ After Developer approval |
 

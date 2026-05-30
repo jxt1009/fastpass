@@ -1,8 +1,7 @@
 import XCTest
 @testable import FastTrack
 
-// NOTE: To run these tests, add a Unit Testing Bundle target named "FastTrackTests"
-// in Xcode: File → New → Target → Unit Testing Bundle, set Host Application to FastTrack.
+// These tests run through the shared FastTrack scheme, which includes the FastTrackTests target.
 
 final class AppSettingsTests: XCTestCase {
 

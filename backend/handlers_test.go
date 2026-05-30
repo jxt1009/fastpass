@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,6 +14,10 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func stringPtr(value string) *string {
+	return &value
+}
 
 // setupTestDB creates an in-memory SQLite database for handler tests.
 func setupTestDB(t *testing.T) {
@@ -37,6 +43,7 @@ func makeAuthRouter() *gin.Engine {
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)
 		api.PUT("/drives/:id", updateDrive)
+		api.DELETE("/me", deleteCurrentUser)
 	}
 	return r
 }
@@ -56,8 +63,8 @@ func TestDriveOwnership_CannotReadOtherUsersDrive(t *testing.T) {
 	setupTestDB(t)
 
 	// Create two users
-	userA := User{Email: "a@test.com", AppleUserID: "apple.a", Username: "usera"}
-	userB := User{Email: "b@test.com", AppleUserID: "apple.b", Username: "userb"}
+	userA := User{Email: "a@test.com", AppleUserID: stringPtr("apple.a"), Username: "usera"}
+	userB := User{Email: "b@test.com", AppleUserID: stringPtr("apple.b"), Username: "userb"}
 	db.Create(&userA)
 	db.Create(&userB)
 
@@ -82,8 +89,8 @@ func TestDriveOwnership_CannotUpdateOtherUsersDrive(t *testing.T) {
 	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
 	setupTestDB(t)
 
-	userA := User{Email: "a2@test.com", AppleUserID: "apple.a2", Username: "usera2"}
-	userB := User{Email: "b2@test.com", AppleUserID: "apple.b2", Username: "userb2"}
+	userA := User{Email: "a2@test.com", AppleUserID: stringPtr("apple.a2"), Username: "usera2"}
+	userB := User{Email: "b2@test.com", AppleUserID: stringPtr("apple.b2"), Username: "userb2"}
 	db.Create(&userA)
 	db.Create(&userB)
 
@@ -108,7 +115,7 @@ func TestDriveOwnership_OwnerCanReadOwnDrive(t *testing.T) {
 	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
 	setupTestDB(t)
 
-	user := User{Email: "owner@test.com", AppleUserID: "apple.owner", Username: "owner"}
+	user := User{Email: "owner@test.com", AppleUserID: stringPtr("apple.owner"), Username: "owner"}
 	db.Create(&user)
 
 	drive := Drive{UserID: user.ID, StartTime: time.Now(), EndTime: time.Now(), MaxSpeed: 55}
@@ -130,8 +137,8 @@ func TestListDrives_OnlyReturnsOwnDrives(t *testing.T) {
 	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
 	setupTestDB(t)
 
-	userA := User{Email: "list_a@test.com", AppleUserID: "apple.list_a", Username: "lista"}
-	userB := User{Email: "list_b@test.com", AppleUserID: "apple.list_b", Username: "listb"}
+	userA := User{Email: "list_a@test.com", AppleUserID: stringPtr("apple.list_a"), Username: "lista"}
+	userB := User{Email: "list_b@test.com", AppleUserID: stringPtr("apple.list_b"), Username: "listb"}
 	db.Create(&userA)
 	db.Create(&userB)
 
@@ -179,5 +186,94 @@ func TestCreateDrive_RequiresAuth(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401 with no auth header, got %d", w.Code)
+	}
+}
+
+func TestAuthMiddleware_RejectsRefreshTokens(t *testing.T) {
+	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	user := User{Email: "refresh-only@test.com", Username: "refreshonly"}
+	db.Create(&user)
+
+	router := makeAuthRouter()
+
+	refreshToken, err := generateRefreshToken(user)
+	if err != nil {
+		t.Fatalf("failed to generate refresh token: %v", err)
+	}
+
+	req, _ := http.NewRequest("GET", "/api/v1/drives", nil)
+	req.Header.Set("Authorization", "Bearer "+refreshToken)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for refresh token on API route, got %d", w.Code)
+	}
+}
+
+func TestDeleteCurrentUser_RemovesOwnedData(t *testing.T) {
+	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	tempDir := t.TempDir()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("failed to change working directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(wd); err != nil {
+			t.Fatalf("failed to restore working directory: %v", err)
+		}
+	}()
+
+	user := User{Email: "delete@test.com", Username: "delete-me", AuthProvider: "google"}
+	follower := User{Email: "follower@test.com", Username: "follower", AuthProvider: "google"}
+	db.Create(&user)
+	db.Create(&follower)
+	db.Create(&Drive{UserID: user.ID, StartTime: time.Now(), EndTime: time.Now()})
+	db.Create(&Follow{FollowerID: follower.ID, FollowingID: user.ID})
+	db.Create(&Follow{FollowerID: user.ID, FollowingID: follower.ID})
+	avatarPath := filepath.Join("uploads", "avatars", "1.png")
+	if err := os.MkdirAll(filepath.Dir(avatarPath), 0o755); err != nil {
+		t.Fatalf("failed to create avatar directory: %v", err)
+	}
+	if err := os.WriteFile(avatarPath, []byte("avatar"), 0o644); err != nil {
+		t.Fatalf("failed to create avatar fixture: %v", err)
+	}
+
+	router := makeAuthRouter()
+
+	req, _ := http.NewRequest("DELETE", "/api/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 deleting account, got %d (body: %s)", w.Code, w.Body.String())
+	}
+
+	var remainingUsers int64
+	var remainingDrives int64
+	var remainingFollows int64
+	db.Model(&User{}).Where("id = ?", user.ID).Count(&remainingUsers)
+	db.Model(&Drive{}).Where("user_id = ?", user.ID).Count(&remainingDrives)
+	db.Model(&Follow{}).Where("follower_id = ? OR following_id = ?", user.ID, user.ID).Count(&remainingFollows)
+
+	if remainingUsers != 0 {
+		t.Fatalf("expected deleted user to be removed, found %d rows", remainingUsers)
+	}
+	if remainingDrives != 0 {
+		t.Fatalf("expected deleted user's drives to be removed, found %d rows", remainingDrives)
+	}
+	if remainingFollows != 0 {
+		t.Fatalf("expected deleted user's follows to be removed, found %d rows", remainingFollows)
+	}
+	if _, err := os.Stat(avatarPath); !os.IsNotExist(err) {
+		t.Fatalf("expected avatar file to be removed, stat err = %v", err)
 	}
 }

@@ -9,7 +9,7 @@ import (
 func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		
+
 		tokenString, err := extractBearerToken(authHeader)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid authorization header"})
@@ -20,6 +20,11 @@ func authMiddleware() gin.HandlerFunc {
 		claims, err := validateJWT(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.Abort()
+			return
+		}
+		if err := requireTokenType(claims, tokenTypeAccess); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token for this endpoint"})
 			c.Abort()
 			return
 		}
@@ -36,7 +41,7 @@ func authMiddleware() gin.HandlerFunc {
 func optionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		
+
 		if authHeader == "" {
 			c.Next()
 			return
@@ -50,6 +55,10 @@ func optionalAuthMiddleware() gin.HandlerFunc {
 
 		claims, err := validateJWT(tokenString)
 		if err != nil {
+			c.Next()
+			return
+		}
+		if err := requireTokenType(claims, tokenTypeAccess); err != nil {
 			c.Next()
 			return
 		}
@@ -68,7 +77,7 @@ func getUserID(c *gin.Context) (uint, bool) {
 	if !exists {
 		return 0, false
 	}
-	
+
 	id, ok := userID.(uint)
 	return id, ok
 }

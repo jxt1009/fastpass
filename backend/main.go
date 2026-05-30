@@ -34,13 +34,13 @@ func main() {
 		slog.Error("DATABASE_URL environment variable is required")
 		os.Exit(1)
 	}
-	
+
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	
+
 	// Auto-migrate models
 	db.AutoMigrate(&User{}, &Drive{}, &Follow{})
 	// Rename best060_time → best_060_time if GORM previously auto-generated the name without underscores.
@@ -52,7 +52,7 @@ func main() {
 	// Backfill: any user created before is_public column was added gets false (Go zero value).
 	// Since privacy is a new feature, safely default all existing accounts to public.
 	db.Exec("UPDATE users SET is_public = true WHERE NOT is_public")
-	
+
 	// Setup router
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -69,7 +69,7 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-	
+
 	// Serve uploaded avatars as static files
 	r.Static("/uploads", "./uploads")
 
@@ -80,12 +80,13 @@ func main() {
 		auth.POST("/google", handleGoogleSignIn)
 		auth.POST("/refresh", refreshToken)
 	}
-	
+
 	// API routes (auth required)
 	api := r.Group("/api/v1")
 	api.Use(authMiddleware())
 	{
 		api.GET("/me", getCurrentUser)
+		api.DELETE("/me", deleteCurrentUser)
 		api.PUT("/profile", updateProfile)
 		api.PUT("/profile/avatar", uploadAvatar)
 		api.GET("/stats", getCarStats)
@@ -105,7 +106,7 @@ func main() {
 		api.GET("/users/:username/followers", getFollowers)
 		api.GET("/users/:username/following", getFollowing)
 	}
-	
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

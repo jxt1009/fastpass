@@ -1,9 +1,17 @@
-git_url "YOUR_MATCH_REPO_URL"   # Replace with private git repo URL for certs
-                                 # e.g. "https://github.com/yourorg/fasttrack-certs"
+fastlane_env = [
+  File.expand_path("FastlaneEnv.rb", __dir__),
+  File.expand_path("fastlane/FastlaneEnv.rb", Dir.pwd)
+].find { |path| File.exist?(path) }
+load fastlane_env if fastlane_env
+
+git_url fastlane_env!("MATCH_GIT_URL")
 
 storage_mode "git"
 
 type "appstore"
 
-app_identifier "dev.toper.FastTrack"
-username "YOUR_APPLE_ID@example.com"  # Replace with your Apple ID
+app_identifier [
+  fastlane_env!("FASTTRACK_APP_IDENTIFIER"),
+  "#{fastlane_env!("FASTTRACK_APP_IDENTIFIER")}.FastTrackWidgets"
+]
+username fastlane_env!("APPLE_ID")

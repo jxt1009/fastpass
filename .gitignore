@@ -56,9 +56,12 @@ ios/**/Secrets.swift
 ios/FastTrack/fastlane/builds/
 ios/FastTrack/fastlane/test_output/
 ios/FastTrack/.env.fastlane
+ios/FastTrack/.bundle/
 ios/FastTrack/Gemfile.lock
+ios/FastTrack/vendor/bundle/
 ios/FastTrack/fastlane/report.xml
 ios/FastTrack/fastlane/*.ipa
+ios/**/*.mobileprovision
 
 # git-cliff / release
 RELEASE_NOTES.md

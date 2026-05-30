@@ -9,6 +9,13 @@ jobs:
   testflight:
     name: Upload to TestFlight
     runs-on: macos-15
+    env:
+      FASTTRACK_APP_IDENTIFIER: com.toper.FastTrack
+      MATCH_GIT_URL: https://github.com/jxt1009/fasttrack-secrets.git
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      FASTLANE_KEYCHAIN_PASSWORD: fasttrack-fastlane
 
     defaults:
       run:
@@ -38,9 +45,11 @@ jobs:
       - name: Set App Store Connect API key
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           mkdir -p ~/.fastlane/spaceship
-          echo "$APP_STORE_CONNECT_API_KEY" > ~/.fastlane/asc_key.json
+          printf '%b' "$APP_STORE_CONNECT_API_KEY" > ~/.fastlane/AuthKey.p8
 
       - name: Extract version from tag
         id: version
@@ -50,6 +59,8 @@ jobs:
         env:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-          APP_STORE_CONNECT_API_KEY_PATH: ~/.fastlane/asc_key.json
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_PATH: ~/.fastlane/AuthKey.p8
           FL_VERSION_NUMBER: ${{ steps.version.outputs.version }}
         run: bundle exec fastlane beta

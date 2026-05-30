@@ -1,13 +1,15 @@
 default_platform(:ios)
 
+require_relative "FastlaneEnv"
+
 platform :ios do
   before_all do
     # Load App Store Connect API key if available (CI)
-    if ENV["APP_STORE_CONNECT_API_KEY_PATH"]
+    if ENV["APP_STORE_CONNECT_P8_PATH"] || ENV["APP_STORE_CONNECT_API_KEY_PATH"]
       app_store_connect_api_key(
         key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
         issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-        key_filepath: ENV["APP_STORE_CONNECT_API_KEY_PATH"],
+        key_filepath: ENV["APP_STORE_CONNECT_P8_PATH"] || ENV["APP_STORE_CONNECT_API_KEY_PATH"],
         duration: 1200,
         in_house: false
       )
@@ -18,8 +20,8 @@ platform :ios do
   lane :test do
     run_tests(
       project: "FastTrack.xcodeproj",
-      scheme: "FastTrackTests",
-      devices: ["iPhone 16"],
+      scheme: "FastTrack",
+      devices: ["iPhone 17 Pro"],
       code_coverage: true,
       output_directory: "fastlane/test_output"
     )
@@ -27,8 +29,25 @@ platform :ios do
 
   desc "Build and upload to TestFlight"
   lane :beta do
+    build_keychain_name = "fasttrack-fastlane.keychain-db"
+    build_keychain_password = ENV["FASTLANE_KEYCHAIN_PASSWORD"] || "fasttrack-fastlane"
+
+    create_keychain(
+      name: build_keychain_name,
+      password: build_keychain_password,
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      lock_when_sleeps: false
+    )
+
     # Sync distribution certificates and provisioning profiles
-    match(type: "appstore", readonly: is_ci)
+    match(
+      type: "appstore",
+      readonly: is_ci,
+      keychain_name: build_keychain_name,
+      keychain_password: build_keychain_password
+    )
 
     # Bump build number to current timestamp
     increment_build_number(

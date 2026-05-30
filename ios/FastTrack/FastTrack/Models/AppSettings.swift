@@ -47,6 +47,7 @@ enum UnitSystem: String, CaseIterable, Identifiable {
 
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
+    private var suppressServerSync = false
 
     @Published var keepScreenOn: Bool {
         didSet { UserDefaults.standard.set(keepScreenOn, forKey: "settings_keepScreenOn") }
@@ -61,18 +62,22 @@ class AppSettings: ObservableObject {
     @Published var preferredColorScheme: AppColorScheme {
         didSet {
             UserDefaults.standard.set(preferredColorScheme.rawValue, forKey: "settings_colorScheme")
-            syncToServer()
+            if !suppressServerSync {
+                syncToServer()
+            }
         }
     }
 
     @Published var unitSystem: UnitSystem {
         didSet {
             UserDefaults.standard.set(unitSystem.rawValue, forKey: "settings_unitSystem")
-            syncToServer()
+            if !suppressServerSync {
+                syncToServer()
+            }
         }
     }
 
-    private init() {
+    init() {
         if UserDefaults.standard.object(forKey: "settings_keepScreenOn") == nil {
             keepScreenOn = true
         } else {
@@ -108,6 +113,14 @@ class AppSettings: ObservableObject {
         if let raw = colorScheme, let value = AppColorScheme(rawValue: raw) {
             self.preferredColorScheme = value
         }
+    }
+
+    @MainActor
+    func resetAccountScopedPreferences() {
+        suppressServerSync = true
+        unitSystem = .imperial
+        preferredColorScheme = .system
+        suppressServerSync = false
     }
 
     // MARK: - Unit Helpers

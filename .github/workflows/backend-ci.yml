@@ -56,5 +56,5 @@ jobs:
           CGO_ENABLED: "1"
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/fasttrack_test?sslmode=disable
           JWT_SECRET: test-secret-not-used-in-production-at-least-64-chars-long-here
-          APPLE_APP_BUNDLE_ID: dev.toper.FastTrack
+          APPLE_APP_BUNDLE_ID: com.toper.FastTrack
         run: go test ./... -v -timeout 60s

@@ -700,6 +700,40 @@ class DriveManager: ObservableObject {
         pollTimer?.invalidate()
         pollTimer = nil
     }
+
+    @MainActor
+    func clearLocalData() {
+        stopPolling()
+        isRecording = false
+        currentDrive = nil
+        drives = []
+        isLoadingDrives = false
+        routeCoordinates = []
+        recordingStartTime = nil
+        recordingLocations = []
+        speedReadings = []
+        richRoutePoints = []
+        recordedRouteEvents = []
+        stoppedSince = nil
+        totalStoppedTime = 0
+        leftTurns = 0
+        rightTurns = 0
+        brakeEvents = 0
+        laneChanges = 0
+        maxAcceleration = 0
+        maxDeceleration = 0
+        peakGForce = 0
+        currentGForce = 0
+        topCornerSpeed = 0
+        best060Time = nil
+        currentMaxSpeed = 0
+        headingWindow = nil
+        lastTurnOrLaneTime = nil
+        lastBrakeTime = nil
+        zeroStart = nil
+        best060Active = false
+        headingHistory = []
+    }
 }
 
 // MARK: - Preview Helper
