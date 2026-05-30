@@ -2,6 +2,36 @@
 
 All notable changes to FastTrack are documented here.
 
+## [0.1.2] - 2026-05-30
+
+### Bug Fixes
+
+- Restore production landing pages and apple auth ([`327fa1f`](https://github.com/jtoper/fasttrack/commit/327fa1f075650bae4892ba38d33a33716d80800f))
+- Restore production ingress backend rule ([`12384cc`](https://github.com/jtoper/fasttrack/commit/12384cc91cccf0549ff1af9b0b42bff9cddc2897))
+- Harden apple token verification ([`6999b92`](https://github.com/jtoper/fasttrack/commit/6999b926ca66e0eb90b94200183619c8099be458))
+- Accept apple rs256 tokens ([`5a7cec7`](https://github.com/jtoper/fasttrack/commit/5a7cec7d2c002d358dc01db2b53769a27a7a052b))
+- Make google auth use app client id ([`fdf76de`](https://github.com/jtoper/fasttrack/commit/fdf76de8bc217eee55994059caec944cd7bd60dc))
+- Inject google client id into ios releases ([`d648323`](https://github.com/jtoper/fasttrack/commit/d648323dc0a8f7cd2d11ddd701011d9ada2e37b1))
+
+### CI/CD
+
+- **release**: Add release-please automation ([`73ce38b`](https://github.com/jtoper/fasttrack/commit/73ce38b3297b27c307b86f5221772c8b19bf2075))
+
+### Miscellaneous
+
+- **main**: Release 0.1.1 ([`8ea7651`](https://github.com/jtoper/fasttrack/commit/8ea7651bb2eadd17481b28934a778cfd544f73e5))
+- **main**: Release 0.1.2 ([`e4f9179`](https://github.com/jtoper/fasttrack/commit/e4f91791fcb80427de9c9d6451016111d4765ef7))
+
+### Merge
+
+- Sync main after v0.1.0 tag push ([`b00a32c`](https://github.com/jtoper/fasttrack/commit/b00a32ca09295b744665f778d11b8b6ae42fe7d6))
+
+## [0.1.0] - 2026-05-30
+
+### Bug Fixes
+
+- **ios**: Check in apple sign-in entitlement ([`42d1f46`](https://github.com/jtoper/fasttrack/commit/42d1f4686afb38a939522395f9ceb34656fec39c))
+
 ## [0.0.6] - 2026-05-30
 
 ### Bug Fixes
