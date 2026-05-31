@@ -12,7 +12,7 @@
 
 - [x] Introduce `cmd/` + `internal/` backend package layout.
 - [x] Split monolithic backend responsibilities into domain-focused modules.
-- [ ] Replace startup `AutoMigrate`-driven schema changes with explicit versioned migrations.
+- [x] Replace startup `AutoMigrate`-driven schema changes with explicit versioned migrations.
 
 ## Phase 3 — iOS maintainability
 
