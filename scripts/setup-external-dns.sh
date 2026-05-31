@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# This helper prints placeholder examples (<your-domain>, <your-subdomain>).
+# Replace them with environment-specific values for your deployment.
+
 echo "=========================================="
 echo "ExternalDNS Setup for Cloudflare"
 echo "=========================================="

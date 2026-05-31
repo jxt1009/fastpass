@@ -6,7 +6,7 @@ echo "🚀 FastTrack Remote Deployment"
 echo "===================================="
 echo ""
 
-# Configuration
+# Configuration (legacy helper; prefer CI/CD deploy workflow for production)
 SERVER="${DEPLOY_SERVER:-user@your-server}"
 NAMESPACE="${DEPLOY_NAMESPACE:-default}"
 APP_NAME="${DEPLOY_APP_NAME:-fasttrack-api}"
