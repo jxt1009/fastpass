@@ -166,7 +166,7 @@ struct ProfileView: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(profileManager.profile?.username ?? "Set up profile")
+                    Text(profileManager.profile.map { "@\($0.username)" } ?? "Set up profile")
                         .font(.title3).fontWeight(.bold)
                         .foregroundColor(.primary)
                     let subtitle = [

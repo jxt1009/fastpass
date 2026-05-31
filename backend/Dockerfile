@@ -25,7 +25,7 @@ FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates
 
-WORKDIR /root/
+WORKDIR /app
 
 COPY --from=builder /fasttrack .
 COPY --from=builder /app/templates/ ./templates/

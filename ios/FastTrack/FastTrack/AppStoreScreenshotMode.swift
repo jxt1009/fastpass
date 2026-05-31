@@ -137,7 +137,7 @@ struct AppStoreScreenshotRootView: View {
                                     }
 
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(entry.username)
+                                        Text("@\(entry.username)")
                                             .font(.headline)
                                             .foregroundStyle(.white)
                                         Text(entry.rank == 2 ? "You" : "FastTrack driver")
