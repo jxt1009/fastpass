@@ -60,7 +60,7 @@ struct DriveRowSkeleton: View {
 
 struct DriveRowView: View {
     let drive: Drive
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -95,4 +95,5 @@ struct DriveRowView: View {
 #Preview {
     DriveHistoryView()
         .environmentObject(DriveManager.preview())
+        .environmentObject(AppSettings.shared)
 }

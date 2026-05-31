@@ -48,6 +48,25 @@ class DriveManager: ObservableObject {
 
     // Live Activity
     private var liveActivity: Activity<DriveActivityAttributes>?
+    private let authManager: AuthManager
+    private let profileManager: ProfileManager
+    private let settings: AppSettings
+    private let apiService: APIService
+    private let carStatsManager: CarStatsManager
+
+    init(
+        authManager: AuthManager = .shared,
+        profileManager: ProfileManager = .shared,
+        settings: AppSettings = .shared,
+        apiService: APIService = .shared,
+        carStatsManager: CarStatsManager = .shared
+    ) {
+        self.authManager = authManager
+        self.profileManager = profileManager
+        self.settings = settings
+        self.apiService = apiService
+        self.carStatsManager = carStatsManager
+    }
 
     func setLocationManager(_ manager: LocationManager) {
         locationManager = manager
@@ -111,12 +130,12 @@ class DriveManager: ObservableObject {
         #endif
 
         // Keep screen on while recording if the setting is enabled
-        if AppSettings.shared.keepScreenOn {
+        if settings.keepScreenOn {
             UIApplication.shared.isIdleTimerDisabled = true
         }
 
         // Get selected car from profile, with fallbacks
-        let profile = ProfileManager.shared.profile
+        let profile = profileManager.profile
         var selectedCar = profile?.selectedCar
         
         // If no car is selected but garage has cars, select the first one
@@ -125,7 +144,7 @@ class DriveManager: ObservableObject {
             // Update profile to remember this selection
             if var updatedProfile = profile {
                 updatedProfile.selectedCarId = firstCar.id
-                ProfileManager.shared.saveProfile(updatedProfile)
+                profileManager.saveProfile(updatedProfile)
             }
         }
         
@@ -140,7 +159,7 @@ class DriveManager: ObservableObject {
 
         currentDrive = Drive(
             id: nil,
-            userID: AuthManager.shared.getUser()?.id ?? 0,
+            userID: authManager.getUser()?.id ?? 0,
             startTime: Date(), endTime: Date(),
             startLatitude: 0, startLongitude: 0,
             endLatitude: 0, endLongitude: 0,
@@ -198,11 +217,11 @@ class DriveManager: ObservableObject {
 
         Task {
             do {
-                let saved = try await APIService.shared.createDrive(drive)
+                let saved = try await apiService.createDrive(drive)
                 await MainActor.run {
                     self.drives.insert(saved, at: 0)
                     // Update car statistics
-                    CarStatsManager.shared.updateStats(for: saved)
+                    self.carStatsManager.updateStats(for: saved)
                     self.currentDrive = nil
                     self.recordingStartTime = nil
                     #if DEBUG
@@ -635,7 +654,7 @@ class DriveManager: ObservableObject {
     func fetchDrives() {
         Task {
             do {
-                let fetched = try await APIService.shared.fetchDrives()
+                let fetched = try await apiService.fetchDrives()
                 await MainActor.run {
                     self.drives = fetched
                     self.isLoadingDrives = false

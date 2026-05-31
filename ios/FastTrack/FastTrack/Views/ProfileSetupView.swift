@@ -2,7 +2,7 @@ import SwiftUI
 import PhotosUI
 
 struct ProfileSetupView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var profileManager: ProfileManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var username = ""

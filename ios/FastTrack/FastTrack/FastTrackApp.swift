@@ -11,14 +11,23 @@ import SwiftUI
 struct FastTrackApp: App {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var driveManager: DriveManager
+    @StateObject private var authManager: AuthManager
+    @StateObject private var settings: AppSettings
+    @StateObject private var profileManager: ProfileManager
     
     init() {
         let locMgr = LocationManager()
         let drvMgr = DriveManager()
         drvMgr.setLocationManager(locMgr)
+        let authMgr = AuthManager.shared
+        let appSettings = AppSettings.shared
+        let profMgr = ProfileManager.shared
         
         _locationManager = StateObject(wrappedValue: locMgr)
         _driveManager = StateObject(wrappedValue: drvMgr)
+        _authManager = StateObject(wrappedValue: authMgr)
+        _settings = StateObject(wrappedValue: appSettings)
+        _profileManager = StateObject(wrappedValue: profMgr)
     }
     
     var body: some Scene {
@@ -31,11 +40,17 @@ struct FastTrackApp: App {
                     RootView()
                         .environmentObject(locationManager)
                         .environmentObject(driveManager)
+                        .environmentObject(authManager)
+                        .environmentObject(settings)
+                        .environmentObject(profileManager)
                 }
 #else
                 RootView()
                     .environmentObject(locationManager)
                     .environmentObject(driveManager)
+                    .environmentObject(authManager)
+                    .environmentObject(settings)
+                    .environmentObject(profileManager)
 #endif
             }
         }
@@ -45,9 +60,9 @@ struct FastTrackApp: App {
 struct RootView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
-    @ObservedObject private var authManager = AuthManager.shared
-    @ObservedObject private var settings = AppSettings.shared
-    @ObservedObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var settings: AppSettings
+    @EnvironmentObject var profileManager: ProfileManager
     @State private var isInitializing = true
     @State private var selectedTab = 0
     @State private var showingProfileSetup = false
@@ -70,9 +85,9 @@ struct RootView: View {
         .task {
             if authManager.isAuthenticated {
                 do {
-                    try await AuthManager.shared.refreshTokenIfNeeded()
+                    try await authManager.refreshTokenIfNeeded()
                 } catch {
-                    AuthManager.shared.signOut()
+                    authManager.signOut()
                 }
             }
             // Small minimum display time so the splash doesn't flash on fast devices

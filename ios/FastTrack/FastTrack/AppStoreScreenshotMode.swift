@@ -49,6 +49,9 @@ struct AppStoreScreenshotRootView: View {
         }
             .environmentObject(locationManager)
             .environmentObject(driveManager)
+            .environmentObject(AuthManager.shared)
+            .environmentObject(ProfileManager.shared)
+            .environmentObject(AppSettings.shared)
             .environment(\.colorScheme, .dark)
             .preferredColorScheme(.dark)
     }
@@ -66,7 +69,6 @@ struct AppStoreScreenshotRootView: View {
             ProfileView()
         case .signin:
             SignInView()
-                .environmentObject(AuthManager.shared)
         case .leaderboard:
             AppStoreLeaderboardScreenshotView()
         case .driveoverview:
