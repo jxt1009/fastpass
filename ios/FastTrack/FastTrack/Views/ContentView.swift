@@ -30,14 +30,9 @@ struct ContentView: View {
 
                 // Placeholder content when idle
                 if !driveManager.isRecording {
-                    VStack(spacing: Spacing.sm) {
-                        Image(systemName: "map.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray.opacity(0.6))
-                        Text("Start a drive to see map")
-                            .foregroundColor(.gray)
-                            .font(.headline)
-                    }
+                    Text("Start a drive to see map")
+                        .foregroundColor(.gray)
+                        .font(.headline)
                 }
 
                 // Instrument cluster overlay
@@ -98,6 +93,12 @@ struct ContentView: View {
                         .font(.title2)
                         .foregroundStyle(.secondary)
                 }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.sm)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.ftCardBg.opacity(0.9))
+                )
             }
 
             if driveManager.isRecording {
