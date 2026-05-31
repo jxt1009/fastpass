@@ -207,37 +207,37 @@ jobs:
       - name: Read marketing version
         id: version
         env:
-          INPUT_VERSION: ${{ inputs.version }}
+         INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ -n "$INPUT_VERSION" ]; then
-            echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
-          elif [ -f FastTrack/IOS_VERSION ]; then
-            echo "version=$(cat FastTrack/IOS_VERSION)" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-          fi
+         if [ -n "$INPUT_VERSION" ]; then
+           echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
+         elif [ -f FastTrack/IOS_VERSION ]; then
+           echo "version=$(cat FastTrack/IOS_VERSION)" >> $GITHUB_OUTPUT
+         else
+           echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+         fi
 
       - name: Fetch release notes for TestFlight
         env:
-          GH_TOKEN: ${{ github.token }}
+         GH_TOKEN: ${{ github.token }}
         run: |
-          for i in $(seq 1 10); do
-            notes=$(gh release view "$GITHUB_REF_NAME" --json body --jq '.body' 2>/dev/null || true)
-            if [ -n "$notes" ]; then
-              truncated="${notes:0:4000}"
-              {
-                echo "FL_WHATS_NEW<<EOF"
-                printf '%s' "$truncated"
-                echo ""
-                echo "EOF"
-              } >> "$GITHUB_ENV"
-              echo "Fetched release notes (${#truncated} chars)"
-              exit 0
-            fi
-            echo "Release not yet available, retrying in 2s (attempt $i/10)..."
-            sleep 2
-          done
-          echo "::warning::Release notes not found for $GITHUB_REF_NAME; TestFlight 'What to Test' will be empty."
+         for i in $(seq 1 10); do
+           notes=$(gh release view "$GITHUB_REF_NAME" --json body --jq '.body' 2>/dev/null || true)
+           if [ -n "$notes" ]; then
+             truncated="${notes:0:4000}"
+             {
+               echo "FL_WHATS_NEW<<EOF"
+               printf '%s' "$truncated"
+               echo ""
+               echo "EOF"
+             } >> "$GITHUB_ENV"
+             echo "Fetched release notes (${#truncated} chars)"
+             exit 0
+           fi
+           echo "Release not yet available, retrying in 2s (attempt $i/10)..."
+           sleep 2
+         done
+         echo "::warning::Release notes not found for $GITHUB_REF_NAME; TestFlight 'What to Test' will be empty."
 
       - name: Run Fastlane beta
         env:
