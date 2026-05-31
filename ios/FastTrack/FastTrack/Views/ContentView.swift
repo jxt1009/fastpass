@@ -44,8 +44,12 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 60)
 
-                    speedSection
-                        .padding(.top, Spacing.xl)
+                    HStack(spacing: 0) {
+                        speedSection
+                            .padding(.top, Spacing.xl)
+                            .padding(.leading, Spacing.md)
+                        Spacer()
+                    }
 
                     Spacer()
 
