@@ -60,38 +60,38 @@ fasttrack-postgres-backup-pvc    10GB  /data/fasttrack/backups
 
 ### Manual backup
 ```bash
-./backup-restore.sh backup
+./scripts/backup-restore.sh backup
 ```
 
 ### List backups
 ```bash
-./backup-restore.sh list
+./scripts/backup-restore.sh list
 ```
 
 ### Restore from backup (overwrites current data!)
 ```bash
-./backup-restore.sh restore fasttrack_backup_YYYYMMDD_HHMMSS.sql.gz
+./scripts/backup-restore.sh restore fasttrack_backup_YYYYMMDD_HHMMSS.sql.gz
 ```
 
 ### Download backup to local machine
 ```bash
-./backup-restore.sh download fasttrack_backup_YYYYMMDD_HHMMSS.sql.gz
+./scripts/backup-restore.sh download fasttrack_backup_YYYYMMDD_HHMMSS.sql.gz
 ```
 
 ### Upload local backup to server
 ```bash
-./backup-restore.sh upload my_local_backup.sql.gz
-./backup-restore.sh restore my_local_backup.sql.gz
+./scripts/backup-restore.sh upload my_local_backup.sql.gz
+./scripts/backup-restore.sh restore my_local_backup.sql.gz
 ```
 
 ### Test database connection
 ```bash
-./backup-restore.sh test
+./scripts/backup-restore.sh test
 ```
 
 ### Clean backups older than 30 days
 ```bash
-./backup-restore.sh clean
+./scripts/backup-restore.sh clean
 ```
 
 ---
@@ -189,7 +189,7 @@ kubectl get pvc fasttrack-postgres-pvc -w  # watch for resize
 
 ```bash
 # 1. Backup
-./backup-restore.sh backup && ./backup-restore.sh download <file>
+./scripts/backup-restore.sh backup && ./scripts/backup-restore.sh download <file>
 
 # 2. Restore to external host
 gunzip -c <file> | psql -h EXTERNAL_HOST -U USER -d fasttrack
@@ -233,6 +233,6 @@ kubectl get secret fasttrack-secrets -o jsonpath='{.data.database-url}' | base64
 ### Out of disk space
 ```bash
 kubectl exec -it deployment/fasttrack-postgres -- df -h
-./backup-restore.sh clean
+./scripts/backup-restore.sh clean
 # Then expand PVC if needed
 ```

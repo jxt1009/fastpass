@@ -1,0 +1,8 @@
+# Default ownership
+* @jxt1009
+
+# Service ownership
+/backend/ @jxt1009
+/ios/ @jxt1009
+/.github/workflows/ @jxt1009
+/docs/ @jxt1009
