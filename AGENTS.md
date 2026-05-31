@@ -2,17 +2,25 @@
 
 ## 1. Always use a git worktree
 
-Before starting any work, create a dedicated git worktree for the feature/fix branch:
+Before starting any work, create a dedicated git worktree inside the repo's
+`.worktree/` directory for the feature/fix branch:
 
 ```bash
-git worktree add ../fasttrack-<branch-name> <base-branch>
+git worktree add .worktree/<branch-name> main
 ```
 
-Work in the worktree directory, commit there, and push from there. Remove the worktree after the PR is merged.
-
-Before pushing, always rebase the branch onto `main` (or the target base branch) to keep history linear:
+Work in the worktree directory (`.worktree/<branch-name>/`), commit there, and
+push from there. Remove the worktree after the PR is merged:
 
 ```bash
+git worktree remove .worktree/<branch-name>
+```
+
+Before pushing, always rebase the branch onto `main` (or the target base
+branch) to keep history linear:
+
+```bash
+cd .worktree/<branch-name>
 git rebase main
 ```
 
