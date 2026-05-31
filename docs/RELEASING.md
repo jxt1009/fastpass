@@ -83,6 +83,13 @@ For local development, prefer Keychain-backed secrets over plaintext `.env.fastl
 
 Merge the release PR to trigger automatic TestFlight upload. The release PR creates the version tag, and the [ios-release workflow](../.github/workflows/ios-release.yml) runs `fastlane beta` automatically for stable `v*` tags.
 
+**Marketing version strategy:**
+The iOS marketing version is decoupled from the git tag and stored in [`ios/FastTrack/FastTrack/IOS_VERSION`](../ios/FastTrack/FastTrack/IOS_VERSION). This allows multiple TestFlight builds under the same marketing version (e.g., `0.4.1`).
+
+- **When to bump `IOS_VERSION`:** Only when you want to start a new Beta App Review cycle. After the first build under a marketing version clears Apple's Beta App Review, all subsequent builds with the same version skip the review queue (~10-15 min instead of 8-24 hours).
+- **Tag-triggered releases** (push `v*` tag): Use the version in `IOS_VERSION` file.
+- **Manual TestFlight upload** (workflow_dispatch on `main` branch): Can override the version via manual input, or leave empty to use the `IOS_VERSION` file.
+
 ### Manual TestFlight upload (local)
 ```sh
 cd ios/FastTrack

@@ -4,11 +4,19 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Marketing version (leave empty to use IOS_VERSION file)'
+        required: false
+        type: string
 
 jobs:
   testflight:
     name: Upload to TestFlight
-    if: ${{ !contains(github.ref_name, '-') }}
+    if: |
+      (github.event_name == 'push' && !contains(github.ref_name, '-')) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: macos-26
     env:
       FASTTRACK_APP_IDENTIFIER: com.toper.FastTrack
@@ -196,9 +204,18 @@ jobs:
 
           echo "APP_STORE_CONNECT_API_KEY_PATH=$key_path" >> "$GITHUB_ENV"
 
-      - name: Extract version from tag
+      - name: Read marketing version
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
+          elif [ -f FastTrack/IOS_VERSION ]; then
+            echo "version=$(cat FastTrack/IOS_VERSION)" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Fetch release notes for TestFlight
         env:
