@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct FastTrackApp: App {
-    @StateObject private var locationManager = LocationManager()
+    @StateObject private var locationManager: LocationManager
     @StateObject private var driveManager: DriveManager
     @StateObject private var authManager: AuthManager
     @StateObject private var settings: AppSettings
