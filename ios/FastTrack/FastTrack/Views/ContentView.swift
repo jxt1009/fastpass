@@ -266,8 +266,8 @@ struct LiveMapView: View {
             Annotation("", coordinate: userLocation) {
                 ZStack {
                     Circle()
-                        .fill(Color.blue.opacity(0.3))
-                        .frame(width: 32, height: 32)
+                        .stroke(.white, lineWidth: 3)
+                        .frame(width: 22, height: 22)
                     Circle()
                         .fill(Color.blue)
                         .frame(width: 16, height: 16)
@@ -276,19 +276,14 @@ struct LiveMapView: View {
 
             if routeCoordinates.count > 1 {
                 MapPolyline(coordinates: routeCoordinates)
-                    .stroke(Color.blue, lineWidth: 4)
+                    .stroke(Color.ftAmber, lineWidth: 4)
             }
 
             if let first = routeCoordinates.first {
                 Annotation("", coordinate: first) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 20, height: 20)
-                        Image(systemName: "flag.fill")
-                            .foregroundColor(.white)
-                            .font(.system(size: 10))
-                    }
+                    Image(systemName: "flag.checkered")
+                        .foregroundColor(.ftGreen)
+                        .font(.system(size: 18, weight: .bold))
                 }
             }
         }

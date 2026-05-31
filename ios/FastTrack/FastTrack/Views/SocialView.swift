@@ -40,9 +40,6 @@ struct SocialView: View {
             }
             .task(id: queryKey) { await loadLeaderboard() }
             .refreshable { await loadLeaderboard() }
-            .onChange(of: selectedCategory) { _, _ in
-                entries = []
-            }
             // Tap anywhere outside the filter to dismiss keyboard,
             // using simultaneousGesture so NavigationLinks still work
             .simultaneousGesture(

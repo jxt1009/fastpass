@@ -13,7 +13,7 @@ private struct TurnPreferenceBar: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Turn Preference")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 GeometryReader { geo in
                     HStack(spacing: 2) {
                         Rectangle()
@@ -30,10 +30,10 @@ private struct TurnPreferenceBar: View {
                         .font(.subheadline).fontWeight(.semibold)
                         .foregroundColor(.blue)
                     Text("Left")
-                        .font(.caption).foregroundColor(Color(white: 0.5))
+                        .font(.caption).foregroundColor(.secondary)
                     Spacer()
                     Text("Right")
-                        .font(.caption).foregroundColor(Color(white: 0.5))
+                        .font(.caption).foregroundColor(.secondary)
                     Text("\(rightPct)%")
                         .font(.subheadline).fontWeight(.semibold)
                         .foregroundColor(.pink)
@@ -65,7 +65,7 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                Color.ftSurfaceBg.ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
@@ -96,15 +96,14 @@ struct ProfileView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.black, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingSetup = true
                     } label: {
                         Image(systemName: "pencil.circle")
-                            .foregroundColor(.white)
+                            .foregroundColor(.ftBlue)
                     }
                 }
             }
@@ -169,7 +168,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(profileManager.profile?.username ?? "Set up profile")
                         .font(.title3).fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     let subtitle = [
                         profileManager.profile?.country,
                         profileManager.profile.flatMap { p in
@@ -179,17 +178,17 @@ struct ProfileView: View {
                     if !subtitle.isEmpty {
                         Text(subtitle)
                             .font(.caption)
-                            .foregroundColor(Color(white: 0.55))
+                            .foregroundColor(.secondary)
                     }
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(Int(settings.speedValue(locationManager.currentSpeed)))")
                         .font(.title2).fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     Text(settings.speedUnit)
                         .font(.caption2)
-                        .foregroundColor(Color(white: 0.5))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -226,7 +225,7 @@ struct ProfileView: View {
                 Text("Garage")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Spacer()
                 Button {
                     showingAddCar = true
@@ -253,10 +252,10 @@ struct ProfileView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "car")
                             .font(.title2)
-                            .foregroundColor(Color(white: 0.5))
+                            .foregroundColor(.secondary)
                         Text("No cars in garage")
                             .font(.subheadline)
-                            .foregroundColor(Color(white: 0.6))
+                            .foregroundColor(.secondary)
                         Button("Add Your First Car") {
                             showingAddCar = true
                         }
@@ -311,14 +310,14 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Top Speed")
                         .font(.caption)
-                        .foregroundColor(Color(white: 0.55))
+                        .foregroundColor(.secondary)
                     HStack(alignment: .lastTextBaseline, spacing: 4) {
                         Text(String(format: "%.0f", settings.speedValue(stats.topSpeed)))
                             .font(.largeTitle).fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Text(settings.speedUnit)
                             .font(.subheadline)
-                            .foregroundColor(Color(white: 0.5))
+                            .foregroundColor(.secondary)
                     }
                 }
                 Spacer()
@@ -337,24 +336,24 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Best 0-60 \(settings.speedUnit) time")
                         .font(.caption)
-                        .foregroundColor(Color(white: 0.55))
+                        .foregroundColor(.secondary)
                     if let t = stats.best060Time {
                         HStack(alignment: .lastTextBaseline, spacing: 4) {
                             Text(String(format: "%.2f", t))
                                 .font(.largeTitle).fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Text("sec")
                                 .font(.subheadline)
-                                .foregroundColor(Color(white: 0.5))
+                                .foregroundColor(.secondary)
                         }
                     } else {
                         Text("—")
                             .font(.largeTitle).fontWeight(.bold)
-                            .foregroundColor(Color(white: 0.4))
+                            .foregroundColor(.secondary)
                     }
                 }
                 Spacer()
-                StatInfoButton(entry: StatInfo.zeroToSixty).colorScheme(.dark)
+                StatInfoButton(entry: StatInfo.zeroToSixty)
             }
         }
     }
@@ -430,7 +429,7 @@ struct ProfileView: View {
                 label: "Total Trips", value: "\(stats.totalTrips)", unit: ""
             )
             InstrumentStatCell(
-                icon: "stop.circle.fill", iconColor: Color(white: 0.6),
+                icon: "stop.circle.fill", iconColor: .secondary,
                 label: "Total Stops", value: "\(stats.totalStops)", unit: ""
             )
             InstrumentStatCell(
@@ -464,10 +463,10 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Public Profile")
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Text("Appear on leaderboards and let others view your stats")
                             .font(.caption)
-                            .foregroundColor(Color(white: 0.55))
+                            .foregroundColor(.secondary)
                     }
                 }
                 .tint(.blue)
@@ -486,17 +485,17 @@ struct ProfileView: View {
                         Image(systemName: "trophy.fill").foregroundColor(.yellow)
                         VStack(alignment: .leading, spacing: 1) {
                             Text("\(achievementManager.unlockedAchievements.count)")
-                                .font(.title3).fontWeight(.bold).foregroundColor(.white)
-                            Text("Unlocked").font(.caption).foregroundColor(Color(white: 0.55))
+                                .font(.title3).fontWeight(.bold).foregroundColor(.primary)
+                            Text("Unlocked").font(.caption).foregroundColor(.secondary)
                         }
                     }
-                    Divider().background(Color(white: 0.3)).frame(height: 32)
+                    Divider().frame(height: 32)
                     HStack(spacing: 6) {
                         Image(systemName: "chart.bar.fill").foregroundColor(.blue)
                         VStack(alignment: .leading, spacing: 1) {
                             Text("\(achievementManager.achievements.count)")
-                                .font(.title3).fontWeight(.bold).foregroundColor(.white)
-                            Text("Total").font(.caption).foregroundColor(Color(white: 0.55))
+                                .font(.title3).fontWeight(.bold).foregroundColor(.primary)
+                            Text("Total").font(.caption).foregroundColor(.secondary)
                         }
                     }
                     Spacer()
@@ -510,7 +509,7 @@ struct ProfileView: View {
                 // Most recent unlocked achievements (up to 3)
                 let recent = achievementManager.unlockedAchievements.prefix(3)
                 if !recent.isEmpty {
-                    Divider().background(Color(white: 0.25))
+                    Divider()
                     VStack(spacing: 8) {
                         ForEach(recent) { achievement in
                             HStack(spacing: 10) {
@@ -518,12 +517,12 @@ struct ProfileView: View {
                                     .font(.title3)
                                     .foregroundColor(achievement.category.color)
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(achievement.title)
-                                        .font(.subheadline).fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                    Text(achievement.description)
-                                        .font(.caption)
-                                        .foregroundColor(Color(white: 0.55))
+                                Text(achievement.title)
+                                    .font(.subheadline).fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                                Text(achievement.description)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                                         .lineLimit(1)
                                 }
                                 Spacer()
@@ -549,15 +548,15 @@ struct ProfileView: View {
                             .frame(width: 20)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Keep Screen On While Recording")
-                                .font(.subheadline).foregroundColor(.white)
+                                .font(.subheadline).foregroundColor(.primary)
                             Text("Prevents sleep during active drives")
-                                .font(.caption).foregroundColor(Color(white: 0.55))
+                                .font(.caption).foregroundColor(.secondary)
                         }
                     }
                 }
                 .tint(.blue)
 
-                Divider().background(Color(white: 0.25)).padding(.vertical, 12)
+                Divider().padding(.vertical, 12)
 
                 // Unit System
                 VStack(alignment: .leading, spacing: 8) {
@@ -565,7 +564,7 @@ struct ProfileView: View {
                         Image(systemName: "ruler.fill")
                             .foregroundColor(.orange)
                             .frame(width: 20)
-                        Text("Units").font(.subheadline).foregroundColor(.white)
+                        Text("Units").font(.subheadline).foregroundColor(.primary)
                     }
                     Picker("Unit System", selection: $settings.unitSystem) {
                         ForEach(UnitSystem.allCases) { system in
@@ -573,10 +572,9 @@ struct ProfileView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .colorScheme(.dark)
                 }
 
-                Divider().background(Color(white: 0.25)).padding(.vertical, 12)
+                Divider().padding(.vertical, 12)
 
                 // Appearance
                 VStack(alignment: .leading, spacing: 8) {
@@ -584,7 +582,7 @@ struct ProfileView: View {
                         Image(systemName: "circle.lefthalf.filled")
                             .foregroundColor(.purple)
                             .frame(width: 20)
-                        Text("Appearance").font(.subheadline).foregroundColor(.white)
+                        Text("Appearance").font(.subheadline).foregroundColor(.primary)
                     }
                     Picker("Color Scheme", selection: $settings.preferredColorScheme) {
                         ForEach(AppColorScheme.allCases) { scheme in
@@ -592,7 +590,6 @@ struct ProfileView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .colorScheme(.dark)
                 }
             }
         }
@@ -615,7 +612,7 @@ struct ProfileView: View {
             .foregroundColor(.red)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(red: 0.17, green: 0.17, blue: 0.18))
+            .background(Color(.systemGray6))
             .cornerRadius(12)
         }
         .disabled(isDeletingAccount)
@@ -631,7 +628,7 @@ struct ProfileView: View {
                 .foregroundColor(.red)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color(red: 0.17, green: 0.17, blue: 0.18))
+                .background(Color(.systemGray6))
                 .cornerRadius(12)
         }
         .padding(.top, 8)
@@ -703,10 +700,10 @@ struct CarGarageCard: View {
                         Text(car.shortDisplay)
                             .font(.headline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Text(car.displayString)
                             .font(.subheadline)
-                            .foregroundColor(Color(white: 0.7))
+                            .foregroundColor(.secondary)
                     }
                     Spacer()
                     
@@ -734,14 +731,13 @@ struct CarGarageCard: View {
                 // Stats section (collapsible)
                 if showingStats {
                     Divider()
-                        .background(Color(white: 0.3))
                     
                     if let stats = carStats {
                         CarStatsRow(stats: stats)
                     } else {
                         Text("No driving data yet")
                             .font(.caption)
-                            .foregroundColor(Color(white: 0.5))
+                            .foregroundColor(.secondary)
                             .padding(.vertical, 4)
                     }
                 }
@@ -781,10 +777,10 @@ struct StatMini: View {
             Text(value)
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text(title)
                 .font(.caption2)
-                .foregroundColor(Color(white: 0.6))
+                .foregroundColor(.secondary)
         }
     }
 }

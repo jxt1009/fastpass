@@ -367,7 +367,7 @@ struct InstrumentStatCell: View {
                 HStack {
                     Image(systemName: icon).foregroundColor(iconColor).font(.title3)
                     Spacer()
-                    if let info { StatInfoButton(entry: info).colorScheme(.dark) }
+                    if let info { StatInfoButton(entry: info) }
                 }
                 Text(label).font(.caption).foregroundColor(.secondary)
                 HStack(alignment: .lastTextBaseline, spacing: 3) {
