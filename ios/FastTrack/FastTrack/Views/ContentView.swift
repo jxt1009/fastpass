@@ -85,13 +85,13 @@ struct ContentView: View {
                     Text(settings.speedUnit.uppercased())
                         .font(.title2)
                         .foregroundStyle(.secondary)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.ftCardBg.opacity(0.9))
+                        )
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.ftCardBg.opacity(0.9))
-                )
             }
 
             if driveManager.isRecording {
