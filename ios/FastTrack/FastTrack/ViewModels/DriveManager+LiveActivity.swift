@@ -5,7 +5,7 @@ extension DriveManager {
 
     // MARK: - Live Activity
 
-    func startLiveActivity() {
+    internal func startLiveActivity() {
         guard ActivityAuthorizationInfo().areActivitiesEnabled,
               let startDate = recordingStartTime else { return }
         let attrs = DriveActivityAttributes(startDate: startDate)
@@ -24,7 +24,7 @@ extension DriveManager {
         }
     }
 
-    func updateLiveActivity(speedMph: Double, distanceMiles: Double) {
+    internal func updateLiveActivity(speedMph: Double, distanceMiles: Double) {
         guard let activity = liveActivity else { return }
         let state = DriveActivityAttributes.DriveActivityState(
             speedMph: speedMph,
@@ -38,7 +38,7 @@ extension DriveManager {
         }
     }
 
-    func endLiveActivity() {
+    internal func endLiveActivity() {
         guard let activity = liveActivity else { return }
         let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0, maxSpeedMph: 0)
         let content = ActivityContent(state: state, staleDate: Date())

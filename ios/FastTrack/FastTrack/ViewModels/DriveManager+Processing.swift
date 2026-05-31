@@ -5,7 +5,7 @@ extension DriveManager {
 
     // MARK: - Location processing
 
-    func processLocation(_ location: CLLocation) {
+    internal func processLocation(_ location: CLLocation) {
         // Skip very old locations (more than 5 seconds old)
         let age = abs(location.timestamp.timeIntervalSinceNow)
         if age > 5.0 {

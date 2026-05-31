@@ -17,11 +17,11 @@
 ## Phase 3 — iOS maintainability
 
 - [x] Reduce singleton usage with clearer dependency injection boundaries.
-- [ ] Split oversized managers/views into smaller feature-owned components.
+- [x] Split oversized managers/views into smaller feature-owned components.
 - [x] Establish consistent app-state ownership for auth/profile/drive/settings flows.
 
 ## Phase 4 — Workflow and quality polish
 
-- [ ] Extract repeated backend deploy workflow logic into reusable actions/workflows.
-- [ ] Add workflow/docs/config quality checks in CI.
-- [ ] Formalize repository standards/ADRs for structural changes and debt tracking.
+- [x] Extract repeated backend deploy workflow logic into reusable actions/workflows.
+- [x] Add workflow/docs/config quality checks in CI.
+- [x] Formalize repository standards/ADRs for structural changes and debt tracking.
