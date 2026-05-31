@@ -5,10 +5,10 @@ import Combine
 struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
     @State private var showingCarPicker = false
     @State private var showingSafetyDisclaimer = false
-    @ObservedObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var profileManager: ProfileManager
 
     private let hasAcceptedSafetyKey = "hasAcceptedSafetyDisclaimer"
 
@@ -306,4 +306,6 @@ struct LiveMapView: View {
     ContentView()
         .environmentObject(LocationManager.preview())
         .environmentObject(DriveManager.preview())
+        .environmentObject(AppSettings.shared)
+        .environmentObject(ProfileManager.shared)
 }

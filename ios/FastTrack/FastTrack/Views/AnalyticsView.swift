@@ -3,7 +3,7 @@ import Charts
 
 struct AnalyticsView: View {
     @EnvironmentObject var driveManager: DriveManager
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
     @State private var selectedTimeFrame: TimeFrame = .month
     @State private var selectedMetric: AnalyticsMetric = .speed
     @State private var showingDetailSheet = false

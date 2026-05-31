@@ -16,9 +16,9 @@
 
 ## Phase 3 — iOS maintainability
 
-- [ ] Reduce singleton usage with clearer dependency injection boundaries.
+- [x] Reduce singleton usage with clearer dependency injection boundaries.
 - [ ] Split oversized managers/views into smaller feature-owned components.
-- [ ] Establish consistent app-state ownership for auth/profile/drive/settings flows.
+- [x] Establish consistent app-state ownership for auth/profile/drive/settings flows.
 
 ## Phase 4 — Workflow and quality polish
 

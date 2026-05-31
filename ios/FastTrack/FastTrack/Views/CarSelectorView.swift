@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CarSelectorView: View {
-    @ObservedObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var profileManager: ProfileManager
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddCar = false
     
@@ -63,7 +63,7 @@ struct CarSelectorView: View {
 }
 
 struct AddCarView: View {
-    @ObservedObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var profileManager: ProfileManager
     @Environment(\.dismiss) private var dismiss
     @State private var carSelection = CarSelection()
     @State private var nickname = ""
@@ -133,4 +133,5 @@ struct AddCarView: View {
 
 #Preview {
     CarSelectorView()
+        .environmentObject(ProfileManager.shared)
 }

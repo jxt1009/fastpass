@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
 
     var body: some View {
         List {
@@ -132,5 +132,6 @@ private struct SpeedometerCalibrationRow: View {
 #Preview {
     NavigationStack {
         SettingsView()
+            .environmentObject(AppSettings.shared)
     }
 }

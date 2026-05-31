@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SocialView: View {
-    @ObservedObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var profileManager: ProfileManager
 
     @State private var entries: [LeaderboardEntry] = []
     @State private var isLoading = false
@@ -319,4 +319,5 @@ private struct LeaderboardRow: View {
 
 #Preview {
     SocialView()
+        .environmentObject(ProfileManager.shared)
 }
