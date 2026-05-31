@@ -16,7 +16,7 @@ func configureLogging() {
 
 func initDatabase() {
 	// Database connection — DATABASE_URL must be set (no insecure fallback).
-	// Example (with SSL): host=db user=postgres ****** dbname=triprank port=5432 sslmode=require
+	// Example (with SSL): host=db user=postgres ****** dbname=fasttrack port=5432 sslmode=require
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		slog.Error("DATABASE_URL environment variable is required")
