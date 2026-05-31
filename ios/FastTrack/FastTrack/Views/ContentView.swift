@@ -32,12 +32,9 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 60)
 
-                    HStack(spacing: 0) {
-                        speedSection
-                            .padding(.top, Spacing.xl)
-                            .padding(.leading, Spacing.md)
-                        Spacer()
-                    }
+                    speedSection
+                        .padding(.top, Spacing.xl)
+                        .frame(maxWidth: .infinity)
 
                     Spacer()
 
@@ -72,37 +69,30 @@ struct ContentView: View {
 
     private var speedSection: some View {
         VStack(spacing: Spacing.sm) {
-            ZStack {
-                GaugeArc()
-                    .stroke(SpeedColor.color(for: locationManager.currentSpeed),
-                            style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                    .frame(width: 260, height: 260)
+            VStack(spacing: 2) {
+                Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
+                    .font(.system(size: 100, weight: .bold, design: .monospaced))
+                    .foregroundColor(SpeedColor.color(for: locationManager.currentSpeed))
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.2),
+                               value: Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))
 
-                VStack(spacing: 2) {
-                    Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
-                        .font(.system(size: 100, weight: .bold, design: .monospaced))
-                        .foregroundColor(SpeedColor.color(for: locationManager.currentSpeed))
-                        .contentTransition(.numericText())
-                        .animation(.easeInOut(duration: 0.2),
-                                   value: Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))
-
-                    Text(settings.speedUnit.uppercased())
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, Spacing.sm)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.ftCardBg.opacity(0.9))
-                        )
-                }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.ftCardBg.opacity(0.9))
-                )
+                Text(settings.speedUnit.uppercased())
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.ftCardBg.opacity(0.9))
+                    )
             }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.ftCardBg.opacity(0.9))
+            )
 
             if driveManager.isRecording {
                 HStack(spacing: 4) {
