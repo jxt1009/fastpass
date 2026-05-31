@@ -142,9 +142,11 @@ if kubectl get secret fasttrack-secrets -n $NAMESPACE &>/dev/null; then
         fi
         
         if [ ! -z "$DB_PASSWORD" ]; then
+            POSTGRES_USER="${POSTGRES_USER:-fasttrack}"
+            POSTGRES_SERVICE="${POSTGRES_SERVICE:-fasttrack-postgres-service}"
             kubectl delete secret fasttrack-secrets -n $NAMESPACE
             kubectl create secret generic fasttrack-secrets -n $NAMESPACE \
-                --from-literal=database-url="host=${POSTGRES_SERVICE:-postgres-service} user=postgres password=$DB_PASSWORD dbname=fasttrack port=5432 sslmode=disable" \
+                --from-literal=database-url="host=$POSTGRES_SERVICE user=$POSTGRES_USER password=$DB_PASSWORD dbname=fasttrack port=5432 sslmode=disable" \
                 --from-literal=jwt-secret="$jwt_secret"
             echo -e "${GREEN}✓ Secret updated${NC}"
         else
@@ -180,9 +182,9 @@ echo ""
 echo -e "${BLUE}→ Deploying to Kubernetes...${NC}"
 
 # Apply manifests
-kubectl apply -f "$K8S_DIR/service.yaml"
-kubectl apply -f "$K8S_DIR/deployment.yaml"
-kubectl apply -f "$K8S_DIR/ingress.yaml"
+kubectl apply -n $NAMESPACE -f "$K8S_DIR/base/service.yaml"
+kubectl apply -n $NAMESPACE -f "$K8S_DIR/base/deployment.yaml"
+kubectl apply -n $NAMESPACE -f "$K8S_DIR/base/ingress.yaml"
 
 echo -e "${GREEN}✓ Kubernetes manifests applied${NC}"
 echo ""

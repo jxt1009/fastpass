@@ -133,15 +133,19 @@ echo ""
 echo -e "${BLUE}→ Deploying to Kubernetes...${NC}"
 
 # Copy K8s manifests to server
-scp "$BACKEND_DIR"/k8s/*.yaml $SERVER:/tmp/
+REMOTE_MANIFEST_DIR="/tmp/fasttrack-k8s"
+ssh $SERVER "mkdir -p $REMOTE_MANIFEST_DIR"
+scp "$BACKEND_DIR"/k8s/base/service.yaml $SERVER:$REMOTE_MANIFEST_DIR/
+scp "$BACKEND_DIR"/k8s/base/deployment.yaml $SERVER:$REMOTE_MANIFEST_DIR/
+scp "$BACKEND_DIR"/k8s/base/ingress.yaml $SERVER:$REMOTE_MANIFEST_DIR/
 
 # Apply manifests
-ssh $SERVER "kubectl apply -f /tmp/service.yaml"
-ssh $SERVER "kubectl apply -f /tmp/deployment.yaml"
-ssh $SERVER "kubectl apply -f /tmp/ingress.yaml"
+ssh $SERVER "kubectl apply -n $NAMESPACE -f $REMOTE_MANIFEST_DIR/service.yaml"
+ssh $SERVER "kubectl apply -n $NAMESPACE -f $REMOTE_MANIFEST_DIR/deployment.yaml"
+ssh $SERVER "kubectl apply -n $NAMESPACE -f $REMOTE_MANIFEST_DIR/ingress.yaml"
 
 # Clean up
-ssh $SERVER "rm /tmp/*.yaml"
+ssh $SERVER "rm -rf $REMOTE_MANIFEST_DIR"
 
 echo -e "${GREEN}✓ Kubernetes manifests applied${NC}"
 echo ""
