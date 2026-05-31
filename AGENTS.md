@@ -32,3 +32,9 @@ Format:
 ## 3. Opening PRs
 
 After pushing a branch, always create a PR with `gh pr create` and populate both the title and body. The title should mirror the conventional commit style. The body should summarize what changed and why.
+
+## 4. Planning artifacts in repo
+
+For any multi-step implementation (feature work, refactors, or non-trivial fixes), create and maintain a plan in `docs/plans/` using a date-prefixed filename (for example `2026-05-31-testflight-release-notes.md`).
+
+Treat these plans as version-controlled project artifacts: keep them in-repo, update them at major milestones, and avoid keeping substantive implementation plans only in ephemeral session files.

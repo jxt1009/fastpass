@@ -93,6 +93,11 @@ If a commit with an invalid conventional commit message (e.g. header > 100 chars
 4. Re-apply the original changes and commit with a valid conventional message (≤ 100 chars).
 5. Push the branch and open a PR. **Use squash merge** when merging the fix PR.
 
+## Planning workflow
+
+- For multi-step implementation work, create and maintain a plan under `docs/plans/` with a date-prefixed filename (for example `2026-05-31-testflight-release-notes.md`).
+- Treat plans as version-controlled project artifacts: update them at major milestones and keep the canonical plan in the repository (not only in ephemeral session files).
+
 ## Key conventions
 
 - The backend JSON contract is snake_case, and the iOS models mirror it with explicit `CodingKeys`. When adding or renaming API fields, update both sides together.
