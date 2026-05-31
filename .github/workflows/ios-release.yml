@@ -14,7 +14,9 @@ on:
 jobs:
   testflight:
     name: Upload to TestFlight
-    if: ${{ !contains(github.ref_name, '-') }}
+    if: |
+      (github.event_name == 'push' && !contains(github.ref_name, '-')) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: macos-26
     env:
       FASTTRACK_APP_IDENTIFIER: com.toper.FastTrack
@@ -204,9 +206,11 @@ jobs:
 
       - name: Read marketing version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          if [ -n "$INPUT_VERSION" ]; then
+            echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
           elif [ -f FastTrack/IOS_VERSION ]; then
             echo "version=$(cat FastTrack/IOS_VERSION)" >> $GITHUB_OUTPUT
           else
