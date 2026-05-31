@@ -33,7 +33,7 @@ cd backend
 export DATABASE_URL="host=localhost user=postgres dbname=fasttrack port=5432 sslmode=disable"
 export JWT_SECRET="$(openssl rand -base64 32)"
 export BASE_URL="http://localhost:8080"
-go run .
+go run ./cmd/server
 ```
 
 ### Deployment

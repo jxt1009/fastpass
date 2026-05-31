@@ -8,7 +8,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy source code and web assets
-COPY *.go ./
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
 COPY templates/ ./templates/
 COPY static/ ./static/
 
@@ -17,7 +18,7 @@ ARG VERSION=dev
 ARG COMMIT=unknown
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X main.buildVersion=${VERSION} -X main.buildCommit=${COMMIT}" \
-    -o /fasttrack
+    -o /fasttrack ./cmd/server
 
 # Runtime stage
 FROM alpine:latest
