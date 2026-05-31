@@ -121,7 +121,8 @@ A Personal Access Token (classic) or GitHub App token with permission to open re
 > **Where to add them:** In GitHub, go to **Settings → Environments**.
 > - Create two environments: `staging` and `production`
 > - Add `production` protection rules: restrict to `main` branch + add yourself as a required reviewer
-> - Add the secrets below to **both** environments (each environment needs its own copy — staging can point to a staging DB, production to the real one)
+> - Add the shared secrets below to **both** environments
+> - Add environment-specific secrets only to the matching environment
 
 **`KUBECONFIG`**
 Base64-encoded kubeconfig giving kubectl access to your cluster. Generate:
@@ -137,21 +138,26 @@ A random 64-character hex string used to sign JWTs. Generate one:
 openssl rand -hex 32
 ```
 
-**`DATABASE_URL`**
-Postgres connection string. For staging and production you'll want separate databases:
+**`STAGING_DATABASE_URL`** (`staging` environment)
+Postgres connection string for staging:
 ```
-# staging
-postgres://fasttrack:PASSWORD@localhost:5432/fasttrack_staging?sslmode=disable
-# production
-postgres://fasttrack:PASSWORD@localhost:5432/fasttrack?sslmode=disable
+host=staging-db user=fasttrack dbname=fasttrack_staging port=5432 sslmode=disable
+```
+
+**`PRODUCTION_DATABASE_URL`** (`production` environment)
+Postgres connection string for production:
+```
+host=production-db user=fasttrack dbname=fasttrack port=5432 sslmode=disable
 ```
 
 **`APPLE_APP_BUNDLE_ID`**
 Value: `com.toper.FastTrack`
 
-**`BASE_URL`**
-- Staging: `https://staging.fast.toper.dev`
-- Production: `https://fast.toper.dev`
+**`STAGING_BASE_URL`** (`staging` environment)
+Public backend URL for staging.
+
+**`PRODUCTION_BASE_URL`** (`production` environment)
+Public backend URL for production.
 
 ---
 
@@ -200,9 +206,11 @@ Paste the base64 output as the secret value.
 |--------|-------------|----------|--------|
 | `KUBECONFIG` | staging + production | backend-deploy | ✅ Set now |
 | `JWT_SECRET` | staging + production | backend-deploy | ✅ Set now |
-| `DATABASE_URL` | staging + production | backend-deploy | ✅ Set now (different DB per env) |
+| `STAGING_DATABASE_URL` | staging | backend-deploy | ✅ Set now |
+| `PRODUCTION_DATABASE_URL` | production | backend-deploy | ✅ Set now |
 | `APPLE_APP_BUNDLE_ID` | staging + production | backend-deploy | ✅ Set now (`com.toper.FastTrack`) |
-| `BASE_URL` | staging + production | backend-deploy | ✅ Set now (different URL per env) |
+| `STAGING_BASE_URL` | staging | backend-deploy | ✅ Set now |
+| `PRODUCTION_BASE_URL` | production | backend-deploy | ✅ Set now |
 | `RELEASE_PLEASE_TOKEN` | — | release-please | ✅ Set now |
 | `APP_STORE_CONNECT_KEY_ID` | — | ios-release | ⏳ After Developer approval |
 | `APP_STORE_CONNECT_ISSUER_ID` | — | ios-release | ⏳ After Developer approval |
