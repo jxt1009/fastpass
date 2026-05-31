@@ -35,6 +35,7 @@ jobs:
           config_data: |
             extends: default
             rules:
+              document-start: false
               line-length:
                 max: 160
                 level: warning
@@ -45,3 +46,5 @@ jobs:
               braces:
                 min-spaces-inside: 0
                 max-spaces-inside: 1
+              indentation:
+                indent-sequences: whatever

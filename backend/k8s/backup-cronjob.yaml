@@ -29,11 +29,11 @@ spec:
               pg_dump -h fasttrack-postgres-service -U fasttrack -d fasttrack > "$BACKUP_FILE"
               gzip "$BACKUP_FILE"
               echo "Backup completed: ${BACKUP_FILE}.gz"
-              
+
               # Keep only last 30 days of backups
               find /backups -name "fasttrack_backup_*.sql.gz" -mtime +30 -delete
               echo "Cleaned up old backups (>30 days)"
-              
+
               # List current backups
               ls -lh /backups/
             env:

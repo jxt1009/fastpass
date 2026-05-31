@@ -37,7 +37,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Backend status
-cd "$REPO_ROOT/backend"
+cd "$REPO_ROOT/backend" || exit
 if [ -f "triprank-api" ]; then
     echo "✅ Backend binary compiled"
 else
@@ -50,7 +50,7 @@ else
         exit 1
     fi
 fi
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit
 
 echo ""
 echo "🎯 Next Steps:"

@@ -4,7 +4,7 @@ echo "🎯 FastTrack Integration Checklist"
 echo "================================="
 echo ""
 
-cd "$(dirname "$0")/FastTrack"
+cd "$(dirname "$0")/FastTrack" || exit
 
 echo "✅ Swift Files (should be 8):"
 find . -name "*.swift" -type f | wc -l | xargs echo "   Found:"
