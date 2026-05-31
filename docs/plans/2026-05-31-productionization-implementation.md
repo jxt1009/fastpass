@@ -10,7 +10,7 @@
 
 ## Phase 2 — Backend architecture hardening
 
-- [ ] Introduce `cmd/` + `internal/` backend package layout.
+- [x] Introduce `cmd/` + `internal/` backend package layout.
 - [ ] Split monolithic backend responsibilities into domain-focused modules.
 - [ ] Replace startup `AutoMigrate`-driven schema changes with explicit versioned migrations.
 

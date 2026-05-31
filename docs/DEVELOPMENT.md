@@ -129,7 +129,7 @@ export JWT_SECRET="$(openssl rand -base64 32)"
 export APPLE_APP_BUNDLE_ID="com.toper.FastTrack"
 export BASE_URL="http://localhost:8080"
 
-go run .
+go run ./cmd/server
 ```
 
 ### Test endpoints
@@ -150,7 +150,7 @@ curl http://localhost:8080/api/v1/drives \
 ### Build
 ```bash
 cd backend
-go build -o fasttrack-api
+go build -o fasttrack-api ./cmd/server
 ./fasttrack-api
 ```
 

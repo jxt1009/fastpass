@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"log/slog"
@@ -12,13 +12,7 @@ import (
 
 var db *gorm.DB
 
-// Injected at build time via -ldflags
-var (
-	buildVersion = "dev"
-	buildCommit  = "unknown"
-)
-
-func main() {
+func Run(buildVersion, buildCommit string) {
 	var err error
 
 	// Structured JSON logging for Loki ingestion

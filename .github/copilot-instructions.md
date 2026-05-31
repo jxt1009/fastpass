@@ -20,7 +20,7 @@ go test ./... -v -timeout 60s
 go test ./... -run TestGenerateAndValidateJWT -v
 ```
 
-The backend runs against PostgreSQL in normal development, but the handler tests in `handlers_test.go` use in-memory SQLite. Use `backend/main.go` and the GitHub Actions workflow as the source of truth for runtime vs. test setup.
+The backend runs against PostgreSQL in normal development, but the handler tests in `internal/app/handlers_test.go` use in-memory SQLite. Use `backend/internal/app/main.go` and the GitHub Actions workflow as the source of truth for runtime vs. test setup.
 
 ### iOS app (`ios/FastTrack/`)
 
@@ -67,7 +67,7 @@ Always recreate `FastTrack/Secrets.swift` from `FastTrack/Secrets.swift.template
 
 FastTrack is two deployable pieces in one repo:
 
-1. `backend/` is a Go API using Gin + GORM + PostgreSQL. `main.go` wires structured logging, request IDs, Prometheus metrics, avatar static file serving, JWT auth routes, and the authenticated `/api/v1` API. The backend also serves the landing page, privacy policy, and terms of service via `public_pages.go`. The data model is centered on `User`, `Drive`, and `Follow`, with GORM auto-migrations done at startup.
+1. `backend/` is a Go API using Gin + GORM + PostgreSQL. `cmd/server/main.go` launches `internal/app`, which wires structured logging, request IDs, Prometheus metrics, avatar static file serving, JWT auth routes, and the authenticated `/api/v1` API. The backend also serves the landing page, privacy policy, and terms of service via `public_pages.go`. The data model is centered on `User`, `Drive`, and `Follow`, with GORM auto-migrations done at startup.
 2. `ios/FastTrack/FastTrack/` is the SwiftUI app. `LocationManager` fuses GPS + IMU data, `DriveManager` owns the recording state machine and serializes route/stat payloads, and `APIService`/`AuthManager` handle backend sync and auth token lifecycle.
 
 The `website/` directory is vestigial — public pages are now served by the backend. Deployment is workflow-driven: the backend Docker image is built, then applied with Kubernetes manifests under `backend/k8s/` and the staging/production overlays in `backend/k8s/overlays/`.
