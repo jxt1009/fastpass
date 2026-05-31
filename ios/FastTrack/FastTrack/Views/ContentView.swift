@@ -28,13 +28,6 @@ struct ContentView: View {
                 Color.ftSurfaceBg
                     .opacity(driveManager.isRecording ? 0.15 : 0.55)
 
-                // Placeholder content when idle
-                if !driveManager.isRecording {
-                    Text("Start a drive to see map")
-                        .foregroundColor(.gray)
-                        .font(.headline)
-                }
-
                 // Instrument cluster overlay
                 VStack(spacing: 0) {
                     Spacer(minLength: 60)
@@ -111,6 +104,11 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 2)
+            } else {
+                Text("Start a drive to see map")
+                    .foregroundColor(.gray)
+                    .font(.headline)
+                    .padding(.top, Spacing.sm)
             }
         }
     }
