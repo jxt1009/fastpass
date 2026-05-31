@@ -118,7 +118,7 @@ private struct UserSearchRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(result.username)
+                    Text("@\(result.username)")
                         .font(.body)
                     if result.username == currentUsername {
                         Text("You")

@@ -252,7 +252,7 @@ private struct LeaderboardRow: View {
             // User info
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(entry.username)
+                    Text("@\(entry.username)")
                         .font(.body)
                         .fontWeight(isCurrentUser ? .semibold : .regular)
                     if isCurrentUser {
