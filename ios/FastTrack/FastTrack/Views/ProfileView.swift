@@ -523,8 +523,8 @@ struct ProfileView: View {
                                 Text(achievement.description)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                }
+                                    .lineLimit(1)
+                            }
                                 Spacer()
                                 Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                             }
