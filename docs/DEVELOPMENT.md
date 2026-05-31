@@ -14,6 +14,16 @@ Small one-file fixes do not need a dedicated plan, but significant work should l
 
 ---
 
+## Architecture Decision Records (ADRs)
+
+Decisions that materially affect the architecture, tooling, or deployment of the project should be recorded as ADRs under `docs/adr/`.
+
+See [`docs/adr/README.md`](adr/README.md) for the process, naming conventions, and an index of existing records.
+
+Use [`docs/adr/template.md`](adr/template.md) as a starting point for new ADRs.
+
+---
+
 ## iOS — Xcode Setup
 
 ### 1. Open the project

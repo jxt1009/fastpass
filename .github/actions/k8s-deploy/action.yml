@@ -1,0 +1,145 @@
+name: Deploy to Kubernetes
+description: >
+  Configures kubeconfig, syncs Kubernetes secrets from CI inputs, ensures the
+  GHCR pull secret is present, then rolls out a new image via kustomize.
+
+inputs:
+  namespace:
+    description: Kubernetes namespace to deploy into (e.g. fasttrack-staging)
+    required: true
+  kubeconfig:
+    description: Base64-encoded kubeconfig content
+    required: true
+  kustomize-dir:
+    description: Path to the kustomize overlay directory (relative to repo root)
+    required: true
+  image:
+    description: Full image reference with tag to deploy (e.g. ghcr.io/owner/repo:sha)
+    required: true
+  github-token:
+    description: GitHub token used to authenticate with GHCR
+    required: true
+  github-actor:
+    description: GitHub actor for GHCR authentication
+    required: true
+  database-url:
+    description: Database connection string secret value
+    required: false
+    default: ''
+  jwt-secret:
+    description: JWT signing secret value
+    required: false
+    default: ''
+  apple-app-bundle-id:
+    description: Apple app bundle identifier
+    required: false
+    default: ''
+  base-url:
+    description: Public base URL for the backend
+    required: false
+    default: ''
+  google-client-id:
+    description: Google OAuth client ID
+    required: false
+    default: ''
+  google-client-secret:
+    description: Google OAuth client secret
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v4
+
+    - name: Configure kubeconfig
+      shell: bash
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ inputs.kubeconfig }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+        # API server cert doesn't include the public IP SAN; skip TLS cert verification.
+        # Auth is still enforced via the service account token.
+        CLUSTER_NAME=$(kubectl config view --minify -o jsonpath='{.clusters[0].name}')
+        kubectl config set-cluster "$CLUSTER_NAME" --insecure-skip-tls-verify=true
+
+    - name: Sync cluster secrets
+      shell: bash
+      env:
+        NAMESPACE: ${{ inputs.namespace }}
+        DATABASE_URL: ${{ inputs.database-url }}
+        JWT_SECRET: ${{ inputs.jwt-secret }}
+        APPLE_APP_BUNDLE_ID: ${{ inputs.apple-app-bundle-id }}
+        BASE_URL: ${{ inputs.base-url }}
+        GOOGLE_CLIENT_ID: ${{ inputs.google-client-id }}
+        GOOGLE_CLIENT_SECRET: ${{ inputs.google-client-secret }}
+      run: |
+        kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+        # Ensure secret exists (no-op if already present)
+        kubectl create secret generic fasttrack-secrets \
+          --from-literal=_placeholder=1 \
+          --namespace "$NAMESPACE" \
+          --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f - 2>/dev/null || true
+
+        # Update only non-empty CI secrets via merge-patch (leaves existing keys untouched).
+        # For required keys: if not in CI secrets, verify cluster already has a non-empty
+        # value — fail only if neither source has the key (true first-time misconfiguration).
+        python3 << 'PYEOF'
+        import subprocess, base64, json, sys, os
+
+        ns = os.environ["NAMESPACE"]
+        from_ci = {
+            "database-url":         os.environ.get("DATABASE_URL", ""),
+            "jwt-secret":           os.environ.get("JWT_SECRET", ""),
+            "apple-app-bundle-id":  os.environ.get("APPLE_APP_BUNDLE_ID", ""),
+            "base-url":             os.environ.get("BASE_URL", ""),
+            "google-client-id":     os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "google-client-secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+        }
+
+        required = {"database-url", "jwt-secret"}
+        missing_from_ci = {k for k in required if not from_ci[k].strip()}
+        if missing_from_ci:
+            # Check if cluster already has these keys set
+            r = subprocess.run(
+                ["kubectl", "get", "secret", "fasttrack-secrets", "-n", ns,
+                 "-o", "jsonpath={.data}"],
+                capture_output=True, text=True)
+            existing = json.loads(r.stdout) if r.stdout.strip() else {}
+            truly_missing = [k for k in missing_from_ci
+                             if not existing.get(k, "").strip()]
+            if truly_missing:
+                print(f"ERROR: required secrets missing from both CI and cluster: {truly_missing}", file=sys.stderr)
+                sys.exit(1)
+            print(f"INFO: {missing_from_ci} not in CI secrets — cluster values will be kept as-is")
+
+        data = {k: base64.b64encode(v.strip().encode()).decode()
+                for k, v in from_ci.items() if v.strip()}
+        if data:
+            patch = json.dumps({"data": data})
+            r = subprocess.run(
+                ["kubectl", "patch", "secret", "fasttrack-secrets",
+                 "-n", ns, "--type=merge", "-p", patch],
+                capture_output=True, text=True)
+            print(r.stdout, r.stderr)
+            sys.exit(r.returncode)
+        else:
+            print("INFO: No CI secrets provided — cluster secret left unchanged")
+        PYEOF
+
+        kubectl create secret docker-registry ghcr-pull-secret \
+          --docker-server=ghcr.io \
+          --docker-username="${{ inputs.github-actor }}" \
+          --docker-password="${{ inputs.github-token }}" \
+          --namespace "$NAMESPACE" \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy image
+      shell: bash
+      run: |
+        cd ${{ inputs.kustomize-dir }}
+        kustomize edit set image fasttrack-api=${{ inputs.image }}
+        kubectl apply -k .
+        kubectl rollout status deployment/fasttrack-api -n ${{ inputs.namespace }} --timeout=300s
