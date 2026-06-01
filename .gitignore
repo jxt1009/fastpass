@@ -82,5 +82,6 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 
-# Git worktrees (created inside the repo)
+# Git worktrees (local development only — never commit these)
+.worktrees/
 .worktree/
