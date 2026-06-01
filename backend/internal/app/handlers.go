@@ -38,7 +38,7 @@ func createDrive(c *gin.Context) {
 
 	// Evaluate achievements; embed the user's currently-unlocked set so the
 	// client can celebrate and sync exactly without a follow-up fetch.
-	unlocked, evalErr := evaluateForUser(userID, drive.ID)
+	unlocked, evalErr := evaluateForUser(userID)
 	if evalErr != nil {
 		// Don't fail the create — log and continue with an empty unlocked set.
 		logWithRequestID(c).Warn("achievement evaluation failed", "user_id", userID, "error", evalErr.Error())
@@ -123,13 +123,15 @@ func updateDrive(c *gin.Context) {
 	}
 
 	// Re-evaluate achievements on update too (e.g. car reassignment can
-	// affect which drive the user "set" a 0-60 PB on).
-	if unlocked, evalErr := evaluateForUser(userID, drive.ID); evalErr == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"drive":                drive,
-			"unlocked_achievements": unlocked,
-		})
-		return
+	// affect which drive the user "set" a 0-60 PB on). Always return the
+	// same envelope shape so clients have a single decode path; an empty
+	// slice signals "nothing new unlocked".
+	var unlocked []UnlockedAchievement
+	if u, evalErr := evaluateForUser(userID); evalErr == nil {
+		unlocked = u
 	}
-	c.JSON(http.StatusOK, drive)
+	c.JSON(http.StatusOK, gin.H{
+		"drive":                 drive,
+		"unlocked_achievements": unlocked,
+	})
 }
