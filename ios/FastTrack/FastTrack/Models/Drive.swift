@@ -94,6 +94,113 @@ struct Drive: Identifiable, Codable, Equatable {
         case zeroToSixtyAttempts = "zero_to_sixty_attempts"
     }
 
+    /// Custom decoder so that `null` for the new `zero_to_sixty_attempts`
+    /// column (which GORM emits for drives that pre-date the schema change)
+    /// is tolerated instead of failing the whole array decode.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id                  = try c.decodeIfPresent(Int.self,                forKey: .id)
+        self.userID              = try c.decode(Int.self,                          forKey: .userID)
+        self.startTime           = try c.decode(Date.self,                         forKey: .startTime)
+        self.endTime             = try c.decode(Date.self,                         forKey: .endTime)
+        self.startLatitude       = try c.decode(Double.self,                       forKey: .startLatitude)
+        self.startLongitude      = try c.decode(Double.self,                       forKey: .startLongitude)
+        self.endLatitude         = try c.decode(Double.self,                       forKey: .endLatitude)
+        self.endLongitude        = try c.decode(Double.self,                       forKey: .endLongitude)
+        self.distance            = try c.decode(Double.self,                       forKey: .distance)
+        self.duration            = try c.decode(Double.self,                       forKey: .duration)
+        self.maxSpeed            = try c.decode(Double.self,                       forKey: .maxSpeed)
+        self.minSpeed            = try c.decode(Double.self,                       forKey: .minSpeed)
+        self.avgSpeed            = try c.decode(Double.self,                       forKey: .avgSpeed)
+        self.routeData           = try c.decodeIfPresent(String.self,             forKey: .routeData)
+        self.carId               = try c.decodeIfPresent(String.self,             forKey: .carId)
+        self.carMake             = try c.decodeIfPresent(String.self,             forKey: .carMake)
+        self.carModel            = try c.decodeIfPresent(String.self,             forKey: .carModel)
+        self.carYear             = try c.decodeIfPresent(Int.self,                forKey: .carYear)
+        self.carTrim             = try c.decodeIfPresent(String.self,             forKey: .carTrim)
+        self.carNickname         = try c.decodeIfPresent(String.self,             forKey: .carNickname)
+        self.stoppedTime         = try c.decode(Double.self,                       forKey: .stoppedTime)
+        self.leftTurns           = try c.decode(Int.self,                          forKey: .leftTurns)
+        self.rightTurns          = try c.decode(Int.self,                          forKey: .rightTurns)
+        self.brakeEvents         = try c.decode(Int.self,                          forKey: .brakeEvents)
+        self.laneChanges         = try c.decode(Int.self,                          forKey: .laneChanges)
+        self.maxAcceleration     = try c.decode(Double.self,                       forKey: .maxAcceleration)
+        self.maxDeceleration     = try c.decode(Double.self,                       forKey: .maxDeceleration)
+        self.peakGForce          = try c.decode(Double.self,                       forKey: .peakGForce)
+        self.topCornerSpeed      = try c.decode(Double.self,                       forKey: .topCornerSpeed)
+        self.best060Time         = try c.decodeIfPresent(Double.self,              forKey: .best060Time)
+        self.zeroToSixtyAttempts = try c.decodeIfPresent([ZeroToSixtyAttempt].self, forKey: .zeroToSixtyAttempts) ?? []
+    }
+
+    // Explicit memberwise init — required because `init(from:)` above
+    // suppresses the synthesized memberwise init in Swift. Keep the
+    // argument order in sync with `CodingKeys` to avoid surprises.
+    init(
+        id: Int? = nil,
+        userID: Int,
+        startTime: Date,
+        endTime: Date,
+        startLatitude: Double,
+        startLongitude: Double,
+        endLatitude: Double,
+        endLongitude: Double,
+        distance: Double,
+        duration: Double,
+        maxSpeed: Double,
+        minSpeed: Double,
+        avgSpeed: Double,
+        routeData: String? = nil,
+        carId: String? = nil,
+        carMake: String? = nil,
+        carModel: String? = nil,
+        carYear: Int? = nil,
+        carTrim: String? = nil,
+        carNickname: String? = nil,
+        stoppedTime: Double,
+        leftTurns: Int,
+        rightTurns: Int,
+        brakeEvents: Int,
+        laneChanges: Int,
+        maxAcceleration: Double,
+        maxDeceleration: Double,
+        peakGForce: Double,
+        topCornerSpeed: Double,
+        best060Time: Double? = nil,
+        zeroToSixtyAttempts: [ZeroToSixtyAttempt] = []
+    ) {
+        self.id                  = id
+        self.userID              = userID
+        self.startTime           = startTime
+        self.endTime             = endTime
+        self.startLatitude       = startLatitude
+        self.startLongitude      = startLongitude
+        self.endLatitude         = endLatitude
+        self.endLongitude        = endLongitude
+        self.distance            = distance
+        self.duration            = duration
+        self.maxSpeed            = maxSpeed
+        self.minSpeed            = minSpeed
+        self.avgSpeed            = avgSpeed
+        self.routeData           = routeData
+        self.carId               = carId
+        self.carMake             = carMake
+        self.carModel            = carModel
+        self.carYear             = carYear
+        self.carTrim             = carTrim
+        self.carNickname         = carNickname
+        self.stoppedTime         = stoppedTime
+        self.leftTurns           = leftTurns
+        self.rightTurns          = rightTurns
+        self.brakeEvents         = brakeEvents
+        self.laneChanges         = laneChanges
+        self.maxAcceleration     = maxAcceleration
+        self.maxDeceleration     = maxDeceleration
+        self.peakGForce          = peakGForce
+        self.topCornerSpeed      = topCornerSpeed
+        self.best060Time         = best060Time
+        self.zeroToSixtyAttempts = zeroToSixtyAttempts
+    }
+
     static var example: Drive {
         Drive(
             id: 1,
