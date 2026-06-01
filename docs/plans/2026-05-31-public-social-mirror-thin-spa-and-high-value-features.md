@@ -1,7 +1,7 @@
 # Public Social Mirror via Thin No-Auth SPA + High-Value App Features Plan
 
 **Date:** 2026-05-31  
-**Branch:** `feat/public-social-mirror-thin-spa` (worktree at `../fasttrack-public-social-mirror`)  
+**Branch:** `feat/public-social-mirror-thin-spa` (worktree at `.worktrees/public-social-mirror`)  
 **Status:** In progress — plan created as first artifact per project rules.
 
 ## Context & Revised Scope (from user feedback)
@@ -71,7 +71,7 @@ Alternative if we want even thinner later: pure vanilla + history API + minimal 
 ### Detailed Phases
 
 #### Phase 0 — Setup (this worktree + plan)
-- [x] `git worktree add -b feat/public-social-mirror-thin-spa ../fasttrack-public-social-mirror main`
+- [x] `git worktree add -b feat/public-social-mirror-thin-spa .worktrees/public-social-mirror main`
 - [ ] Create this plan file in `docs/plans/2026-05-31-public-social-mirror-thin-spa-and-high-value-features.md` (first commit).
 - [ ] Update todo list / status.
 - [ ] Confirm stack (Svelte) and serving approach with any final quick questions if needed.
