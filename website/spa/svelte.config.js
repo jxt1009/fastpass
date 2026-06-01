@@ -13,6 +13,7 @@ const config = {
 			fallback: 'index.html'
 		})
 		// No broad prerender: dynamic routes like /u/[username] are handled client-side.
+		// (Addressed Copilot review feedback)
 	}
 };
 

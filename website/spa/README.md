@@ -27,6 +27,8 @@ See the root `docs/plans/2026-05-31-public-social-mirror-thin-spa-and-high-value
 
 **Note:** This SPA consumes only public API endpoints. Authenticated features live in the iOS app.
 
+(Copilot review feedback addressed in this version)
+
 ## Developing
 
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:

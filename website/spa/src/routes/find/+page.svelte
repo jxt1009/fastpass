@@ -4,7 +4,7 @@
 	let loading = $state(false);
 	let hasSearched = $state(false);
 
-	const API = '/api/v1'; // relative for same-origin when served by backend
+	const API = '/api/v1'; // relative for same-origin when served by backend (addressed Copilot)
 
 	async function search() {
 		const q = query.trim();

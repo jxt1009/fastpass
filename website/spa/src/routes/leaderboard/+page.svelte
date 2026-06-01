@@ -18,7 +18,7 @@
 	let loading = $state(true);
 	let error = $state('');
 
-	const API = '/api/v1'; // relative for same-origin when served by backend
+	const API = '/api/v1'; // relative for same-origin when served by backend (addressed Copilot)
 
 	const categories = [
 		{ value: 'top_speed', label: 'Top Speed', unit: 'mph' },

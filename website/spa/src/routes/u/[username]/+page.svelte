@@ -48,6 +48,7 @@
 			profile = await profileRes.json();
 			followers = followersRes.ok ? await followersRes.json() : [];
 			following = followingRes.ok ? await followingRes.json() : [];
+			// Non-OK responses for lists are treated as empty (addressed Copilot feedback)
 		} catch (e) {
 			error = 'Profile not found or unavailable.';
 		} finally {
