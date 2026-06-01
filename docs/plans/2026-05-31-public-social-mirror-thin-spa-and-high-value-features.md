@@ -11,7 +11,7 @@
 - [x] FastTrack dark theme, sticky nav, and strong app CTAs ported
 - [x] Home page is a clean public social discovery landing
 - [x] Public Leaderboard page (filters + table using live API)
-- [ ] Public profile pages + dynamic follower/following lists
+- [x] Public profile pages + dynamic follower/following lists
 - [ ] Public "Find People" search
 - [ ] Backend serving + redirects from old template routes
 - [ ] Docs + PR
