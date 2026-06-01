@@ -136,6 +136,7 @@ struct ProfileView: View {
                 }
                 driveManager.fetchDrives()
                 achievementManager.updateProgress(with: driveManager.drives)
+                Task { await driveManager.refreshAchievementsFromServer() }
             }
             .onChange(of: driveManager.drives) { _, drives in
                 achievementManager.updateProgress(with: drives)
@@ -511,27 +512,65 @@ struct ProfileView: View {
                 if !recent.isEmpty {
                     Divider()
                     VStack(spacing: 8) {
-                        ForEach(recent) { achievement in
-                            HStack(spacing: 10) {
-                                Image(systemName: achievement.icon)
-                                    .font(.title3)
-                                    .foregroundColor(achievement.category.color)
-                                VStack(alignment: .leading, spacing: 1) {
-                                Text(achievement.title)
-                                    .font(.subheadline).fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                                Text(achievement.description)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                                Spacer()
-                                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
-                            }
+                        ForEach(Array(recent), id: \.id) { achievement in
+                            achievementRow(achievement)
                         }
                     }
                 }
             }
+        }
+    }
+
+    // MARK: Achievements Row
+
+    @ViewBuilder
+    private func achievementRow(_ achievement: Achievement) -> some View {
+        // Try to find the source drive locally first (it's already in
+        // driveManager.drives since the unlock came from a drive save).
+        let sourceDrive: Drive? = {
+            guard let id = achievement.sourceDriveId else { return nil }
+            return driveManager.drives.first(where: { $0.id == id })
+        }()
+
+        let rowContent = HStack(spacing: 10) {
+            Image(systemName: achievement.icon)
+                .font(.title3)
+                .foregroundColor(achievement.category.color)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(achievement.title)
+                    .font(.subheadline).fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text(achievement.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if achievement.sourceDriveId != nil {
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            } else {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+            }
+        }
+        .contentShape(Rectangle())
+
+        if let sourceDrive {
+            NavigationLink(destination: DriveDetailView(drive: sourceDrive)) {
+                rowContent
+            }
+            .buttonStyle(.plain)
+        } else if let driveId = achievement.sourceDriveId {
+            // Source drive is on the server but not in the local cache yet.
+            // Open a one-shot detail view that lazily fetches it.
+            NavigationLink(destination: RemoteDriveDetailLoader(driveId: driveId)) {
+                rowContent
+            }
+            .buttonStyle(.plain)
+        } else {
+            rowContent
         }
     }
 
@@ -678,6 +717,51 @@ struct ProfileView: View {
 }
 
 // MARK: - Car Garage Card with Stats
+
+// MARK: - Remote Drive Detail Loader
+
+/// Fetches a single drive via the public endpoint on appear and forwards it
+/// to `DriveDetailView`. Used by profile achievement rows when the source
+/// drive isn't in the local cache.
+struct RemoteDriveDetailLoader: View {
+    let driveId: Int
+    @State private var drive: Drive?
+    @State private var error: String?
+    @State private var isLoading = true
+
+    var body: some View {
+        Group {
+            if let drive {
+                DriveDetailView(drive: drive)
+            } else if isLoading {
+                ProgressView("Loading drive…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ContentUnavailableView(
+                    "Drive Unavailable",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error ?? "This drive could not be loaded.")
+                )
+            }
+        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        do {
+            let fetched = try await APIService.shared.fetchPublicDrive(id: driveId)
+            await MainActor.run {
+                self.drive = fetched
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.error = error.localizedDescription
+                self.isLoading = false
+            }
+        }
+    }
+}
 
 struct CarGarageCard: View {
     let car: UserCar

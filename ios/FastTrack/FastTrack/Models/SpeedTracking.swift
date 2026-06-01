@@ -18,6 +18,8 @@ struct LaunchTracker {
     private let maxValidElapsed = 30.0
 
     private(set) var best060Time: Double?
+    /// All valid attempts captured since the last reset, in chronological order.
+    private(set) var attempts: [ZeroToSixtyAttempt] = []
     private var activeLaunchStart: Date?
     private var lastSample: SpeedSample?
 
@@ -53,16 +55,41 @@ struct LaunchTracker {
             return nil
         }
 
-        if let best060Time {
-            guard elapsed < best060Time else { return nil }
-        }
+        // Always record the attempt, regardless of whether it's a new best.
+        attempts.append(
+            ZeroToSixtyAttempt(
+                startIndex: 0,
+                endIndex: 0,
+                startTimestamp: start.timeIntervalSince1970,
+                endTimestamp: crossingTime.timeIntervalSince1970,
+                elapsedSeconds: elapsed,
+                startLatitude: 0,
+                startLongitude: 0,
+                endLatitude: 0,
+                endLongitude: 0
+            )
+        )
 
+        // Update best + return only on a new best, so existing callers that
+        // treat the return value as "we just set a new PB" keep working.
+        if let best060Time, elapsed >= best060Time {
+            return nil
+        }
         best060Time = elapsed
         return elapsed
     }
 
+    /// Returns the most recently completed attempt, or nil if none.
+    var lastAttempt: ZeroToSixtyAttempt? { attempts.last }
+
+    /// Drops attempts from the list. Used by tests + reset.
+    mutating func clearAttempts() {
+        attempts.removeAll()
+    }
+
     mutating func reset() {
         best060Time = nil
+        attempts.removeAll()
         activeLaunchStart = nil
         lastSample = nil
     }

@@ -434,3 +434,71 @@ struct SectionHeader: View {
         .padding(.top, 8)
     }
 }
+
+// MARK: - Speech Bubble
+
+/// A rounded-rectangle bubble with a small triangular tail at the bottom
+/// centre. Used to label 0-60 attempts on the drive map.
+struct SpeechBubble: Shape {
+    var cornerRadius: CGFloat = 10
+    var tailWidth: CGFloat = 14
+    var tailHeight: CGFloat = 8
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let r = min(cornerRadius, min(rect.width, rect.height) / 2)
+        let bodyBottom = rect.maxY - tailHeight
+        let tailCenterX = rect.midX
+
+        // Start at top-left, just past the corner.
+        p.move(to: CGPoint(x: rect.minX + r, y: rect.minY))
+        // Top edge to top-right corner.
+        p.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
+        // Top-right corner.
+        p.addArc(
+            center: CGPoint(x: rect.maxX - r, y: rect.minY + r),
+            radius: r,
+            startAngle: .degrees(-90),
+            endAngle: .degrees(0),
+            clockwise: false
+        )
+        // Right edge down to the start of the tail.
+        p.addLine(to: CGPoint(x: rect.maxX, y: bodyBottom - r))
+        // Bottom-right corner.
+        p.addArc(
+            center: CGPoint(x: rect.maxX - r, y: bodyBottom - r),
+            radius: r,
+            startAngle: .degrees(0),
+            endAngle: .degrees(90),
+            clockwise: false
+        )
+        // Bottom edge to the right side of the tail.
+        p.addLine(to: CGPoint(x: tailCenterX + tailWidth / 2, y: bodyBottom))
+        // Tail down to its tip.
+        p.addLine(to: CGPoint(x: tailCenterX, y: rect.maxY))
+        // Tail up to its left side.
+        p.addLine(to: CGPoint(x: tailCenterX - tailWidth / 2, y: bodyBottom))
+        // Bottom edge from the left side of the tail to the bottom-left corner.
+        p.addLine(to: CGPoint(x: rect.minX + r, y: bodyBottom))
+        // Bottom-left corner.
+        p.addArc(
+            center: CGPoint(x: rect.minX + r, y: bodyBottom - r),
+            radius: r,
+            startAngle: .degrees(90),
+            endAngle: .degrees(180),
+            clockwise: false
+        )
+        // Left edge up to the top-left corner.
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.minY + r))
+        // Top-left corner.
+        p.addArc(
+            center: CGPoint(x: rect.minX + r, y: rect.minY + r),
+            radius: r,
+            startAngle: .degrees(180),
+            endAngle: .degrees(270),
+            clockwise: false
+        )
+        p.closeSubpath()
+        return p
+    }
+}

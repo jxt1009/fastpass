@@ -47,6 +47,9 @@ struct Achievement: Identifiable, Codable {
     var isUnlocked: Bool = false
     var unlockedDate: Date?
     var progress: Double = 0.0 // 0.0 to 1.0
+    /// Server-authoritative source drive id (nil for pre-feature local
+    /// unlocks). When set, the profile row links into the source drive.
+    var sourceDriveId: Int?
     
     var progressText: String {
         if isUnlocked {
@@ -122,6 +125,36 @@ class AchievementManager: ObservableObject {
             achievements = createDefaultAchievements()
             saveAchievements()
         }
+    }
+
+    /// Merges server-authoritative unlocks into the local cache. The server
+    /// is the source of truth: any local unlock that isn't reflected server-
+    /// side stays unlocked (so a pre-existing user doesn't lose progress),
+    /// but the server's `sourceDriveId` (when present) wins.
+    func applyServerUnlocks(_ serverUnlocks: [UserAchievement], catalog: [AchievementCatalogEntry] = []) {
+        // Match by id. If a server-unlock isn't in the local catalog yet
+        // (e.g. a new entry shipped server-side), skip it — the next app
+        // launch will pick it up once the local catalog includes it.
+        let byId = Dictionary(uniqueKeysWithValues: achievements.map { ($0.id, $0) })
+        var updated = achievements
+        for server in serverUnlocks {
+            guard let idx = updated.firstIndex(where: { $0.id == server.achievementId }) else { continue }
+            updated[idx].isUnlocked = true
+            if updated[idx].unlockedDate == nil {
+                updated[idx].unlockedDate = server.unlockedAt
+            }
+            if updated[idx].sourceDriveId == nil {
+                updated[idx].sourceDriveId = server.sourceDriveId
+            }
+        }
+        // Preserve the local ordering; emit only if something actually changed
+        // to keep SwiftUI diffs cheap.
+        if updated.map(\.isUnlocked) != achievements.map(\.isUnlocked) ||
+            updated.map(\.sourceDriveId) != achievements.map(\.sourceDriveId) {
+            achievements = updated
+            saveAchievements()
+        }
+        _ = byId // keep the dict available for future use
     }
     
     func updateProgress(with drives: [Drive]) {

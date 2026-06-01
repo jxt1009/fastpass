@@ -110,7 +110,34 @@ class APIService {
     // MARK: - Drive Methods
 
     func createDrive(_ drive: Drive) async throws -> Drive {
-        return try await post(endpoint: "/drives", body: drive, requiresAuth: true)
+        struct Envelope: Decodable {
+            let drive: Drive
+            let unlockedAchievements: [UserAchievement]
+
+            enum CodingKeys: String, CodingKey {
+                case drive
+                case unlockedAchievements = "unlocked_achievements"
+            }
+        }
+        // The server returns `{drive, unlocked_achievements}`. For backward
+        // compatibility (e.g. tests + an older backend), also tolerate a
+        // bare `Drive` payload.
+        let url = URL(string: "\(baseURL)/drives")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = AuthManager.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try encoder.encode(drive)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
+
+        if let envelope = try? decoder.decode(Envelope.self, from: data) {
+            return envelope.drive
+        }
+        return try decoder.decode(Drive.self, from: data)
     }
 
     func fetchDrives() async throws -> [Drive] {
@@ -201,6 +228,19 @@ class APIService {
 
     func fetchMe() async throws -> User {
         return try await get(endpoint: "/me")
+    }
+
+    func fetchMyAchievements() async throws -> UserAchievementsResponse {
+        return try await get(endpoint: "/me/achievements")
+    }
+
+    func fetchUserAchievements(username: String) async throws -> UserAchievementsResponse {
+        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username
+        return try await get(endpoint: "/users/\(encoded)/achievements")
+    }
+
+    func fetchPublicDrive(id: Int) async throws -> Drive {
+        return try await get(endpoint: "/drives/\(id)/public")
     }
 
     func fetchCarStats() async throws -> String {
