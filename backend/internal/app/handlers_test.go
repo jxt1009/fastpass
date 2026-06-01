@@ -662,3 +662,71 @@ func TestAchievementEvaluation_ZeroToSixtyAttemptsRoundTrip(t *testing.T) {
 		t.Errorf("expected second attempt start_index = 20, got %d", read.ZeroToSixtyAttempts[1].StartIndex)
 	}
 }
+
+func TestAchievementEvaluation_ConsecutiveDayStreakUnlocks(t *testing.T) {
+	jwtSecret = []byte("streak-test-secret-32-bytes-long!!!!")
+	setupTestDB(t)
+
+	user := User{Email: "streak@test.com", Username: "streaker", AuthProvider: "google"}
+	db.Create(&user)
+	token := tokenForUser(t, user)
+	router := makeAuthRouter()
+
+	// Build 3 drives on consecutive UTC days: today, yesterday, two days ago.
+	now := time.Now().UTC().Truncate(24 * time.Hour).Add(12 * time.Hour)
+	for offset := 0; offset < 3; offset++ {
+		start := now.AddDate(0, 0, -offset)
+		drive := Drive{
+			UserID:        user.ID,
+			StartTime:     start,
+			EndTime:       start.Add(10 * time.Minute),
+			StartLatitude: 37.0,
+			StartLongitude: -122.0,
+			EndLatitude:   37.001,
+			EndLongitude:  -122.0,
+			Distance:      1500,
+			Duration:      600,
+			MaxSpeed:      20,
+		}
+		if err := db.Create(&drive).Error; err != nil {
+			t.Fatalf("seed drive: %v", err)
+		}
+	}
+
+	// Re-evaluate (createDrive path) by saving another drive and asking
+	// the server to evaluate as part of the handler.
+	seed := map[string]interface{}{
+		"start_time":      now.Add(48 * time.Hour).Format(time.RFC3339),
+		"end_time":        now.Add(48 * time.Hour).Add(10 * time.Minute).Format(time.RFC3339),
+		"start_latitude":  37.0,
+		"start_longitude": -122.0,
+		"end_latitude":    37.001,
+		"end_longitude":   -122.0,
+		"distance":        1500,
+		"duration":        600,
+		"max_speed":       20,
+	}
+	body, _ := json.Marshal(seed)
+	req, _ := http.NewRequest("POST", "/api/v1/drives", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Unlocked []UnlockedAchievement `json:"unlocked_achievements"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	ids := map[string]bool{}
+	for _, u := range resp.Unlocked {
+		ids[u.AchievementID] = true
+	}
+	if !ids["streak_3"] {
+		t.Errorf("expected streak_3 to be unlocked; got %v", ids)
+	}
+}

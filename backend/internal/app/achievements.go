@@ -122,6 +122,14 @@ var defaultCatalog = []AchievementCatalogEntry{
 		Requirement: AchievementRequirement{Type: "drive_count", Value: 100, Unit: "drives"},
 	},
 	{
+		ID:          "streak_3",
+		Title:       "Getting Consistent",
+		Description: "Drive on 3 consecutive days",
+		Category:    "consistency",
+		Icon:        "calendar",
+		Requirement: AchievementRequirement{Type: "consecutive_days", Value: 3, Unit: "days"},
+	},
+	{
 		ID:          "streak_7",
 		Title:       "Week Warrior",
 		Description: "Drive on 7 consecutive days",
@@ -228,7 +236,9 @@ func loadEvaluationInputs(userID uint) (evaluationInputs, error) {
 	// Best 0-60 (lowest)
 	var best *float64
 	var bestVal float64
-	if err := db.Raw(`SELECT MIN(best_060_time) FROM drives WHERE user_id = ? AND best_060_time IS NOT NULL`, userID).Scan(&bestVal).Error; err != nil {
+	// COALESCE handles the empty-set case: MIN over zero rows returns SQL
+	// NULL, which can't be scanned directly into a float64.
+	if err := db.Raw(`SELECT COALESCE(MIN(best_060_time), 0) FROM drives WHERE user_id = ? AND best_060_time IS NOT NULL`, userID).Scan(&bestVal).Error; err != nil {
 		return in, err
 	}
 	if bestVal > 0 {
@@ -353,10 +363,8 @@ func evaluate(userID uint, inputs evaluationInputs) []evaluationResult {
 }
 
 // evaluateForUser runs the full evaluation and persists any new unlocks. It
-// returns the set of newly-unlocked achievements (suitable for embedding in
-// the createDrive response) plus all currently-unlocked achievements so the
-// client can sync.
-func evaluateForUser(userID uint, triggeringDriveID uint) ([]UnlockedAchievement, error) {
+// returns the set of currently-unlocked achievements so the client can sync.
+func evaluateForUser(userID uint) ([]UnlockedAchievement, error) {
 	inputs, err := loadEvaluationInputs(userID)
 	if err != nil {
 		return nil, err
@@ -379,7 +387,6 @@ func evaluateForUser(userID uint, triggeringDriveID uint) ([]UnlockedAchievement
 	}
 
 	now := time.Now().UTC()
-	var newlyUnlocked []UnlockedAchievement
 	for _, c := range candidate {
 		if existing[c.AchievementID] {
 			continue
@@ -395,22 +402,10 @@ func evaluateForUser(userID uint, triggeringDriveID uint) ([]UnlockedAchievement
 		if err := db.Create(&row).Error; err != nil {
 			return nil, err
 		}
-		newlyUnlocked = append(newlyUnlocked, UnlockedAchievement{
-			AchievementID: row.AchievementID,
-			UnlockedAt:    row.UnlockedAt,
-			SourceDriveID: row.SourceDriveID,
-			SourceKind:    row.SourceKind,
-			SourceValue:   row.SourceValue,
-		})
-		_ = triggeringDriveID // reserved for future "first to set" attribution
 	}
 
 	// Return full unlocked set so clients can sync exactly
-	all, err := loadUnlockedAchievements(userID)
-	if err != nil {
-		return nil, err
-	}
-	return all, nil
+	return loadUnlockedAchievements(userID)
 }
 
 // UnlockedAchievement is the public-facing shape of a single unlocked
@@ -531,14 +526,17 @@ func consecutiveDriveDays(drives []Drive) int {
 		return 0
 	}
 	// Walk start times; count the longest run of consecutive UTC days.
-	const daySecs = 24 * 60 * 60
+	const oneDay = 24 * time.Hour
 	dates := make([]time.Time, 0, len(drives))
 	for _, d := range drives {
-		dates = append(dates, d.StartTime.UTC().Truncate(daySecs))
+		dates = append(dates, d.StartTime.UTC().Truncate(oneDay))
 	}
 	maxRun, run := 1, 1
 	for i := 1; i < len(dates); i++ {
-		delta := dates[i].Sub(dates[i-1]) / daySecs
+		// `time.Duration` is nanoseconds; convert the gap to whole days
+		// explicitly. Using an untyped `24*60*60` constant here would
+		// truncate to nanoseconds and silently break the streak check.
+		delta := int(dates[i].Sub(dates[i-1]) / oneDay)
 		if delta == 1 {
 			run++
 			if run > maxRun {
