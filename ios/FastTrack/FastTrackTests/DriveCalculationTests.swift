@@ -340,6 +340,11 @@ final class DriveCalculationTests: XCTestCase {
     }
 
     func testDrive_DecodesPopulatedZeroToSixtyAttempts() throws {
+        // Wire format mirrors the Go `ZeroToSixtyAttempt` JSON tags in
+        // `backend/internal/app/models.go` (start_ts / end_ts / elapsed_s /
+        // start_lat / start_lng / end_lat / end_lng). If the server struct
+        // changes, this test should fail to remind us to update the
+        // client's CodingKeys in lockstep.
         let json = """
         {
           "id": 24,
@@ -373,9 +378,10 @@ final class DriveCalculationTests: XCTestCase {
           "top_corner_speed": 0,
           "best_060_time": null,
           "zero_to_sixty_attempts": [
-            { "start_index": 0, "end_index": 5, "start_timestamp": 1.0, "end_timestamp": 6.0,
-              "elapsed_seconds": 5.0, "start_latitude": 37.0, "start_longitude": -122.0,
-              "end_latitude": 37.001, "end_longitude": -122.0 }
+            { "start_index": 12, "end_index": 27,
+              "start_ts": 1700000100, "end_ts": 1700000105, "elapsed_s": 5.0,
+              "start_lat": 37.0, "start_lng": -122.0,
+              "end_lat": 37.001, "end_lng": -122.0 }
           ]
         }
         """.data(using: .utf8)!
@@ -384,7 +390,70 @@ final class DriveCalculationTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let drive = try decoder.decode(Drive.self, from: json)
         XCTAssertEqual(drive.zeroToSixtyAttempts.count, 1)
-        XCTAssertEqual(drive.zeroToSixtyAttempts[0].elapsedSeconds, 5.0, accuracy: 0.001)
+        let attempt = drive.zeroToSixtyAttempts[0]
+        XCTAssertEqual(attempt.startIndex,     12)
+        XCTAssertEqual(attempt.endIndex,       27)
+        XCTAssertEqual(attempt.startTimestamp, 1_700_000_100.0, accuracy: 0.001)
+        XCTAssertEqual(attempt.endTimestamp,   1_700_000_105.0, accuracy: 0.001)
+        XCTAssertEqual(attempt.elapsedSeconds, 5.0,           accuracy: 0.001)
+        XCTAssertEqual(attempt.startLatitude,  37.0,          accuracy: 0.0001)
+        XCTAssertEqual(attempt.startLongitude, -122.0,        accuracy: 0.0001)
+        XCTAssertEqual(attempt.endLatitude,    37.001,        accuracy: 0.0001)
+        XCTAssertEqual(attempt.endLongitude,   -122.0,        accuracy: 0.0001)
+        XCTAssertFalse(attempt.legacy)
+    }
+
+    /// Locks the wire-format round-trip in both directions using the real
+    /// snake_case keys. If the server struct or client CodingKeys drift,
+    /// one of the two assertions will fail.
+    func testZeroToSixtyAttempt_WireFormatRoundTrip() throws {
+        let original = ZeroToSixtyAttempt(
+            startIndex:     12,
+            endIndex:       27,
+            startTimestamp: 1_700_000_100,
+            endTimestamp:   1_700_000_105,
+            elapsedSeconds: 5.0,
+            startLatitude:  37.0,
+            startLongitude: -122.0,
+            endLatitude:    37.001,
+            endLongitude:   -122.0,
+            legacy:         true
+        )
+
+        // Encode
+        let encoded = try JSONEncoder().encode(original)
+        let json = try XCTUnwrap(String(data: encoded, encoding: .utf8))
+
+        // Spot-check the keys match the Go struct's `json:"…"` tags.
+        for requiredKey in [
+            "start_index", "end_index",
+            "start_ts", "end_ts", "elapsed_s",
+            "start_lat", "start_lng",
+            "end_lat",   "end_lng",
+            "legacy"
+        ] {
+            XCTAssertTrue(json.contains("\"\(requiredKey)\""),
+                          "Encoded JSON missing required wire key \(requiredKey): \(json)")
+        }
+
+        // Decode the same payload back and assert equality.
+        let decoded = try JSONDecoder().decode(ZeroToSixtyAttempt.self, from: encoded)
+        XCTAssertEqual(decoded, original)
+    }
+
+    /// Required fields must fail loudly on a wire-format mismatch instead
+    /// of silently zeroing out (which would render a phantom overlay).
+    func testZeroToSixtyAttempt_DecoderFailsOnMissingRequiredField() {
+        // `elapsed_s` is the most important field — drop it and ensure
+        // the decoder raises instead of substituting 0.
+        let malformed = """
+        { "start_index": 0, "end_index": 5,
+          "start_ts": 1.0, "end_ts": 6.0,
+          "start_lat": 0, "start_lng": 0,
+          "end_lat": 0, "end_lng": 0 }
+        """.data(using: .utf8)!
+
+        XCTAssertThrowsError(try JSONDecoder().decode(ZeroToSixtyAttempt.self, from: malformed))
     }
 
     // MARK: - 0-60 attempts

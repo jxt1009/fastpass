@@ -59,33 +59,39 @@ struct ZeroToSixtyAttempt: Codable, Identifiable, Equatable {
     }
 
     // Custom decoder — the server's wire format omits the `id` field (it's
-    // an iOS-side identity), so synthesise one on decode.
+    // an iOS-side identity), so synthesise one on decode. All other fields
+    // are required: a wire-format mismatch should fail loudly rather than
+    // produce an all-zero attempt (which would render as a phantom overlay
+    // at (0,0) and a 0.0s elapsed time).
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.id             = (try c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
-        self.startIndex     = try c.decodeIfPresent(Int.self,    forKey: .startIndex)     ?? 0
-        self.endIndex       = try c.decodeIfPresent(Int.self,    forKey: .endIndex)       ?? 0
-        self.startTimestamp = try c.decodeIfPresent(Double.self, forKey: .startTimestamp) ?? 0
-        self.endTimestamp   = try c.decodeIfPresent(Double.self, forKey: .endTimestamp)   ?? 0
-        self.elapsedSeconds = try c.decodeIfPresent(Double.self, forKey: .elapsedSeconds) ?? 0
-        self.startLatitude  = try c.decodeIfPresent(Double.self, forKey: .startLatitude)  ?? 0
-        self.startLongitude = try c.decodeIfPresent(Double.self, forKey: .startLongitude) ?? 0
-        self.endLatitude    = try c.decodeIfPresent(Double.self, forKey: .endLatitude)    ?? 0
-        self.endLongitude   = try c.decodeIfPresent(Double.self, forKey: .endLongitude)   ?? 0
-        self.legacy         = try c.decodeIfPresent(Bool.self,   forKey: .legacy)         ?? false
+        self.startIndex     = try c.decode(Int.self,    forKey: .startIndex)
+        self.endIndex       = try c.decode(Int.self,    forKey: .endIndex)
+        self.startTimestamp = try c.decode(Double.self, forKey: .startTimestamp)
+        self.endTimestamp   = try c.decode(Double.self, forKey: .endTimestamp)
+        self.elapsedSeconds = try c.decode(Double.self, forKey: .elapsedSeconds)
+        self.startLatitude  = try c.decode(Double.self, forKey: .startLatitude)
+        self.startLongitude = try c.decode(Double.self, forKey: .startLongitude)
+        self.endLatitude    = try c.decode(Double.self, forKey: .endLatitude)
+        self.endLongitude   = try c.decode(Double.self, forKey: .endLongitude)
+        self.legacy         = (try c.decodeIfPresent(Bool.self, forKey: .legacy)) ?? false
     }
 
+    // JSON keys mirror the Go `ZeroToSixtyAttempt` struct in
+    // `backend/internal/app/models.go` exactly. Don't rename these without
+    // updating the server-side struct in lockstep.
     private enum CodingKeys: String, CodingKey {
         case id
         case startIndex     = "start_index"
         case endIndex       = "end_index"
-        case startTimestamp = "start_timestamp"
-        case endTimestamp   = "end_timestamp"
-        case elapsedSeconds = "elapsed_seconds"
-        case startLatitude  = "start_latitude"
-        case startLongitude = "start_longitude"
-        case endLatitude    = "end_latitude"
-        case endLongitude   = "end_longitude"
+        case startTimestamp = "start_ts"
+        case endTimestamp   = "end_ts"
+        case elapsedSeconds = "elapsed_s"
+        case startLatitude  = "start_lat"
+        case startLongitude = "start_lng"
+        case endLatitude    = "end_lat"
+        case endLongitude   = "end_lng"
         case legacy
     }
 }
