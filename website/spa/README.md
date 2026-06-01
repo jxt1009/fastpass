@@ -1,22 +1,31 @@
-# sv
+# FastTrack Public Social SPA
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+This is the thin, public-only (no-auth) SvelteKit SPA for FastTrack social discovery.
 
-## Creating a project
+It is built as a static site (using `@sveltejs/adapter-static` with `fallback: 'index.html'`) and is intended to be served by the backend alongside the existing public pages and API.
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Key pages
+- `/` – Public landing with CTAs to the app
+- `/leaderboard` – Public global leaderboard with filters
+- `/find` – Search public users
+- `/u/[username]` – Public profile with live follower/following lists
 
-```sh
-# create a new project
-npx sv create my-app
+## Development
+```bash
+cd website/spa
+npm run dev
 ```
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.15.3 create --template minimal --types ts --add tailwindcss="plugins:none" prettier --no-download-check --install npm website/spa
+## Production build
+```bash
+npm run build   # outputs to build/ (static files)
 ```
+
+The built assets are meant to be served from the backend (e.g. mounted under social routes) so that API calls can be relative (`/api/v1`).
+
+See the root `docs/plans/2026-05-31-public-social-mirror-thin-spa-and-high-value-features.md` for full context and roadmap.
+
+**Note:** This SPA consumes only public API endpoints. Authenticated features live in the iOS app.
 
 ## Developing
 

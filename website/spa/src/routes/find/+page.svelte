@@ -4,7 +4,7 @@
 	let loading = $state(false);
 	let hasSearched = $state(false);
 
-	const API = 'https://fast.toper.dev/api/v1';
+	const API = '/api/v1'; // relative for same-origin when served by backend
 
 	async function search() {
 		const q = query.trim();
@@ -43,7 +43,7 @@
 	{:else if results.length > 0}
 		<div style="margin-top: 24px;">
 			{#each results as user}
-				<a href="/u/{user.username}" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+				<a href={`/u/${encodeURIComponent(user.username)}`} style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border);">
 					{#if user.avatar_url}
 						<img src={user.avatar_url} alt="" style="width: 36px; height: 36px; border-radius: 50%;" />
 					{:else}

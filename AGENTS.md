@@ -1,28 +1,40 @@
 # Project instructions for opencode
 
-## 1. Always use a git worktree
+## 1. Always use a git worktree (and always start from latest main)
 
-Before starting any work, create a dedicated git worktree inside the repo's
-`.worktree/` directory for the feature/fix branch:
+**Critical:** This repo has frequent worktree + rebase conflicts when branches
+drift from main. To avoid this:
 
-```bash
-git worktree add .worktree/<branch-name> main
-```
+1. **Always** start from a fresh main:
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
 
-Work in the worktree directory (`.worktree/<branch-name>/`), commit there, and
-push from there. Remove the worktree after the PR is merged:
+2. Then create the worktree from that up-to-date main:
+   ```bash
+   git worktree add .worktrees/<branch-name> main
+   ```
 
-```bash
-git worktree remove .worktree/<branch-name>
-```
+3. Work exclusively in `.worktrees/<branch-name>/`
 
-Before pushing, always rebase the branch onto `main` (or the target base
-branch) to keep history linear:
+4. Before any push or PR update, rebase onto the *latest* origin/main:
+   ```bash
+   cd .worktrees/<branch-name>
+   git fetch origin main
+   git rebase origin/main
+   ```
 
-```bash
-cd .worktree/<branch-name>
-git rebase main
-```
+5. Push with `--force-with-lease` after rebase.
+
+6. Clean up after PR merge:
+   ```bash
+   git worktree remove .worktrees/<branch-name>
+   ```
+
+**Never** create a worktree or rebase without first pulling the absolute latest `main`. This is the #1 cause of repeated .gitignore and other conflicts.
+
+We use `.worktrees/` (plural) as the convention for local worktrees inside the repo (see existing ones and `.gitignore`).
 
 ## 2. Conventional commits
 
