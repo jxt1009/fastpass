@@ -288,6 +288,105 @@ final class DriveCalculationTests: XCTestCase {
         XCTAssertNotNil(drive.calculatePerformanceMetrics())
     }
 
+    // MARK: - Drive JSON decoding
+
+    /// Pre-feature drives have `zero_to_sixty_attempts` = `null` on the
+    /// server. The decoder must accept that without rejecting the whole
+    /// array (which is what the production bug looked like: `fetchDrives()`
+    /// returned 200 with a valid body, but the client showed zero drives).
+    func testDrive_DecodesNullZeroToSixtyAttemptsAsEmpty() throws {
+        let json = """
+        {
+          "id": 23,
+          "user_id": 1,
+          "start_time": "2026-05-31T22:36:23Z",
+          "end_time":   "2026-05-31T22:51:37Z",
+          "start_latitude": 37.0,
+          "start_longitude": -122.0,
+          "end_latitude": 37.001,
+          "end_longitude": -122.0,
+          "distance": 8324.45,
+          "duration": 914,
+          "max_speed": 32.88,
+          "min_speed": 0,
+          "avg_speed": 9.10,
+          "route_data": null,
+          "car_id": null,
+          "car_make": null,
+          "car_model": null,
+          "car_year": null,
+          "car_trim": null,
+          "car_nickname": null,
+          "stopped_time": 0,
+          "left_turns": 0,
+          "right_turns": 0,
+          "brake_events": 0,
+          "lane_changes": 0,
+          "max_acceleration": 0,
+          "max_deceleration": 0,
+          "peak_g_force": 0,
+          "top_corner_speed": 0,
+          "best_060_time": 4.9,
+          "zero_to_sixty_attempts": null
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let drive = try decoder.decode(Drive.self, from: json)
+        XCTAssertEqual(drive.id, 23)
+        XCTAssertEqual(drive.best060Time ?? 0, 4.9, accuracy: 0.01)
+        XCTAssertEqual(drive.zeroToSixtyAttempts, [])
+    }
+
+    func testDrive_DecodesPopulatedZeroToSixtyAttempts() throws {
+        let json = """
+        {
+          "id": 24,
+          "user_id": 1,
+          "start_time": "2026-06-01T21:20:11Z",
+          "end_time":   "2026-06-01T21:25:11Z",
+          "start_latitude": 37.0,
+          "start_longitude": -122.0,
+          "end_latitude": 37.001,
+          "end_longitude": -122.0,
+          "distance": 1500,
+          "duration": 300,
+          "max_speed": 20,
+          "min_speed": 0,
+          "avg_speed": 5,
+          "route_data": null,
+          "car_id": null,
+          "car_make": null,
+          "car_model": null,
+          "car_year": null,
+          "car_trim": null,
+          "car_nickname": null,
+          "stopped_time": 0,
+          "left_turns": 0,
+          "right_turns": 0,
+          "brake_events": 0,
+          "lane_changes": 0,
+          "max_acceleration": 0,
+          "max_deceleration": 0,
+          "peak_g_force": 0,
+          "top_corner_speed": 0,
+          "best_060_time": null,
+          "zero_to_sixty_attempts": [
+            { "start_index": 0, "end_index": 5, "start_timestamp": 1.0, "end_timestamp": 6.0,
+              "elapsed_seconds": 5.0, "start_latitude": 37.0, "start_longitude": -122.0,
+              "end_latitude": 37.001, "end_longitude": -122.0 }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let drive = try decoder.decode(Drive.self, from: json)
+        XCTAssertEqual(drive.zeroToSixtyAttempts.count, 1)
+        XCTAssertEqual(drive.zeroToSixtyAttempts[0].elapsedSeconds, 5.0, accuracy: 0.001)
+    }
+
     // MARK: - 0-60 attempts
 
     func testLaunchTracker_RecordsMultipleAttemptsInOneDrive() {

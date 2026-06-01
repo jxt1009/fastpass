@@ -57,4 +57,35 @@ struct ZeroToSixtyAttempt: Codable, Identifiable, Equatable {
             longitude: (startLongitude + endLongitude) / 2
         )
     }
+
+    // Custom decoder — the server's wire format omits the `id` field (it's
+    // an iOS-side identity), so synthesise one on decode.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id             = (try c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+        self.startIndex     = try c.decodeIfPresent(Int.self,    forKey: .startIndex)     ?? 0
+        self.endIndex       = try c.decodeIfPresent(Int.self,    forKey: .endIndex)       ?? 0
+        self.startTimestamp = try c.decodeIfPresent(Double.self, forKey: .startTimestamp) ?? 0
+        self.endTimestamp   = try c.decodeIfPresent(Double.self, forKey: .endTimestamp)   ?? 0
+        self.elapsedSeconds = try c.decodeIfPresent(Double.self, forKey: .elapsedSeconds) ?? 0
+        self.startLatitude  = try c.decodeIfPresent(Double.self, forKey: .startLatitude)  ?? 0
+        self.startLongitude = try c.decodeIfPresent(Double.self, forKey: .startLongitude) ?? 0
+        self.endLatitude    = try c.decodeIfPresent(Double.self, forKey: .endLatitude)    ?? 0
+        self.endLongitude   = try c.decodeIfPresent(Double.self, forKey: .endLongitude)   ?? 0
+        self.legacy         = try c.decodeIfPresent(Bool.self,   forKey: .legacy)         ?? false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case startIndex     = "start_index"
+        case endIndex       = "end_index"
+        case startTimestamp = "start_timestamp"
+        case endTimestamp   = "end_timestamp"
+        case elapsedSeconds = "elapsed_seconds"
+        case startLatitude  = "start_latitude"
+        case startLongitude = "start_longitude"
+        case endLatitude    = "end_latitude"
+        case endLongitude   = "end_longitude"
+        case legacy
+    }
 }
