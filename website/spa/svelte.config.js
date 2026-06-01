@@ -11,11 +11,8 @@ const config = {
 		// fallback enables client-side routing for /leaderboard, /u/:username, search, etc.
 		adapter: adapter({
 			fallback: 'index.html'
-		}),
-		// Prerender public pages where possible (we'll expand this)
-		prerender: {
-			entries: ['*']
-		}
+		})
+		// No broad prerender: dynamic routes like /u/[username] are handled client-side.
 	}
 };
 

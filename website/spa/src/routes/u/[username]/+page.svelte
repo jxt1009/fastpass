@@ -30,7 +30,7 @@
 	let loading = $state(true);
 	let error = $state('');
 
-	const API = 'https://fast.toper.dev/api/v1';
+	const API = '/api/v1'; // relative for same-origin when served by backend
 
 	async function loadProfile() {
 		loading = true;
@@ -46,8 +46,8 @@
 			if (!profileRes.ok) throw new Error('User not found');
 
 			profile = await profileRes.json();
-			followers = await followersRes.json();
-			following = await followingRes.json();
+			followers = followersRes.ok ? await followersRes.json() : [];
+			following = followingRes.ok ? await followingRes.json() : [];
 		} catch (e) {
 			error = 'Profile not found or unavailable.';
 		} finally {
@@ -145,7 +145,7 @@
 			<div>
 				<div class="section-title">Followers ({followers.length})</div>
 				{#each followers as user}
-					<a href="/u/{user.username}" class="social-user">
+					<a href={`/u/${encodeURIComponent(user.username)}`} class="social-user">
 						<div class="su-name">{user.username}</div>
 						{#if user.country}<div class="su-country">{user.country}</div>{/if}
 					</a>
@@ -157,7 +157,7 @@
 			<div>
 				<div class="section-title">Following ({following.length})</div>
 				{#each following as user}
-					<a href="/u/{user.username}" class="social-user">
+					<a href={`/u/${encodeURIComponent(user.username)}`} class="social-user">
 						<div class="su-name">{user.username}</div>
 						{#if user.country}<div class="su-country">{user.country}</div>{/if}
 					</a>

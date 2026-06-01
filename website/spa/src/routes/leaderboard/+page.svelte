@@ -18,7 +18,7 @@
 	let loading = $state(true);
 	let error = $state('');
 
-	const API = 'https://fast.toper.dev/api/v1';
+	const API = '/api/v1'; // relative for same-origin when served by backend
 
 	const categories = [
 		{ value: 'top_speed', label: 'Top Speed', unit: 'mph' },
