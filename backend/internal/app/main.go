@@ -18,6 +18,7 @@ func Run(buildVersion, buildCommit string) {
 	registerAccountRoutes(r)
 	registerDriveRoutes(r)
 	registerSocialRoutes(r)
+	registerAchievementRoutes(r)
 
 	startServer(r, buildVersion, buildCommit)
 }

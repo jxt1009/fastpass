@@ -19,10 +19,14 @@ func createDrive(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Set the user ID from auth token
 	drive.UserID = userID
-	
+
+	if drive.ZeroToSixtyAttempts == nil {
+		drive.ZeroToSixtyAttempts = []ZeroToSixtyAttempt{}
+	}
+
 	if err := db.Create(&drive).Error; err != nil {
 		dbQueryErrorsTotal.WithLabelValues("create_drive").Inc()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create drive"})
@@ -32,7 +36,18 @@ func createDrive(c *gin.Context) {
 	driveRecordingsTotal.Inc()
 	logWithRequestID(c).Info("drive recorded", "user_id", userID, "drive_id", drive.ID, "distance_m", drive.Distance)
 
-	c.JSON(http.StatusCreated, drive)
+	// Evaluate achievements; embed the user's currently-unlocked set so the
+	// client can celebrate and sync exactly without a follow-up fetch.
+	unlocked, evalErr := evaluateForUser(userID, drive.ID)
+	if evalErr != nil {
+		// Don't fail the create — log and continue with an empty unlocked set.
+		logWithRequestID(c).Warn("achievement evaluation failed", "user_id", userID, "error", evalErr.Error())
+		unlocked = []UnlockedAchievement{}
+	}
+	c.JSON(http.StatusCreated, gin.H{
+		"drive":                drive,
+		"unlocked_achievements": unlocked,
+	})
 }
 
 func listDrives(c *gin.Context) {
@@ -84,25 +99,37 @@ func updateDrive(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
-	
+
 	var drive Drive
 	// Ensure user can only update their own drives
 	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&drive).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Drive not found"})
 		return
 	}
-	
+
 	if err := c.ShouldBindJSON(&drive); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	drive.ID = uint(id)
 	drive.UserID = userID // Ensure user_id doesn't change
+	if drive.ZeroToSixtyAttempts == nil {
+		drive.ZeroToSixtyAttempts = []ZeroToSixtyAttempt{}
+	}
 	if err := db.Save(&drive).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update drive"})
 		return
 	}
-	
+
+	// Re-evaluate achievements on update too (e.g. car reassignment can
+	// affect which drive the user "set" a 0-60 PB on).
+	if unlocked, evalErr := evaluateForUser(userID, drive.ID); evalErr == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"drive":                drive,
+			"unlocked_achievements": unlocked,
+		})
+		return
+	}
 	c.JSON(http.StatusOK, drive)
 }

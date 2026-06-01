@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func stringPtr(value string) *string {
+func stringPtrHelper(value string) *string {
 	return &value
 }
 
@@ -44,7 +45,17 @@ func makeAuthRouter() *gin.Engine {
 		api.GET("/drives/:id", getDrive)
 		api.PUT("/drives/:id", updateDrive)
 		api.DELETE("/me", deleteCurrentUser)
+		api.GET("/me/achievements", getMyAchievements)
 	}
+	return r
+}
+
+// makePublicRouter returns a router with the no-auth public endpoints.
+func makePublicRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/api/v1/users/:username/achievements", getUserAchievements)
+	r.GET("/api/v1/drives/:id/public", getPublicDrive)
 	return r
 }
 
@@ -63,8 +74,8 @@ func TestDriveOwnership_CannotReadOtherUsersDrive(t *testing.T) {
 	setupTestDB(t)
 
 	// Create two users
-	userA := User{Email: "a@test.com", AppleUserID: stringPtr("apple.a"), Username: "usera"}
-	userB := User{Email: "b@test.com", AppleUserID: stringPtr("apple.b"), Username: "userb"}
+	userA := User{Email: "a@test.com", AppleUserID: stringPtrHelper("apple.a"), Username: "usera"}
+	userB := User{Email: "b@test.com", AppleUserID: stringPtrHelper("apple.b"), Username: "userb"}
 	db.Create(&userA)
 	db.Create(&userB)
 
@@ -89,8 +100,8 @@ func TestDriveOwnership_CannotUpdateOtherUsersDrive(t *testing.T) {
 	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
 	setupTestDB(t)
 
-	userA := User{Email: "a2@test.com", AppleUserID: stringPtr("apple.a2"), Username: "usera2"}
-	userB := User{Email: "b2@test.com", AppleUserID: stringPtr("apple.b2"), Username: "userb2"}
+	userA := User{Email: "a2@test.com", AppleUserID: stringPtrHelper("apple.a2"), Username: "usera2"}
+	userB := User{Email: "b2@test.com", AppleUserID: stringPtrHelper("apple.b2"), Username: "userb2"}
 	db.Create(&userA)
 	db.Create(&userB)
 
@@ -115,7 +126,7 @@ func TestDriveOwnership_OwnerCanReadOwnDrive(t *testing.T) {
 	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
 	setupTestDB(t)
 
-	user := User{Email: "owner@test.com", AppleUserID: stringPtr("apple.owner"), Username: "owner"}
+	user := User{Email: "owner@test.com", AppleUserID: stringPtrHelper("apple.owner"), Username: "owner"}
 	db.Create(&user)
 
 	drive := Drive{UserID: user.ID, StartTime: time.Now(), EndTime: time.Now(), MaxSpeed: 55}
@@ -137,8 +148,8 @@ func TestListDrives_OnlyReturnsOwnDrives(t *testing.T) {
 	jwtSecret = []byte("handler-test-secret-32-bytes-long!!")
 	setupTestDB(t)
 
-	userA := User{Email: "list_a@test.com", AppleUserID: stringPtr("apple.list_a"), Username: "lista"}
-	userB := User{Email: "list_b@test.com", AppleUserID: stringPtr("apple.list_b"), Username: "listb"}
+	userA := User{Email: "list_a@test.com", AppleUserID: stringPtrHelper("apple.list_a"), Username: "lista"}
+	userB := User{Email: "list_b@test.com", AppleUserID: stringPtrHelper("apple.list_b"), Username: "listb"}
 	db.Create(&userA)
 	db.Create(&userB)
 
@@ -306,5 +317,348 @@ func TestPublicPages_AreServedByBackend(t *testing.T) {
 		if !bytes.Contains(rec.Body.Bytes(), []byte(tt.wantSnippet)) {
 			t.Fatalf("%s: response missing %q", tt.path, tt.wantSnippet)
 		}
+	}
+}
+
+// ─── Achievement tests ──────────────────────────────────────────────────────
+
+type createDriveResponse struct {
+	Drive                json.RawMessage        `json:"drive"`
+	UnlockedAchievements []UnlockedAchievement  `json:"unlocked_achievements"`
+}
+
+type achievementsResponse struct {
+	Catalog  []AchievementCatalogEntry `json:"catalog"`
+	Unlocked []UnlockedAchievement     `json:"unlocked"`
+}
+
+func postDrive(t *testing.T, router *gin.Engine, token string, payload map[string]interface{}) createDriveResponse {
+	t.Helper()
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("POST", "/api/v1/drives", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201 on create drive, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp createDriveResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode create drive response: %v", err)
+	}
+	return resp
+}
+
+func TestUserAchievements_AreUnlockedOnDriveSave(t *testing.T) {
+	jwtSecret = []byte("achievement-test-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	user := User{Email: "ach@test.com", Username: "achiever", AuthProvider: "google"}
+	db.Create(&user)
+
+	router := makeAuthRouter()
+	token := tokenForUser(t, user)
+
+	// First drive — max_speed 50 m/s (~112 mph), triggers sub_6/sub_5/speed_50/speed_100.
+	_ = postDrive(t, router, token, map[string]interface{}{
+		"start_time":   time.Now().Add(-time.Hour),
+		"end_time":     time.Now(),
+		"start_lat":    37.0,
+		"start_lng":    -122.0,
+		"end_lat":      37.01,
+		"end_lng":      -122.0,
+		"distance":     1000.0,
+		"duration":     120.0,
+		"max_speed":    50.0,
+		"min_speed":    0.0,
+		"avg_speed":    8.0,
+		"best_060_time": 4.2, // triggers sub_6_club and sub_5_club
+	})
+
+	// Fetch /me/achievements
+	req, _ := http.NewRequest("GET", "/api/v1/me/achievements", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp achievementsResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode achievements: %v", err)
+	}
+	if len(resp.Catalog) == 0 {
+		t.Fatalf("expected non-empty catalog")
+	}
+	gotIDs := map[string]UnlockedAchievement{}
+	for _, a := range resp.Unlocked {
+		gotIDs[a.AchievementID] = a
+	}
+	for _, expected := range []string{"first_drive", "sub_6_club", "sub_5_club", "speed_50", "speed_100"} {
+		if _, ok := gotIDs[expected]; !ok {
+			t.Errorf("expected achievement %q to be unlocked", expected)
+		}
+	}
+	// sub_5_club should have a source drive id
+	if a, ok := gotIDs["sub_5_club"]; ok {
+		if a.SourceDriveID == nil || *a.SourceDriveID == 0 {
+			t.Errorf("expected sub_5_club.source_drive_id to be set")
+		}
+		if a.SourceKind != SourceKindBestZeroToSixty {
+			t.Errorf("expected sub_5_club.source_kind = %q, got %q", SourceKindBestZeroToSixty, a.SourceKind)
+		}
+	}
+}
+
+func TestPublicAchievements_HiddenForPrivateUser(t *testing.T) {
+	jwtSecret = []byte("public-ach-test-secret-32-bytes-long!")
+	setupTestDB(t)
+
+	user := User{Email: "priv@test.com", Username: "privateuser", AuthProvider: "google"}
+	db.Create(&user)
+	// IsPublic uses a `default:true` GORM tag, which means GORM will treat
+	// the zero-valued `false` as "use the default". Force an explicit update
+	// to flip the user to private for this test.
+	db.Model(&user).Update("is_public", false)
+
+	// Insert a manually-unlocked achievement
+	db.Create(&UserAchievement{
+		UserID:        user.ID,
+		AchievementID: "first_drive",
+		UnlockedAt:    time.Now().UTC(),
+		SourceKind:    SourceKindDriveCount,
+		SourceValue:   1,
+	})
+
+	router := makePublicRouter()
+	req, _ := http.NewRequest("GET", "/api/v1/users/privateuser/achievements", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for private user, got %d", w.Code)
+	}
+}
+
+func TestPublicAchievements_VisibleForPublicUser(t *testing.T) {
+	jwtSecret = []byte("public-ach-visible-test-32-bytes!!")
+	setupTestDB(t)
+
+	user := User{Email: "pub@test.com", Username: "publicuser", AuthProvider: "google", IsPublic: true}
+	db.Create(&user)
+
+	db.Create(&UserAchievement{
+		UserID:        user.ID,
+		AchievementID: "speed_100",
+		UnlockedAt:    time.Now().UTC(),
+		SourceKind:    SourceKindMaxSpeed,
+		SourceValue:   50.0,
+	})
+
+	router := makePublicRouter()
+	req, _ := http.NewRequest("GET", "/api/v1/users/publicuser/achievements", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp achievementsResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Unlocked) != 1 || resp.Unlocked[0].AchievementID != "speed_100" {
+		t.Errorf("expected one speed_100 unlock, got %+v", resp.Unlocked)
+	}
+	if len(resp.Catalog) == 0 {
+		t.Errorf("expected catalog to be returned")
+	}
+}
+
+func TestPublicDrive_OnlyForPublicUser(t *testing.T) {
+	jwtSecret = []byte("public-drive-test-secret-32-bytes!!")
+	setupTestDB(t)
+
+	private := User{Email: "pdpriv@test.com", Username: "pdpriv", AuthProvider: "google"}
+	public := User{Email: "pdpub@test.com", Username: "pdpub", AuthProvider: "google"}
+	db.Create(&private)
+	db.Create(&public)
+	// Force private user to actually be private (see note in
+	// TestPublicAchievements_HiddenForPrivateUser).
+	db.Model(&private).Update("is_public", false)
+
+	privateDrive := Drive{UserID: private.ID, StartTime: time.Now(), EndTime: time.Now()}
+	publicDrive := Drive{UserID: public.ID, StartTime: time.Now(), EndTime: time.Now()}
+	db.Create(&privateDrive)
+	db.Create(&publicDrive)
+
+	router := makePublicRouter()
+
+	// Private drive should 404
+	req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/drives/%d/public", privateDrive.ID), nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for private drive, got %d", w.Code)
+	}
+
+	// Public drive should 200
+	req2, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/drives/%d/public", publicDrive.ID), nil)
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Errorf("expected 200 for public drive, got %d", w2.Code)
+	}
+}
+
+func TestAchievementEvaluation_RecordsPBZeroSixtySourceDrive(t *testing.T) {
+	jwtSecret = []byte("pb-060-test-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	user := User{Email: "pb@test.com", Username: "pbdrive", AuthProvider: "google"}
+	db.Create(&user)
+
+	router := makeAuthRouter()
+	token := tokenForUser(t, user)
+
+	// First drive: 6.0s
+	resp1 := postDrive(t, router, token, map[string]interface{}{
+		"start_time":    time.Now().Add(-2 * time.Hour),
+		"end_time":      time.Now().Add(-time.Hour),
+		"start_lat":     37.0,
+		"start_lng":     -122.0,
+		"end_lat":       37.01,
+		"end_lng":       -122.0,
+		"distance":      1000.0,
+		"duration":      120.0,
+		"max_speed":     30.0,
+		"min_speed":     0.0,
+		"avg_speed":     8.0,
+		"best_060_time": 6.0,
+	})
+
+	var d1 map[string]interface{}
+	_ = json.Unmarshal(resp1.Drive, &d1)
+	drive1ID := uint(d1["id"].(float64))
+
+	// Fetch /me/achievements and check sub_6_club source drive
+	req, _ := http.NewRequest("GET", "/api/v1/me/achievements", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	var ach1 achievementsResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &ach1)
+	var sub6 *UnlockedAchievement
+	for i := range ach1.Unlocked {
+		if ach1.Unlocked[i].AchievementID == "sub_6_club" {
+			sub6 = &ach1.Unlocked[i]
+			break
+		}
+	}
+	if sub6 == nil {
+		t.Fatalf("expected sub_6_club to be unlocked on first drive")
+	}
+	if sub6.SourceDriveID == nil || *sub6.SourceDriveID != drive1ID {
+		t.Errorf("expected sub_6_club.source_drive_id == %d, got %v", drive1ID, sub6.SourceDriveID)
+	}
+
+	// Second drive: 7.5s (slower) — should NOT change the PB source drive.
+	resp2 := postDrive(t, router, token, map[string]interface{}{
+		"start_time":    time.Now().Add(-time.Hour),
+		"end_time":      time.Now(),
+		"start_lat":     37.0,
+		"start_lng":     -122.0,
+		"end_lat":       37.01,
+		"end_lng":       -122.0,
+		"distance":      1000.0,
+		"duration":      120.0,
+		"max_speed":     30.0,
+		"min_speed":     0.0,
+		"avg_speed":     8.0,
+		"best_060_time": 7.5,
+	})
+
+	_ = resp2
+	req2, _ := http.NewRequest("GET", "/api/v1/me/achievements", nil)
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	var ach2 achievementsResponse
+	_ = json.Unmarshal(w2.Body.Bytes(), &ach2)
+	for _, a := range ach2.Unlocked {
+		if a.AchievementID == "sub_6_club" {
+			if a.SourceDriveID == nil || *a.SourceDriveID != drive1ID {
+				t.Errorf("expected sub_6_club.source_drive_id to remain %d (PB drive), got %v", drive1ID, a.SourceDriveID)
+			}
+		}
+	}
+}
+
+func TestAchievementEvaluation_ZeroToSixtyAttemptsRoundTrip(t *testing.T) {
+	jwtSecret = []byte("attempts-test-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	user := User{Email: "att@test.com", Username: "attempts", AuthProvider: "google"}
+	db.Create(&user)
+
+	router := makeAuthRouter()
+	token := tokenForUser(t, user)
+
+	attempts := []ZeroToSixtyAttempt{
+		{
+			StartIndex: 0, EndIndex: 12,
+			StartTimestamp: 1.0, EndTimestamp: 6.0,
+			ElapsedSeconds: 5.0,
+			StartLatitude: 37.0, StartLongitude: -122.0,
+			EndLatitude: 37.005, EndLongitude: -122.0,
+		},
+		{
+			StartIndex: 20, EndIndex: 40,
+			StartTimestamp: 60.0, EndTimestamp: 67.5,
+			ElapsedSeconds: 7.5,
+			StartLatitude: 37.01, StartLongitude: -122.0,
+			EndLatitude: 37.02, EndLongitude: -122.0,
+		},
+	}
+	resp := postDrive(t, router, token, map[string]interface{}{
+		"start_time":    time.Now().Add(-time.Hour),
+		"end_time":      time.Now(),
+		"start_lat":     37.0,
+		"start_lng":     -122.0,
+		"end_lat":       37.02,
+		"end_lng":       -122.0,
+		"distance":      2000.0,
+		"duration":      300.0,
+		"max_speed":     30.0,
+		"min_speed":     0.0,
+		"avg_speed":     8.0,
+		"best_060_time": 5.0,
+		"zero_to_sixty_attempts": attempts,
+	})
+
+	var d map[string]interface{}
+	_ = json.Unmarshal(resp.Drive, &d)
+	driveID := uint(d["id"].(float64))
+
+	// Read back via GET /drives/:id
+	req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/drives/%d", driveID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var read Drive
+	if err := json.Unmarshal(w.Body.Bytes(), &read); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(read.ZeroToSixtyAttempts) != 2 {
+		t.Fatalf("expected 2 attempts, got %d", len(read.ZeroToSixtyAttempts))
+	}
+	if read.ZeroToSixtyAttempts[0].ElapsedSeconds != 5.0 {
+		t.Errorf("expected first attempt elapsed = 5.0, got %v", read.ZeroToSixtyAttempts[0].ElapsedSeconds)
+	}
+	if read.ZeroToSixtyAttempts[1].StartIndex != 20 {
+		t.Errorf("expected second attempt start_index = 20, got %d", read.ZeroToSixtyAttempts[1].StartIndex)
 	}
 }

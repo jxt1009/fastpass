@@ -126,6 +126,24 @@ var schemaMigrations = []schemaMigration{
 			return tx.Exec("UPDATE users SET is_public = true WHERE NOT is_public").Error
 		},
 	},
+	{
+		version:     "2026060101",
+		description: "add zero_to_sixty_attempts + user_achievements",
+		up: func(tx *gorm.DB) error {
+			if err := addColumnIfMissing(tx, &Drive{}, "ZeroToSixtyAttempts"); err != nil {
+				return err
+			}
+			if !tx.Migrator().HasTable(&UserAchievement{}) {
+				if err := tx.Migrator().CreateTable(&UserAchievement{}); err != nil {
+					return err
+				}
+			}
+			if err := addIndexByNameIfMissing(tx, &UserAchievement{}, "idx_user_achievement"); err != nil {
+				return err
+			}
+			return nil
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB) error {
