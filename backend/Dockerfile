@@ -1,17 +1,30 @@
-# Build stage
+# SPA build stage
+FROM node:22-alpine AS spa-builder
+
+WORKDIR /spa
+
+COPY website/spa/package.json website/spa/package-lock.json ./
+RUN npm ci
+
+COPY website/spa/ ./
+RUN npm run build
+
+# Go build stage
 FROM golang:1.26-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/backend
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy go mod files (paths relative to build context = repo root)
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
 # Copy source code and web assets
-COPY cmd/ ./cmd/
-COPY internal/ ./internal/
-COPY templates/ ./templates/
-COPY static/ ./static/
+COPY backend/cmd/ ./cmd/
+COPY backend/internal/ ./internal/
+COPY backend/static/ ./static/
+
+# Copy SPA build output from the previous stage
+COPY --from=spa-builder /spa/build/ ./static/spa/
 
 # Build with version info injected
 ARG VERSION=dev
@@ -28,8 +41,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 COPY --from=builder /fasttrack .
-COPY --from=builder /app/templates/ ./templates/
-COPY --from=builder /app/static/ ./static/
+COPY --from=builder /app/backend/static/ ./static/
 
 EXPOSE 8080
 

@@ -9,7 +9,11 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.Static("/uploads", "./uploads")
 	r.Static("/static", "./static")
 
-	// Public web page routes (no auth required)
+	// SPA build assets (SvelteKit default _app/ path — must be before SPA routes)
+	r.Static("/_app", "./static/spa/_app")
+
+	// Public social SPA routes (client-side routing via SvelteKit SPA fallback)
 	r.GET("/leaderboard", renderLeaderboard)
 	r.GET("/u/:username", renderProfile)
+	r.GET("/find", serveSPAIndex)
 }
