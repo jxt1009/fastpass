@@ -156,7 +156,7 @@
 					{#each profile.garage as car}
 						<div class="garage-card">
 							<div class="car-nickname">{car.nickname || `${car.make} ${car.model}`}</div>
-							<div class="car-model">{profile.year || ''} {car.make} {car.model} {car.trim || ''}</div>
+							<div class="car-model">{car.year || ''} {car.make} {car.model} {car.trim || ''}</div>
 						</div>
 					{/each}
 				</div>
