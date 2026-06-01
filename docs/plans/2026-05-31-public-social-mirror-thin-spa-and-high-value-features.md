@@ -12,7 +12,7 @@
 - [x] Home page is a clean public social discovery landing
 - [x] Public Leaderboard page (filters + table using live API)
 - [x] Public profile pages + dynamic follower/following lists
-- [ ] Public "Find People" search
+- [x] Public "Find People" search
 - [ ] Backend serving + redirects from old template routes
 - [ ] Docs + PR
 
