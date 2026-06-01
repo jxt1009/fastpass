@@ -24,9 +24,32 @@
 		country: string;
 	}
 
+	interface AchievementCatalogEntry {
+		id: string;
+		title: string;
+		description: string;
+		category: string;
+		icon: string;
+		requirement: { type: string; value: number; condition?: string; unit?: string };
+	}
+
+	interface UserAchievement {
+		achievement_id: string;
+		unlocked_at: string;
+		source_drive_id: number | null;
+		source_kind: string;
+		source_value: number;
+	}
+
+	interface AchievementsResponse {
+		catalog: AchievementCatalogEntry[];
+		unlocked: UserAchievement[];
+	}
+
 	let profile = $state<PublicProfile | null>(null);
 	let followers = $state<FollowUser[]>([]);
 	let following = $state<FollowUser[]>([]);
+	let achievements = $state<AchievementsResponse | null>(null);
 	let loading = $state(true);
 	let error = $state('');
 
@@ -37,10 +60,11 @@
 		error = '';
 
 		try {
-			const [profileRes, followersRes, followingRes] = await Promise.all([
+			const [profileRes, followersRes, followingRes, achievementsRes] = await Promise.all([
 				fetch(`${API}/users/${username}`),
 				fetch(`${API}/users/${username}/followers`),
-				fetch(`${API}/users/${username}/following`)
+				fetch(`${API}/users/${username}/following`),
+				fetch(`${API}/users/${username}/achievements`)
 			]);
 
 			if (!profileRes.ok) throw new Error('User not found');
@@ -48,12 +72,19 @@
 			profile = await profileRes.json();
 			followers = followersRes.ok ? await followersRes.json() : [];
 			following = followingRes.ok ? await followingRes.json() : [];
+			achievements = achievementsRes.ok ? await achievementsRes.json() : null;
 			// Non-OK responses for lists are treated as empty (addressed Copilot feedback)
 		} catch (e) {
 			error = 'Profile not found or unavailable.';
 		} finally {
 			loading = false;
 		}
+	}
+
+	function unlockedLookup() {
+		const m = new Map<string, UserAchievement>();
+		if (achievements) for (const u of achievements.unlocked) m.set(u.achievement_id, u);
+		return m;
 	}
 
 	$effect(() => {
@@ -125,8 +156,35 @@
 					{#each profile.garage as car}
 						<div class="garage-card">
 							<div class="car-nickname">{car.nickname || `${car.make} ${car.model}`}</div>
-							<div class="car-model">{car.year || ''} {car.make} {car.model} {car.trim || ''}</div>
+							<div class="car-model">{profile.year || ''} {car.make} {car.model} {car.trim || ''}</div>
 						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- Achievements -->
+		{#if achievements && achievements.catalog.length > 0}
+			{@const unlockedMap = unlockedLookup()}
+			<div class="section">
+				<div class="section-title">Achievements ({unlockedMap.size}/{achievements.catalog.length})</div>
+				<div class="achievement-grid">
+					{#each achievements.catalog as entry}
+						{@const unlock = unlockedMap.get(entry.id)}
+						{@const href = unlock?.source_drive_id ? `/d/${unlock.source_drive_id}` : null}
+						{#if href}
+							<a class="achievement-tile unlocked" href={href} title="View source drive">
+								<div class="achievement-icon">{entry.icon}</div>
+								<div class="achievement-title">{entry.title}</div>
+								<div class="achievement-desc">{entry.description}</div>
+							</a>
+						{:else}
+							<div class="achievement-tile {unlock ? 'unlocked' : 'locked'}" title={unlock ? 'Unlocked' : 'Locked'}>
+								<div class="achievement-icon">{unlock ? entry.icon : '🔒'}</div>
+								<div class="achievement-title">{entry.title}</div>
+								<div class="achievement-desc">{entry.description}</div>
+							</div>
+						{/if}
 					{/each}
 				</div>
 			</div>
@@ -189,5 +247,40 @@
 	.su-country {
 		color: var(--muted);
 		font-size: 0.8rem;
+	}
+
+	.achievement-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 12px;
+	}
+	.achievement-tile {
+		display: block;
+		padding: 14px;
+		background: var(--card, #1a1a1a);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		text-decoration: none;
+		color: var(--text);
+		transition: transform 0.15s ease, border-color 0.15s ease;
+	}
+	a.achievement-tile:hover {
+		transform: translateY(-2px);
+		border-color: var(--accent, #f59e0b);
+	}
+	.achievement-tile.locked {
+		opacity: 0.5;
+	}
+	.achievement-icon {
+		font-size: 1.8rem;
+		margin-bottom: 6px;
+	}
+	.achievement-title {
+		font-weight: 600;
+		margin-bottom: 4px;
+	}
+	.achievement-desc {
+		font-size: 0.8rem;
+		color: var(--muted);
 	}
 </style>
