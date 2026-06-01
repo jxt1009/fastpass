@@ -91,6 +91,7 @@ footer a:hover{color:var(--text)}
   </a>
   <div class="nav-links">
     <a href="/leaderboard">Leaderboard</a>
+    <a href="/find">Find People</a>
   </div>
 </nav>
 <section class="hero">
@@ -169,7 +170,7 @@ footer a:hover{color:var(--text)}
 </div>
 <footer>
   <span>&copy; FastTrack</span>
-  <span><a href="/leaderboard">Leaderboard</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></span>
+  <span><a href="/leaderboard">Leaderboard</a> &middot; <a href="/find">Find People</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></span>
 </footer>
 <script>
 const LB = '/api/v1/leaderboard'

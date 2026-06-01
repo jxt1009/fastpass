@@ -82,6 +82,9 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 
+# SPA build output (built by Node.js, consumed by Go backend)
+backend/static/spa/
+
 # Git worktrees (local development only — never commit these)
 .worktrees/
 .worktree/

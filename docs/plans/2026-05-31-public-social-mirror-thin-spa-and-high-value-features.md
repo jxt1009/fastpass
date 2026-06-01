@@ -1,8 +1,9 @@
 # Public Social Mirror via Thin No-Auth SPA + High-Value App Features Plan
 
-**Date:** 2026-05-31  
-**Branch:** `feat/public-social-mirror-thin-spa` (worktree at `.worktrees/public-social-mirror`)  
-**Status:** Phase 1 complete (SPA scaffolded at `website/spa/`, FastTrack theme + nav + CTAs ported, static build verified). Starting implementation of public social features (Leaderboard first).
+**Date:** 2026-05-31 (updated 2026-05-31)  
+**Branch (Phase 1):** `feat/public-social-mirror-thin-spa` (merged via PR #40)  
+**Branch (Phase 4+5):** `feat/web-backend-serving-glue` (worktree at `.worktrees/web-backend-serving-glue`)  
+**Status:** Complete — SPA is live and served by the Go backend at social routes.
 
 ## Progress
 
@@ -13,8 +14,8 @@
 - [x] Public Leaderboard page (filters + table using live API)
 - [x] Public profile pages + dynamic follower/following lists
 - [x] Public "Find People" search
-- [ ] Backend serving + redirects from old template routes
-- [ ] Docs + PR
+- [x] Backend serving + redirects from old template routes
+- [x] Docs + PR
 
 ## Context & Revised Scope (from user feedback)
 
@@ -112,18 +113,24 @@ Alternative if we want even thinner later: pure vanilla + history API + minimal 
 - Visual consistency with existing brand (colors, typography, avatar fallbacks).
 - **Success check:** Beautiful public discovery experience; clear path from web → app; no broken old links for casual visitors.
 
-#### Phase 4 — Backend Serving + Minimal Glue
-- Extend backend static serving (or add dedicated handler) to serve the SPA's built assets under the social routes (same origin preferred).
-- Optional: tiny CORS header if SPA ends up on different origin during development.
-- Update any marketing links.
-- **Success check:** SPA loads from the same domain the API is on; old template social pages no longer render the heavy Go templates for social paths.
+#### Phase 4 — Backend Serving + Minimal Glue ✓
+- [x] SPA configured to build to `backend/static/spa/` (SvelteKit adapter-static with custom `pages`/`assets` output)
+- [x] Go backend serves SPA's `_app/` assets via `r.Static("/_app", "./static/spa/_app")`
+- [x] Social routes (`/leaderboard`, `/u/:username`, `/find`) return SPA's `index.html` via `c.File()`
+- [x] Home page nav and footer updated with "Find People" link
+- [x] Old Go template files (`templates/layout.html`, `leaderboard.html`, `profile.html`) deleted
+- [x] Old Go template rendering code (`initWebTemplates()`, `resolveWebAuth()`, `SocialEntry`, `GarageCar`) removed
+- [x] Keep home (`/`), privacy (`/privacy`), terms (`/terms`) as Go-rendered pages unchanged
+- **Success check:** SPA loads from the same domain; old social template code completely removed.
 
-#### Phase 5 — Docs, Cleanup, Verification, PR
-- Update `README.md`, `docs/DEVELOPMENT.md`, any deployment notes.
-- Note in `website/README.md` that it now hosts the thin public social SPA.
-- Full verification (see below).
-- Conventional commit(s), rebase on main, push from worktree, `gh pr create`.
-- Merge via squash (per repo rules).
+#### Phase 5 — Docs, Cleanup, Verification, PR ✓
+- [x] Dockerfile updated with multi-stage SPA build (Node.js `spa-builder` → Go builder → runtime)
+- [x] Docker build context changed to repo root (`.`) with `file: backend/Dockerfile` in deploy workflow
+- [x] Deploy workflow triggers on `website/spa/**` changes too
+- [x] `.gitignore` updated with `backend/static/spa/`
+- [x] Updated plan doc
+- [x] Full verification: `go build`, `go vet`, `go test`, `npm run build` all green
+- [x] Push from worktree, `gh pr create`
 
 ## Part 2: Brainstorm — High-Value (Non-Gimmick) Features for the iOS App
 

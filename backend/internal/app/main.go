@@ -10,7 +10,6 @@ func Run(buildVersion, buildCommit string) {
 	configureLogging()
 	initJWTSecret()
 	initDatabase()
-	initWebTemplates()
 
 	r := newRouter()
 	registerOperationalRoutes(r)
