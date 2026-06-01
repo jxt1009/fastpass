@@ -2,7 +2,19 @@
 
 **Date:** 2026-05-31  
 **Branch:** `feat/public-social-mirror-thin-spa` (worktree at `.worktrees/public-social-mirror`)  
-**Status:** In progress — plan created as first artifact per project rules.
+**Status:** Phase 1 complete (SPA scaffolded at `website/spa/`, FastTrack theme + nav + CTAs ported, static build verified). Starting implementation of public social features (Leaderboard first).
+
+## Progress
+
+- [x] Worktree created + plan artifact
+- [x] Thin Svelte 5 SPA scaffolded in `website/spa/` (minimal + TS + Tailwind + static adapter)
+- [x] FastTrack dark theme, sticky nav, and strong app CTAs ported
+- [x] Home page is a clean public social discovery landing
+- [ ] Public Leaderboard page (filters + table using live API)
+- [ ] Public profile pages + dynamic follower/following lists
+- [ ] Public "Find People" search
+- [ ] Backend serving + redirects from old template routes
+- [ ] Docs + PR
 
 ## Context & Revised Scope (from user feedback)
 
