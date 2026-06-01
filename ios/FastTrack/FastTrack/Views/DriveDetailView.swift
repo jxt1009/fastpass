@@ -54,7 +54,11 @@ struct SpeedSegment {
 /// route points. `midpointCoordinate` is where the speech-bubble annotation
 /// is anchored.
 struct ZeroToSixtyAttemptDisplay: Identifiable, Equatable {
-    let id: UUID
+    /// Stable identifier derived from the attempt's `endTimestamp` so
+    /// SwiftUI diffing on `ForEach` doesn't redraw all attempts when the
+    /// view re-runs the parser (e.g. on state changes). Falls back to a
+    /// UUID only if no timestamp is available.
+    let id: String
     let elapsedSeconds: Double
     let polylineCoordinates: [CLLocationCoordinate2D]
     let midpointCoordinate: CLLocationCoordinate2D
@@ -645,7 +649,7 @@ struct DriveDetailView: View {
             let coords = polylineCoordinates(for: attempt)
             let mid = midpoint(for: attempt, fallbackTo: coords)
             return ZeroToSixtyAttemptDisplay(
-                id:                  UUID(),
+                id:                  String(attempt.endTimestamp),
                 elapsedSeconds:      attempt.elapsedSeconds,
                 polylineCoordinates: coords,
                 midpointCoordinate:  mid,
