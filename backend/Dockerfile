@@ -24,7 +24,8 @@ COPY backend/internal/ ./internal/
 COPY backend/static/ ./static/
 
 # Copy SPA build output from the previous stage
-COPY --from=spa-builder /spa/build/ ./static/spa/
+# SPA config outputs to ../../backend/static/spa/ relative to WORKDIR /spa = /backend/static/spa/
+COPY --from=spa-builder /backend/static/spa/ ./static/spa/
 
 # Build with version info injected
 ARG VERSION=dev
