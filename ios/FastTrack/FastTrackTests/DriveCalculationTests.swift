@@ -287,4 +287,93 @@ final class DriveCalculationTests: XCTestCase {
 
         XCTAssertNotNil(drive.calculatePerformanceMetrics())
     }
+
+    // MARK: - 0-60 attempts
+
+    func testLaunchTracker_RecordsMultipleAttemptsInOneDrive() {
+        var tracker = LaunchTracker()
+        let targetMph = 60.0
+
+        func sample(speedMph: Double, seconds: Double) -> SpeedSample {
+            SpeedSample(
+                speed:              speedMph / 2.23694,
+                rawGPSSpeed:        speedMph / 2.23694,
+                speedAccuracy:      1.0,
+                timestamp:          Date(timeIntervalSince1970: 1_700_000_000 + seconds),
+                isZeroLocked:       speedMph < 1,
+                stationaryConfidence: speedMph < 1 ? 1.0 : 0.0
+            )
+        }
+
+        // First launch: 0 → 60 in ~5.0s
+        let _ = tracker.ingest(sample(speedMph: 0,    seconds: 0))
+        for i in 1...50 {
+            let mph = targetMph * Double(i) / 50.0
+            _ = tracker.ingest(sample(speedMph: mph, seconds: Double(i) * 0.1))
+        }
+
+        // Stop, then launch again
+        _ = tracker.ingest(sample(speedMph: 0, seconds: 6.0))
+
+        // Second launch: 0 → 60 in ~6.0s
+        for i in 1...60 {
+            let mph = targetMph * Double(i) / 60.0
+            _ = tracker.ingest(sample(speedMph: mph, seconds: 6.0 + Double(i) * 0.1))
+        }
+
+        XCTAssertEqual(tracker.attempts.count, 2, "Two separate launches should both be recorded")
+        XCTAssertEqual(tracker.attempts[0].elapsedSeconds, 5.0, accuracy: 0.2)
+        XCTAssertEqual(tracker.attempts[1].elapsedSeconds, 6.0, accuracy: 0.2)
+        XCTAssertEqual(tracker.best060Time ?? -1, 5.0, accuracy: 0.2)
+    }
+
+    func testZeroToSixtyAttempt_RoundTripsThroughJSON() throws {
+        let original = ZeroToSixtyAttempt(
+            startIndex:     12,
+            endIndex:       27,
+            startTimestamp: 1_700_000_100,
+            endTimestamp:   1_700_000_105,
+            elapsedSeconds: 5.0,
+            startLatitude:  37.0,
+            startLongitude: -122.0,
+            endLatitude:    37.001,
+            endLongitude:   -122.0,
+            legacy:         false
+        )
+        let data = try JSONEncoder().encode([original])
+        let decoded = try JSONDecoder().decode([ZeroToSixtyAttempt].self, from: data)
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertEqual(decoded[0].elapsedSeconds, 5.0, accuracy: 0.001)
+        XCTAssertEqual(decoded[0].startLatitude,  37.0,  accuracy: 0.0001)
+        XCTAssertEqual(decoded[0].endLongitude,   -122.0, accuracy: 0.0001)
+        XCTAssertEqual(decoded[0].legacy, false)
+        XCTAssertEqual(decoded[0].startIndex, 12)
+        XCTAssertEqual(decoded[0].endIndex, 27)
+    }
+
+    func testAchievementManager_AppliesServerUnlocksWithSourceDrive() {
+        let manager = AchievementManager.shared
+        // Reset any prior state for the test
+        manager.achievements = manager.achievements.map {
+            var copy = $0
+            copy.isUnlocked = false
+            copy.sourceDriveId = nil
+            copy.unlockedDate = nil
+            return copy
+        }
+
+        let server = [UserAchievement(
+            achievementId: "sub_6_club",
+            unlockedAt:    Date(),
+            sourceDriveId: 42,
+            sourceKind:    "zero_to_sixty",
+            sourceValue:   5.0
+        )]
+        manager.applyServerUnlocks(server)
+
+        let sub6 = manager.achievements.first(where: { $0.id == "sub_6_club" })
+        XCTAssertNotNil(sub6)
+        XCTAssertTrue(sub6?.isUnlocked ?? false)
+        XCTAssertEqual(sub6?.sourceDriveId, 42)
+    }
 }

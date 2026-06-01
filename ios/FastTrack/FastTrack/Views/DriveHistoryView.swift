@@ -23,9 +23,13 @@ struct DriveHistoryView: View {
                     List {
                         ForEach(driveManager.drives) { drive in
                             NavigationLink(destination: DriveDetailView(drive: drive)) {
-                                DriveRowView(drive: drive)
+                                DriveRowView(drive: drive, isPersonalBest060: drive.id == driveManager.pb060DriveId)
                             }
-                            .listRowBackground(Color.ftSurfaceBg)
+                            .listRowBackground(
+                                drive.id == driveManager.pb060DriveId
+                                    ? Color.yellow.opacity(0.15)
+                                    : Color.ftSurfaceBg
+                            )
                         }
                     }
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
@@ -60,6 +64,7 @@ struct DriveRowSkeleton: View {
 
 struct DriveRowView: View {
     let drive: Drive
+    var isPersonalBest060: Bool = false
     @EnvironmentObject var settings: AppSettings
 
     var body: some View {
@@ -67,6 +72,19 @@ struct DriveRowView: View {
             HStack {
                 Text(drive.startTime, style: .date)
                     .font(.headline)
+                if isPersonalBest060, drive.best060Time != nil {
+                    HStack(spacing: 3) {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 9, weight: .bold))
+                        Text("PB 0-60")
+                            .font(.caption2.weight(.bold))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .clipShape(Capsule())
+                }
                 Spacer()
                 if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
                     Text(drive.carDisplayString)

@@ -14,6 +14,11 @@ class DriveManager: ObservableObject {
     @Published var isLoadingDrives = true  // true until first fetch completes
     @Published var routeCoordinates: [CLLocationCoordinate2D] = []
     @Published var recordingStartTime: Date?
+    /// Server-authoritative achievements cache. Repopulated on profile appear,
+    /// after each drive save, and on app foreground.
+    @Published var userAchievements: [UserAchievement] = []
+    @Published var achievementsCatalog: [AchievementCatalogEntry] = []
+    @Published var isLoadingAchievements = false
 
     private var locationManager: LocationManager?
     private var cancellables = Set<AnyCancellable>()
@@ -41,6 +46,10 @@ class DriveManager: ObservableObject {
     var best060Time: Double?
     var currentMaxSpeed: Double = 0  // m/s for real-time UI updates
     var launchTracker = LaunchTracker()
+    /// The set of 0-60 attempts captured during the current drive, augmented
+    /// with route-point indices and start/end coordinates at flush time.
+    /// Reset by `startRecording` / `clearLocalData`.
+    var attempts060: [ZeroToSixtyAttempt] = []
 
     // Sub-state for detection algorithms
     var headingWindow: (course: Double, time: Date)?
@@ -105,6 +114,7 @@ class DriveManager: ObservableObject {
         richRoutePoints = []
         recordedRouteEvents = []
         speedReadings = []
+        attempts060 = []
 
         #if DEBUG
         print("⏰ Recording start time: \(recordingStartTime!)")
@@ -197,12 +207,55 @@ class DriveManager: ObservableObject {
         stoppedTimeTracker.finalize(at: endTime)
         drive.endTime = endTime
 
+        // Backfill per-attempt route-point indices + start/end coordinates by
+        // matching against the rich route. Attempts with no matching point
+        // (very rare — typically only on edge cases where the active launch
+        // began before a route point was recorded) get the first/last route
+        // point as a fallback.
+        let attemptsResolved: [ZeroToSixtyAttempt] = attempts060.enumerated().map { _, attempt in
+            var resolved = attempt
+            if let startIdx = richRoutePoints.firstIndex(where: { abs($0.ts - attempt.startTimestamp) < 0.5 }) {
+                resolved.startIndex = startIdx
+                resolved.startLatitude = richRoutePoints[startIdx].lat
+                resolved.startLongitude = richRoutePoints[startIdx].lng
+            } else if !richRoutePoints.isEmpty {
+                resolved.startIndex = 0
+                resolved.startLatitude = richRoutePoints[0].lat
+                resolved.startLongitude = richRoutePoints[0].lng
+            }
+            if let endIdx = richRoutePoints.firstIndex(where: { abs($0.ts - attempt.endTimestamp) < 0.5 }) {
+                resolved.endIndex = endIdx
+                resolved.endLatitude = richRoutePoints[endIdx].lat
+                resolved.endLongitude = richRoutePoints[endIdx].lng
+            } else if let last = richRoutePoints.last {
+                resolved.endIndex = richRoutePoints.count - 1
+                resolved.endLatitude = last.lat
+                resolved.endLongitude = last.lng
+            }
+            return resolved
+        }
+
         // Serialize route as v2 format: {v:2, points:[{lat,lng,speed,ts}], events:[{type,lat,lng,ts}]}
+        // Emit one zero_to_sixty event per attempt so legacy clients can still
+        // show the bubble; new clients should read Drive.zeroToSixtyAttempts.
         let pointDicts = richRoutePoints.map { p -> [String: Any] in
             ["lat": p.lat, "lng": p.lng, "speed": p.speed, "ts": p.ts]
         }
-        let eventDicts = recordedRouteEvents.map { e -> [String: Any] in
+        var eventDicts = recordedRouteEvents.map { e -> [String: Any] in
             ["type": e.type, "lat": e.lat, "lng": e.lng, "ts": e.ts]
+        }
+        for attempt in attemptsResolved {
+            eventDicts.append([
+                "type": "zero_to_sixty",
+                "lat": attempt.startLatitude,
+                "lng": attempt.startLongitude,
+                "ts": attempt.endTimestamp,
+                "start_ts": attempt.startTimestamp,
+                "end_ts": attempt.endTimestamp,
+                "start_index": attempt.startIndex,
+                "end_index": attempt.endIndex,
+                "time_seconds": attempt.elapsedSeconds
+            ])
         }
         let routePayload: [String: Any] = ["v": 2, "points": pointDicts, "events": eventDicts]
         if let data = try? JSONSerialization.data(withJSONObject: routePayload),
@@ -217,6 +270,7 @@ class DriveManager: ObservableObject {
         drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
         drive.peakGForce = peakGForce; drive.topCornerSpeed = topCornerSpeed
         drive.best060Time = best060Time
+        drive.zeroToSixtyAttempts = attemptsResolved
 
         Task {
             do {
@@ -227,10 +281,15 @@ class DriveManager: ObservableObject {
                     self.carStatsManager.updateStats(for: saved)
                     self.currentDrive = nil
                     self.recordingStartTime = nil
+                    self.attempts060 = []
                     #if DEBUG
                     print("✅ Drive saved and car stats updated")
                     #endif
                 }
+                // Refresh server-authoritative achievements (any unlocks from
+                // this drive are included in the response already, but pulling
+                // the canonical state keeps the cache in sync for the profile).
+                await self.refreshAchievementsFromServer()
             } catch {
                 #if DEBUG
                 print("❌ Failed to save drive: \(error.localizedDescription)")
@@ -256,6 +315,61 @@ class DriveManager: ObservableObject {
                 #endif
             }
         }
+    }
+
+    // MARK: - Achievements
+
+    /// Pulls the server-authoritative achievements list. Safe to call from
+    /// any thread; results are published on the main actor.
+    func refreshAchievementsFromServer() async {
+        await MainActor.run { self.isLoadingAchievements = true }
+        do {
+            let resp = try await apiService.fetchMyAchievements()
+            await MainActor.run {
+                self.userAchievements = resp.unlocked
+                self.achievementsCatalog = resp.catalog
+                self.isLoadingAchievements = false
+                // Server is source of truth — push the unlocks into the local
+                // AchievementManager so the profile row can link to the
+                // source drive.
+                AchievementManager.shared.applyServerUnlocks(
+                    resp.unlocked,
+                    catalog: resp.catalog
+                )
+            }
+        } catch {
+            await MainActor.run { self.isLoadingAchievements = false }
+            #if DEBUG
+            print("Failed to fetch achievements: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
+    /// The id of the drive that set the user's all-time best 0-60 mph time.
+    /// Prefers the server's authoritative `sub_6_club` source drive; falls
+    /// back to the most recent drive matching the all-time minimum if the
+    /// user has unlocked sub_6 but the source drive is missing for any
+    /// reason. Returns nil if no drive has a 0-60 recorded.
+    var pb060DriveId: Int? {
+        // 1) Server-authoritative sub-6 club (most reliable)
+        if let sub6 = userAchievements.first(where: { $0.achievementId == "sub_6_club" }),
+           let driveId = sub6.sourceDriveId {
+            return driveId
+        }
+        // 2) Server-authoritative sub-5 club
+        if let sub5 = userAchievements.first(where: { $0.achievementId == "sub_5_club" }),
+           let driveId = sub5.sourceDriveId {
+            return driveId
+        }
+        // 3) Fallback: the most recent drive whose best_060_time equals the
+        //    all-time min.
+        let recorded = drives.compactMap { drive -> (Drive, Double)? in
+            guard let t = drive.best060Time, t > 0 else { return nil }
+            return (drive, t)
+        }
+        guard let minTime = recorded.map(\.1).min() else { return nil }
+        let matches = recorded.filter { $0.1 == minTime }.map(\.0)
+        return matches.max(by: { $0.startTime < $1.startTime })?.id
     }
 
     func startPolling() {
@@ -285,6 +399,7 @@ class DriveManager: ObservableObject {
         latestSpeedSample = nil
         richRoutePoints = []
         recordedRouteEvents = []
+        attempts060 = []
         stoppedTimeTracker.reset()
         leftTurns = 0
         rightTurns = 0
@@ -302,6 +417,8 @@ class DriveManager: ObservableObject {
         lastTurnOrLaneTime = nil
         lastBrakeTime = nil
         headingHistory = []
+        userAchievements = []
+        achievementsCatalog = []
     }
 }
 

@@ -64,11 +64,19 @@ extension DriveManager {
             currentMaxSpeed = sample.speed
         }
 
+        let priorAttemptCount = launchTracker.attempts.count
         if let newBest = launchTracker.ingest(sample) {
             best060Time = newBest
             #if DEBUG
             print("🏁 New best 0-60 time: \(newBest)s")
             #endif
+        }
+        // Drain any newly-recorded attempts into the per-drive list. The
+        // location-aware fields (indices, lat/lng) are filled in at flush
+        // time against the full `richRoutePoints` array.
+        if launchTracker.attempts.count > priorAttemptCount {
+            let newOnes = launchTracker.attempts[priorAttemptCount...]
+            attempts060.append(contentsOf: newOnes)
         }
 
         guard var drive = currentDrive else { return }

@@ -47,6 +47,21 @@ struct SpeedSegment {
     let speedBand: Int   // 0=slow(green) 1=medium(yellow) 2=fast(orange) 3=very fast(red)
 }
 
+// MARK: - 0-60 Attempt Display
+
+/// Resolved view-model for a 0-60 attempt. `polylineCoordinates` is the slice
+/// of the route that this attempt covers, already clipped to the available
+/// route points. `midpointCoordinate` is where the speech-bubble annotation
+/// is anchored.
+struct ZeroToSixtyAttemptDisplay: Identifiable, Equatable {
+    let id: UUID
+    let elapsedSeconds: Double
+    let polylineCoordinates: [CLLocationCoordinate2D]
+    let midpointCoordinate: CLLocationCoordinate2D
+    let isPersonalBest: Bool
+    let isLegacy: Bool
+}
+
 // MARK: - Drive Detail View
 
 struct DriveDetailView: View {
@@ -56,6 +71,12 @@ struct DriveDetailView: View {
     @State private var routePoints: [RoutePoint] = []
     @State private var routeEvents: [RouteEvent] = []
     @State private var showingCarPicker = false
+
+    /// 0-60 attempts parsed from `drive.zeroToSixtyAttempts` and, as a
+    /// backwards-compat fallback, from any `zero_to_sixty` events embedded in
+    /// the route payload. The route-polyline indices are populated from
+    /// `routePoints` so the map can draw each attempt on top of the route.
+    @State private var zeroToSixtyAttempts: [ZeroToSixtyAttemptDisplay] = []
 
     // Map expand state
     @State private var isMapExpanded = false
@@ -77,6 +98,11 @@ struct DriveDetailView: View {
                 // Playback controls (only when rich route data is available)
                 if !routePoints.isEmpty {
                     playbackControls
+                }
+
+                // 0-60 attempt legend (only when attempts were captured)
+                if !zeroToSixtyAttempts.isEmpty {
+                    zeroToSixtyLegend
                 }
 
                 // Stats Grid
@@ -157,7 +183,10 @@ struct DriveDetailView: View {
         }
         .navigationTitle("Drive Details")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { parseRouteData() }
+        .onAppear {
+            parseRouteData()
+            parseZeroToSixtyAttempts()
+        }
         .onDisappear { stopPlayback() }
         .sheet(isPresented: $showingCarPicker) {
             DriveCarSelectorView(drive: drive)
@@ -253,6 +282,23 @@ struct DriveDetailView: View {
                         Circle().fill(event.color.opacity(0.85)).frame(width: 22, height: 22)
                         Image(systemName: event.icon).font(.system(size: 10)).foregroundColor(.white)
                     }
+                }
+            }
+
+            // 0-60 attempt polylines + speech-bubble labels (drawn after the
+            // route so the orange sits on top).
+            ForEach(zeroToSixtyAttempts) { attempt in
+                if attempt.polylineCoordinates.count >= 2 {
+                    MapPolyline(coordinates: attempt.polylineCoordinates)
+                        .stroke(Color.orange, lineWidth: 6)
+                }
+                Annotation("", coordinate: attempt.midpointCoordinate) {
+                    ZeroSixtyAttemptBubble(
+                        elapsedSeconds: attempt.elapsedSeconds,
+                        isPersonalBest: attempt.isPersonalBest,
+                        isLegacy: attempt.isLegacy
+                    )
+                    .accessibilityLabel(Text("0 to 60 in \(String(format: "%.1f", attempt.elapsedSeconds)) seconds"))
                 }
             }
 
@@ -506,6 +552,155 @@ struct DriveDetailView: View {
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
     }
+
+    // MARK: - 0-60 Attempt parsing
+
+    /// Small caption under the map explaining the orange highlight + bubble
+    /// markers. Hidden when the drive has no recorded attempts.
+    @ViewBuilder
+    private var zeroToSixtyLegend: some View {
+        HStack(spacing: 8) {
+            Capsule()
+                .fill(Color.orange)
+                .frame(width: 18, height: 4)
+            Text("0-60 attempts")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            if zeroToSixtyAttempts.contains(where: { $0.isPersonalBest }) {
+                Capsule()
+                    .fill(Color.yellow)
+                    .frame(width: 18, height: 4)
+                Text("personal best")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Text("\(zeroToSixtyAttempts.count) capture\(zeroToSixtyAttempts.count == 1 ? "" : "s")")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 4)
+    }
+
+    /// Resolves every 0-60 attempt into a display model with polyline slice +
+    /// midpoint coordinate, and marks the fastest attempt in the drive as the
+    /// personal best for this drive.
+    private func parseZeroToSixtyAttempts() {
+        var collected: [ZeroToSixtyAttempt] = []
+        var seenEndTimestamps: Set<Double> = []
+
+        // 1) New typed field — preferred
+        for attempt in drive.zeroToSixtyAttempts {
+            if seenEndTimestamps.insert(attempt.endTimestamp).inserted {
+                collected.append(attempt)
+            }
+        }
+
+        // 2) Legacy fallback: events embedded in routeData
+        guard let routeData = drive.routeData,
+              let data = routeData.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data),
+              let v2 = json as? [String: Any],
+              (v2["v"] as? Int) == 2,
+              let evts = v2["events"] as? [[String: Any]] else {
+            zeroToSixtyAttempts = resolvePolylines(for: collected)
+            return
+        }
+
+        // Need route point index range — look it up by timestamp if available,
+        // otherwise let the polyline-resolver fall back to a 0..routePoints.count-1
+        // range (drawn over the whole route — still useful as a legacy marker).
+        for evt in evts where (evt["type"] as? String) == "zero_to_sixty" {
+            guard let startTs = evt["start_ts"] as? Double,
+                  let endTs = evt["end_ts"] as? Double,
+                  let elapsed = evt["elapsed_s"] as? Double else { continue }
+            guard seenEndTimestamps.insert(endTs).inserted else { continue }
+            let startIdx = nearestIndex(of: startTs)
+            let endIdx   = max(startIdx, nearestIndex(of: endTs))
+            collected.append(ZeroToSixtyAttempt(
+                startIndex:     startIdx,
+                endIndex:       endIdx,
+                startTimestamp: startTs,
+                endTimestamp:   endTs,
+                elapsedSeconds: elapsed,
+                startLatitude:  evt["start_lat"] as? Double ?? 0,
+                startLongitude: evt["start_lng"] as? Double ?? 0,
+                endLatitude:    evt["end_lat"]   as? Double ?? 0,
+                endLongitude:   evt["end_lng"]   as? Double ?? 0,
+                legacy:         true
+            ))
+        }
+
+        zeroToSixtyAttempts = resolvePolylines(for: collected)
+    }
+
+    /// Builds the display models for the parsed attempts, including the
+    /// polyline slice and a midpoint coordinate for the bubble annotation.
+    private func resolvePolylines(for attempts: [ZeroToSixtyAttempt]) -> [ZeroToSixtyAttemptDisplay] {
+        guard !attempts.isEmpty else { return [] }
+
+        let fastestTime = attempts.map(\.elapsedSeconds).min() ?? .infinity
+
+        return attempts.map { attempt in
+            let coords = polylineCoordinates(for: attempt)
+            let mid = midpoint(for: attempt, fallbackTo: coords)
+            return ZeroToSixtyAttemptDisplay(
+                id:                  UUID(),
+                elapsedSeconds:      attempt.elapsedSeconds,
+                polylineCoordinates: coords,
+                midpointCoordinate:  mid,
+                isPersonalBest:      attempt.elapsedSeconds == fastestTime,
+                isLegacy:            attempt.legacy
+            )
+        }
+    }
+
+    /// Slice of the route polyline that this attempt covers. Uses the
+    /// attempt's start/end indices when set (the live recorder stores these
+    /// by design); falls back to a timestamp lookup for legacy events.
+    private func polylineCoordinates(for attempt: ZeroToSixtyAttempt) -> [CLLocationCoordinate2D] {
+        guard !routePoints.isEmpty else { return [] }
+        let startIdx: Int
+        let endIdx: Int
+        if attempt.startIndex == 0 && attempt.endIndex == 0 && attempt.elapsedSeconds == 0 {
+            return []
+        }
+        if attempt.legacy {
+            // Legacy events: indices not persisted; resolve from timestamps
+            startIdx = nearestIndex(of: attempt.startTimestamp)
+            let end   = nearestIndex(of: attempt.endTimestamp)
+            endIdx = max(startIdx, end)
+        } else {
+            startIdx = max(0, min(routePoints.count - 1, attempt.startIndex))
+            endIdx   = max(startIdx, min(routePoints.count - 1, attempt.endIndex))
+        }
+        guard startIdx < endIdx else { return [] }
+        return Array(routePoints[startIdx...endIdx].map(\.coordinate))
+    }
+
+    private func nearestIndex(of timestamp: TimeInterval) -> Int {
+        guard !routePoints.isEmpty else { return 0 }
+        var bestIdx = 0
+        var bestDelta = TimeInterval.greatestFiniteMagnitude
+        for (idx, pt) in routePoints.enumerated() {
+            let delta = abs(pt.timestamp - timestamp)
+            if delta < bestDelta {
+                bestDelta = delta
+                bestIdx = idx
+            }
+        }
+        return bestIdx
+    }
+
+    private func midpoint(for attempt: ZeroToSixtyAttempt, fallbackTo coords: [CLLocationCoordinate2D]) -> CLLocationCoordinate2D {
+        if !coords.isEmpty {
+            return coords[coords.count / 2]
+        }
+        return CLLocationCoordinate2D(
+            latitude:  (attempt.startLatitude  + attempt.endLatitude)  / 2,
+            longitude: (attempt.startLongitude + attempt.endLongitude) / 2
+        )
+    }
 }
 
 // MARK: - Drive Car Selector
@@ -610,6 +805,46 @@ struct DriveCarSelectorView: View {
 // MARK: - Route Annotation
 
 // (Removed — using new Map API with MapPolyline and Annotation directly)
+
+// MARK: - 0-60 Attempt Bubble
+
+/// Speech-bubble annotation shown at the midpoint of a 0-60 attempt. The
+/// tail always points down (the bubble is anchored above its annotation point
+/// so the tail sits over the route). Background is solid orange to read
+/// clearly against any map style.
+struct ZeroSixtyAttemptBubble: View {
+    let elapsedSeconds: Double
+    let isPersonalBest: Bool
+    let isLegacy: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 4) {
+                if isPersonalBest {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                Text(String(format: "%.1fs", elapsedSeconds))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                SpeechBubble(cornerRadius: 6, tailWidth: 8, tailHeight: 5)
+                    .fill(isPersonalBest ? Color.yellow : Color.orange)
+            )
+            .overlay(
+                SpeechBubble(cornerRadius: 6, tailWidth: 8, tailHeight: 5)
+                    .stroke(Color.white, lineWidth: 1)
+            )
+            .foregroundColor(isPersonalBest ? .black : .white)
+            // The bubble is offset upward so the speech-bubble tail lands on
+            // the actual coordinate of the attempt.
+            .offset(y: -22)
+        }
+    }
+}
 
 #Preview {
     NavigationStack {

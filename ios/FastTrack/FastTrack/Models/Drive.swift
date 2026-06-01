@@ -36,7 +36,8 @@ struct Drive: Identifiable, Codable, Equatable {
     var peakGForce: Double       // G
     var topCornerSpeed: Double   // m/s
     var best060Time: Double?     // seconds; nil if never hit 60 mph
-    
+    var zeroToSixtyAttempts: [ZeroToSixtyAttempt] = []  // every 0-60 launch detected
+
     var carDisplayString: String {
         if let nickname = carNickname, !nickname.isEmpty {
             return nickname
@@ -90,6 +91,7 @@ struct Drive: Identifiable, Codable, Equatable {
         case peakGForce = "peak_g_force"
         case topCornerSpeed = "top_corner_speed"
         case best060Time = "best_060_time"
+        case zeroToSixtyAttempts = "zero_to_sixty_attempts"
     }
 
     static var example: Drive {
