@@ -224,10 +224,9 @@
 
 	.lb-table-wrap {
 		position: relative;
-		transition: opacity 0.2s ease;
 	}
 
-	.lb-table-wrap.refreshing {
+	.lb-table-wrap.refreshing .lb-table {
 		opacity: 0.55;
 	}
 
@@ -252,6 +251,7 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		overflow: hidden;
+		transition: opacity 0.2s ease;
 	}
 
 	.lb-table th {
