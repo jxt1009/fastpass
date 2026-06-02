@@ -281,7 +281,7 @@ const termsPageHTML = `<!DOCTYPE html>
 </html>`
 
 func registerPublicPageRoutes(r *gin.Engine) {
-	r.GET("/", servePublicPage(homePageHTML))
+	r.GET("/app", servePublicPage(homePageHTML))
 	r.GET("/privacy", servePublicPage(privacyPageHTML))
 	r.GET("/terms", servePublicPage(termsPageHTML))
 }

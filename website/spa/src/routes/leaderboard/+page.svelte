@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	interface LeaderboardEntry {
 		rank: number;
@@ -16,6 +17,7 @@
 	let carModel = $state('');
 	let entries = $state<LeaderboardEntry[]>([]);
 	let loading = $state(true);
+	let refreshing = $state(false);
 	let error = $state('');
 
 	const API = '/api/v1'; // relative for same-origin when served by backend (addressed Copilot)
@@ -28,7 +30,9 @@
 	] as const;
 
 	async function loadLeaderboard() {
-		loading = true;
+		const isFirstLoad = entries.length === 0;
+		if (isFirstLoad) loading = true;
+		else refreshing = true;
 		error = '';
 
 		const params = new URLSearchParams({
@@ -48,6 +52,7 @@
 			entries = [];
 		} finally {
 			loading = false;
+			refreshing = false;
 		}
 	}
 
@@ -132,33 +137,38 @@
 	{:else if entries.length === 0}
 		<div class="lb-empty">No results found.</div>
 	{:else}
-		<table class="lb-table">
-			<thead>
-				<tr>
-					<th>Rank</th>
-					<th>Driver</th>
-					<th>Car</th>
-					<th style="text-align:right">{categories.find(c => c.value === category)?.label} ({getUnit(category)})</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each entries as entry}
-					<tr class="lb-row" onclick={() => window.location.href = `/u/${entry.username}`}>
-						<td><span class="lb-rank {entry.rank === 1 ? 'gold' : entry.rank === 2 ? 'silver' : entry.rank === 3 ? 'bronze' : ''}">#{entry.rank}</span></td>
-						<td>
-							{#if entry.avatar_url}
-								<img class="lb-avatar" src={entry.avatar_url} alt="" />
-							{:else}
-								<span class="lb-avatar-placeholder">{entry.username[0].toUpperCase()}</span>
-							{/if}
-							<span class="lb-user">{entry.username}</span>
-						</td>
-						<td class="lb-car">{entry.car_make} {entry.car_model}</td>
-						<td class="lb-value">{formatValue(entry.value, category)} {getUnit(category)}</td>
+		<div class="lb-table-wrap" class:refreshing>
+			{#if refreshing}
+				<div class="lb-refreshing" role="status" aria-live="polite">Refreshing…</div>
+			{/if}
+			<table class="lb-table">
+				<thead>
+					<tr>
+						<th>Rank</th>
+						<th>Driver</th>
+						<th>Car</th>
+						<th style="text-align:right">{categories.find(c => c.value === category)?.label} ({getUnit(category)})</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each entries as entry (entry.username)}
+						<tr class="lb-row" onclick={() => goto(`/u/${entry.username}`)}>
+							<td><span class="lb-rank {entry.rank === 1 ? 'gold' : entry.rank === 2 ? 'silver' : entry.rank === 3 ? 'bronze' : ''}">#{entry.rank}</span></td>
+							<td>
+								{#if entry.avatar_url}
+									<img class="lb-avatar" src={entry.avatar_url} alt="" />
+								{:else}
+									<span class="lb-avatar-placeholder">{entry.username[0].toUpperCase()}</span>
+								{/if}
+								<span class="lb-user">{entry.username}</span>
+							</td>
+							<td class="lb-car">{entry.car_make} {entry.car_model}</td>
+							<td class="lb-value">{formatValue(entry.value, category)} {getUnit(category)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 
 	<div style="margin-top: 32px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; color: var(--muted);">
@@ -210,6 +220,29 @@
 		border-radius: var(--radius-sm);
 		padding: 6px 12px;
 		font-size: 0.85rem;
+	}
+
+	.lb-table-wrap {
+		position: relative;
+		transition: opacity 0.2s ease;
+	}
+
+	.lb-table-wrap.refreshing {
+		opacity: 0.55;
+	}
+
+	.lb-refreshing {
+		position: absolute;
+		top: 10px;
+		right: 14px;
+		font-size: 0.75rem;
+		color: var(--muted);
+		background: var(--surface-alt);
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		padding: 4px 10px;
+		pointer-events: none;
+		z-index: 1;
 	}
 
 	.lb-table {
