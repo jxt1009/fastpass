@@ -13,6 +13,7 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.Static("/_app", "./static/spa/_app")
 
 	// Public social SPA routes (client-side routing via SvelteKit SPA fallback)
+	r.GET("/", serveSPAIndex)
 	r.GET("/leaderboard", renderLeaderboard)
 	r.GET("/u/:username", renderProfile)
 	r.GET("/find", serveSPAIndex)
