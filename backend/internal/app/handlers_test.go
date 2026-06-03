@@ -298,9 +298,19 @@ func TestPublicPages_AreServedByBackend(t *testing.T) {
 		path        string
 		wantSnippet string
 	}{
-		{path: "/app", wantSnippet: "<title>FastTrack — Performance Driving App</title>"},
 		{path: "/privacy", wantSnippet: "<title>FastTrack Privacy Policy</title>"},
 		{path: "/terms", wantSnippet: "<title>FastTrack Terms of Service</title>"},
+	}
+
+	// /app was retired — verify it redirects to /
+	req, _ := http.NewRequest("GET", "/app", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusMovedPermanently {
+		t.Fatalf("/app: expected 301, got %d", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/" {
+		t.Fatalf("/app: expected Location: /, got %q", loc)
 	}
 
 	for _, tt := range tests {
