@@ -30,8 +30,10 @@
 	] as const;
 
 	let initialLoadDone = $state(false);
+	let requestId = 0;
 
 	async function loadLeaderboard() {
+		const id = ++requestId;
 		if (!initialLoadDone) loading = true;
 		else refreshing = true;
 		error = '';
@@ -47,11 +49,15 @@
 		try {
 			const res = await fetch(`${API}/leaderboard?${params}`);
 			if (!res.ok) throw new Error('Failed to load');
-			entries = await res.json();
+			const data = await res.json();
+			if (id !== requestId) return;
+			entries = data;
 		} catch (e) {
+			if (id !== requestId) return;
 			error = 'Could not load leaderboard. Try again later.';
 			entries = [];
 		} finally {
+			if (id !== requestId) return;
 			loading = false;
 			refreshing = false;
 			initialLoadDone = true;
@@ -97,7 +103,7 @@
 			{#each categories as cat}
 				<button
 					class="filter-pill {category === cat.value ? 'active' : ''}"
-					onclick={() => { category = cat.value; loadLeaderboard(); }}
+					onclick={() => { if (category === cat.value) return; category = cat.value; loadLeaderboard(); }}
 				>
 					{cat.label}
 				</button>
@@ -106,10 +112,10 @@
 
 		<!-- Period -->
 		<div class="filter-pills">
-			<button class="filter-pill {period === 'all_time' ? 'active' : ''}" onclick={() => { period = 'all_time'; loadLeaderboard(); }}>
+			<button class="filter-pill {period === 'all_time' ? 'active' : ''}" onclick={() => { if (period === 'all_time') return; period = 'all_time'; loadLeaderboard(); }}>
 				All Time
 			</button>
-			<button class="filter-pill {period === 'week' ? 'active' : ''}" onclick={() => { period = 'week'; loadLeaderboard(); }}>
+			<button class="filter-pill {period === 'week' ? 'active' : ''}" onclick={() => { if (period === 'week') return; period = 'week'; loadLeaderboard(); }}>
 				This Week
 			</button>
 		</div>
