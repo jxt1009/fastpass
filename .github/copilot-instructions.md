@@ -68,6 +68,8 @@ Always recreate `FastTrack/Secrets.swift` from `FastTrack/Secrets.swift.template
 FastTrack is two deployable pieces in one repo:
 
 1. `backend/` is a Go API using Gin + GORM + PostgreSQL. `cmd/server/main.go` launches `internal/app`, which wires structured logging, request IDs, Prometheus metrics, avatar static file serving, JWT auth routes, and the authenticated `/api/v1` API. The backend also serves the landing page, privacy policy, and terms of service via `public_pages.go`. The data model is centered on `User`, `Drive`, and `Follow`, with GORM auto-migrations done at startup.
+
+**CRITICAL: Shared PostgreSQL** — The PostgreSQL instance runs in the `default` namespace as `fasttrack-postgres` and is shared by **both** `fasttrack-production` and `fasttrack-staging` API deployments. Never delete or modify resources in `default` namespace prefixed with `fasttrack-postgres-*` (PVs, PVCs, deployment, service, secrets) without knowing both environments rely on them. All postgres resources carry label `app.kubernetes.io/part-of: fasttrack`. See `docs/DATABASE.md` for full details.
 2. `ios/FastTrack/FastTrack/` is the SwiftUI app. `LocationManager` fuses GPS + IMU data, `DriveManager` owns the recording state machine and serializes route/stat payloads, and `APIService`/`AuthManager` handle backend sync and auth token lifecycle.
 
 The `website/` directory is vestigial — public pages are now served by the backend. Deployment is workflow-driven: the backend Docker image is built, then applied with Kubernetes manifests under `backend/k8s/` and the staging/production overlays in `backend/k8s/overlays/`.

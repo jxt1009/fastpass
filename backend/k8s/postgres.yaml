@@ -3,13 +3,15 @@ kind: PersistentVolumeClaim
 metadata:
   name: fasttrack-postgres-pvc
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 20Gi
-  storageClassName: local-path  # Adjust based on your storage class
+  storageClassName: local-path
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -18,17 +20,19 @@ metadata:
   namespace: default
   labels:
     app: fasttrack-postgres
+    app.kubernetes.io/part-of: fasttrack
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: fasttrack-postgres
   strategy:
-    type: Recreate  # Important for stateful apps
+    type: Recreate
   template:
     metadata:
       labels:
         app: fasttrack-postgres
+        app.kubernetes.io/part-of: fasttrack
     spec:
       containers:
       - name: postgres
@@ -89,6 +93,8 @@ kind: Service
 metadata:
   name: fasttrack-postgres-service
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   selector:
     app: fasttrack-postgres
@@ -103,6 +109,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: fasttrack-postgres-backup-pvc
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   accessModes:
     - ReadWriteOnce
