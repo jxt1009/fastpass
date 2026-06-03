@@ -7,10 +7,11 @@
 #   ./backup-restore.sh list            - List all backups
 #   ./backup-restore.sh clean           - Clean old backups (>30 days)
 
-set -e
-
 NAMESPACE="default"
-POSTGRES_POD=$(kubectl get pod -n $NAMESPACE -l app=fasttrack-postgres -o jsonpath='{.items[0].metadata.name}')
+
+POSTGRES_POD=$(kubectl get pod -n "$NAMESPACE" -l app=fasttrack-postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+
+set -e
 BACKUP_DIR="/backups"
 
 if [ -z "$POSTGRES_POD" ]; then
