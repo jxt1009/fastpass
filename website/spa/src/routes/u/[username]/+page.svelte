@@ -53,6 +53,8 @@
 	let loading = $state(true);
 	let error = $state('');
 
+	let garage = $derived(profile ? parseGarage(profile.garage) : []);
+
 	const API = '/api/v1'; // relative for same-origin when served by backend
 
 	async function loadProfile() {
@@ -97,6 +99,21 @@
 
 	function formatDistance(m: number) {
 		return (m / 1609.34).toFixed(1);
+	}
+
+	// Server stores garage as a JSON-encoded string (matching iOS wire format);
+	// some newer responses may already send a real array. Handle both.
+	function parseGarage(raw: unknown): any[] {
+		if (Array.isArray(raw)) return raw;
+		if (typeof raw === 'string' && raw.trim()) {
+			try {
+				const parsed = JSON.parse(raw);
+				return Array.isArray(parsed) ? parsed : [];
+			} catch {
+				return [];
+			}
+		}
+		return [];
 	}
 </script>
 
@@ -149,11 +166,11 @@
 		</div>
 
 		<!-- Garage -->
-		{#if profile.garage && profile.garage.length > 0}
+		{#if garage.length > 0}
 			<div class="section">
 				<div class="section-title">Garage</div>
 				<div class="garage-grid">
-					{#each profile.garage as car}
+					{#each garage as car}
 						<div class="garage-card">
 							<div class="car-nickname">{car.nickname || `${car.make} ${car.model}`}</div>
 							<div class="car-model">{car.year || ''} {car.make} {car.model} {car.trim || ''}</div>
