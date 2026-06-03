@@ -2,21 +2,33 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: fasttrack-postgres-pv
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   capacity:
     storage: 20Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: /data/fasttrack/postgres
+    path: /data/fastpass/postgres
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Retain
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - gigabyte
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: fasttrack-postgres-pvc
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   accessModes:
     - ReadWriteOnce
@@ -29,21 +41,33 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: fasttrack-postgres-backup-pv
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   capacity:
     storage: 10Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: /data/fasttrack/backups
+    path: /data/fastpass/backups
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Retain
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - gigabyte
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: fasttrack-postgres-backup-pvc
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   accessModes:
     - ReadWriteOnce
@@ -59,6 +83,7 @@ metadata:
   namespace: default
   labels:
     app: fasttrack-postgres
+    app.kubernetes.io/part-of: fasttrack
 spec:
   replicas: 1
   selector:
@@ -70,6 +95,7 @@ spec:
     metadata:
       labels:
         app: fasttrack-postgres
+        app.kubernetes.io/part-of: fasttrack
     spec:
       containers:
       - name: postgres
@@ -130,6 +156,8 @@ kind: Service
 metadata:
   name: fasttrack-postgres-service
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: fasttrack
 spec:
   selector:
     app: fasttrack-postgres
