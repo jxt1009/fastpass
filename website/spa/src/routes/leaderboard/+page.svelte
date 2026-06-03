@@ -130,11 +130,9 @@
 		</select>
 	</div>
 
-	{#if loading}
-		<div class="lb-loading">Loading leaderboard…</div>
-	{:else if error}
+	{#if error}
 		<div class="lb-error">{error}</div>
-	{:else if entries.length === 0}
+	{:else if entries.length === 0 && !loading}
 		<div class="lb-empty">No results found.</div>
 	{:else}
 		<div class="lb-table-wrap" class:refreshing>
@@ -151,21 +149,35 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each entries as entry (entry.username)}
-						<tr class="lb-row" onclick={() => goto(`/u/${entry.username}`)}>
-							<td><span class="lb-rank {entry.rank === 1 ? 'gold' : entry.rank === 2 ? 'silver' : entry.rank === 3 ? 'bronze' : ''}">#{entry.rank}</span></td>
-							<td>
-								{#if entry.avatar_url}
-									<img class="lb-avatar" src={entry.avatar_url} alt="" />
-								{:else}
-									<span class="lb-avatar-placeholder">{entry.username[0].toUpperCase()}</span>
-								{/if}
-								<span class="lb-user">{entry.username}</span>
-							</td>
-							<td class="lb-car">{entry.car_make} {entry.car_model}</td>
-							<td class="lb-value">{formatValue(entry.value, category)} {getUnit(category)}</td>
-						</tr>
-					{/each}
+					{#if loading}
+						{#each Array(8) as _, i}
+							<tr class="lb-skeleton">
+								<td><span class="lb-skel" style="width:28px"></span></td>
+								<td>
+									<span class="lb-skel lb-skel-avatar"></span>
+									<span class="lb-skel" style="width:80px"></span>
+								</td>
+								<td><span class="lb-skel" style="width:120px"></span></td>
+								<td class="lb-value"><span class="lb-skel" style="width:60px"></span></td>
+							</tr>
+						{/each}
+					{:else}
+						{#each entries as entry (entry.username)}
+							<tr class="lb-row" onclick={() => goto(`/u/${encodeURIComponent(entry.username)}`)}>
+								<td><span class="lb-rank {entry.rank === 1 ? 'gold' : entry.rank === 2 ? 'silver' : entry.rank === 3 ? 'bronze' : ''}">#{entry.rank}</span></td>
+								<td>
+									{#if entry.avatar_url}
+										<img class="lb-avatar" src={entry.avatar_url} alt="" />
+									{:else}
+										<span class="lb-avatar-placeholder">{entry.username[0].toUpperCase()}</span>
+									{/if}
+									<span class="lb-user">{entry.username}</span>
+								</td>
+								<td class="lb-car">{entry.car_make} {entry.car_model}</td>
+								<td class="lb-value">{formatValue(entry.value, category)} {getUnit(category)}</td>
+							</tr>
+						{/each}
+					{/if}
 				</tbody>
 			</table>
 		</div>
@@ -321,9 +333,41 @@
 		text-align: right;
 	}
 
-	.lb-loading, .lb-empty, .lb-error {
+	.lb-empty, .lb-error {
 		padding: 40px;
 		text-align: center;
 		color: var(--muted);
+	}
+
+	/* Skeleton rows: subtle pulse so the table feels alive on first load */
+	.lb-skel {
+		display: inline-block;
+		height: 12px;
+		border-radius: 4px;
+		background: linear-gradient(90deg, var(--surface-alt) 0%, var(--border) 50%, var(--surface-alt) 100%);
+		background-size: 200% 100%;
+		animation: lb-shimmer 1.4s ease-in-out infinite;
+		vertical-align: middle;
+	}
+
+	.lb-skel-avatar {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		margin-right: 10px;
+	}
+
+	.lb-skeleton td {
+		padding: 14px 16px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.lb-skeleton {
+		cursor: default;
+	}
+
+	@keyframes lb-shimmer {
+		0% { background-position: 200% 0; }
+		100% { background-position: -200% 0; }
 	}
 </style>
