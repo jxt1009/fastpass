@@ -1,4 +1,20 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fasttrack-postgres-init
+  namespace: default
+  labels:
+    app.kubernetes.io/part-of: fasttrack
+data:
+  create-staging-db.sh: |
+    #!/bin/bash
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        SELECT 'CREATE DATABASE fasttrack_staging'
+        WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'fasttrack_staging')\\gexec
+    EOSQL
+---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: fasttrack-postgres-pv
@@ -102,7 +118,7 @@ spec:
         image: postgres:15-alpine
         env:
         - name: POSTGRES_DB
-          value: fasttrack
+          value: fasttrack_production
         - name: POSTGRES_USER
           value: fasttrack
         - name: POSTGRES_PASSWORD
@@ -120,6 +136,8 @@ spec:
           mountPath: /var/lib/postgresql/data
         - name: postgres-backup
           mountPath: /backups
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
         resources:
           requests:
             memory: "256Mi"
@@ -150,6 +168,9 @@ spec:
       - name: postgres-backup
         persistentVolumeClaim:
           claimName: fasttrack-postgres-backup-pvc
+      - name: init-scripts
+        configMap:
+          name: fasttrack-postgres-init
 ---
 apiVersion: v1
 kind: Service

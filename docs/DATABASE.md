@@ -16,7 +16,7 @@ All API deployments connect via the internal DNS name `fasttrack-postgres-servic
 
 > **Important:** Both environments share the same PostgreSQL instance and credentials.
 > Never delete resources in the `default` namespace prefixed with `fasttrack-postgres-*`
-> without verifying that both API environments still function. See [Incident Retrospective](#).
+> without verifying that both API environments still function. See [Incident Retrospective](#incident-retrospective-2026-06-02-database-outage).
 
 ---
 
