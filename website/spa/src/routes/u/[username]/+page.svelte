@@ -68,7 +68,11 @@
 		loading = true;
 		error = '';
 
-		const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+		let timedOut = false;
+		const timer = setTimeout(() => {
+			timedOut = true;
+			controller.abort();
+		}, FETCH_TIMEOUT_MS);
 
 		try {
 			const [profileRes, followersRes, followingRes, achievementsRes] = await Promise.all([
@@ -78,6 +82,7 @@
 				fetch(`${API}/users/${username}/achievements`, { signal: controller.signal })
 			]);
 
+			if (controller !== currentController) return;
 			if (!profileRes.ok) throw new Error('User not found');
 
 			profile = await profileRes.json();
@@ -85,7 +90,8 @@
 			following = followingRes.ok ? await followingRes.json() : [];
 			achievements = achievementsRes.ok ? await achievementsRes.json() : null;
 		} catch (e) {
-			if (controller.signal.aborted && !profile) {
+			if (controller !== currentController) return;
+			if (timedOut) {
 				error = 'Request timed out. Please try again.';
 			} else {
 				error = 'Profile not found or unavailable.';
@@ -137,8 +143,8 @@
 		<div>Loading profile…</div>
 	{:else if error || !profile}
 		<div style="text-align:center; padding: 80px 0;">
-			<h1 style="font-size: 2rem; margin-bottom: 8px;">Profile not found</h1>
-			<p style="color: var(--muted);">This driver is either private or does not exist.</p>
+			<h1 style="font-size: 2rem; margin-bottom: 8px;">{error ? 'Something went wrong' : 'Profile not found'}</h1>
+			<p style="color: var(--muted);">{error || 'This driver is either private or does not exist.'}</p>
 			<a href="/leaderboard" style="display: inline-block; margin-top: 24px;">Back to Leaderboard</a>
 		</div>
 	{:else}
