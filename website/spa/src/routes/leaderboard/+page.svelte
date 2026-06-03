@@ -29,9 +29,10 @@
 		{ value: 'drive_count', label: 'Drives', unit: '' }
 	] as const;
 
+	let initialLoadDone = $state(false);
+
 	async function loadLeaderboard() {
-		const isFirstLoad = entries.length === 0;
-		if (isFirstLoad) loading = true;
+		if (!initialLoadDone) loading = true;
 		else refreshing = true;
 		error = '';
 
@@ -53,6 +54,7 @@
 		} finally {
 			loading = false;
 			refreshing = false;
+			initialLoadDone = true;
 		}
 	}
 
@@ -78,12 +80,8 @@
 		'Subaru', 'Tesla', 'Toyota', 'Volkswagen', 'Volvo'
 	];
 
-	$effect(() => {
-		loadLeaderboard();
-	});
-
 	onMount(() => {
-		// initial load already handled by $effect
+		loadLeaderboard();
 	});
 </script>
 
@@ -99,7 +97,7 @@
 			{#each categories as cat}
 				<button
 					class="filter-pill {category === cat.value ? 'active' : ''}"
-					onclick={() => category = cat.value}
+					onclick={() => { category = cat.value; loadLeaderboard(); }}
 				>
 					{cat.label}
 				</button>
@@ -108,25 +106,24 @@
 
 		<!-- Period -->
 		<div class="filter-pills">
-			<button class="filter-pill {period === 'all_time' ? 'active' : ''}" onclick={() => period = 'all_time'}>
+			<button class="filter-pill {period === 'all_time' ? 'active' : ''}" onclick={() => { period = 'all_time'; loadLeaderboard(); }}>
 				All Time
 			</button>
-			<button class="filter-pill {period === 'week' ? 'active' : ''}" onclick={() => period = 'week'}>
+			<button class="filter-pill {period === 'week' ? 'active' : ''}" onclick={() => { period = 'week'; loadLeaderboard(); }}>
 				This Week
 			</button>
 		</div>
 
 		<!-- Car filters -->
-		<select class="filter-select" bind:value={carMake} onchange={() => { carModel = ''; }}>
+		<select class="filter-select" bind:value={carMake} onchange={() => { carModel = ''; loadLeaderboard(); }}>
 			<option value="">All Makes</option>
 			{#each makes as make}
 				<option value={make}>{make}</option>
 			{/each}
 		</select>
 
-		<select class="filter-select" bind:value={carModel} disabled={!carMake}>
+		<select class="filter-select" bind:value={carModel} onchange={() => loadLeaderboard()} disabled={!carMake}>
 			<option value="">All Models</option>
-			<!-- For now models are not dynamically loaded — can enhance later -->
 		</select>
 	</div>
 
@@ -140,6 +137,12 @@
 				<div class="lb-refreshing" role="status" aria-live="polite">Refreshing…</div>
 			{/if}
 			<table class="lb-table">
+				<colgroup>
+					<col style="width:70px">
+					<col>
+					<col>
+					<col style="width:160px">
+				</colgroup>
 				<thead>
 					<tr>
 						<th>Rank</th>
@@ -258,6 +261,7 @@
 
 	.lb-table {
 		width: 100%;
+		table-layout: fixed;
 		border-collapse: collapse;
 		background: var(--surface);
 		border: 1px solid var(--border);
