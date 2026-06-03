@@ -56,17 +56,26 @@
 	let garage = $derived(profile ? parseGarage(profile.garage) : []);
 
 	const API = '/api/v1'; // relative for same-origin when served by backend
+	const FETCH_TIMEOUT_MS = 15_000;
+
+	let currentController: AbortController | null = null;
 
 	async function loadProfile() {
+		currentController?.abort();
+		const controller = new AbortController();
+		currentController = controller;
+
 		loading = true;
 		error = '';
 
+		const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
 		try {
 			const [profileRes, followersRes, followingRes, achievementsRes] = await Promise.all([
-				fetch(`${API}/users/${username}`),
-				fetch(`${API}/users/${username}/followers`),
-				fetch(`${API}/users/${username}/following`),
-				fetch(`${API}/users/${username}/achievements`)
+				fetch(`${API}/users/${username}`, { signal: controller.signal }),
+				fetch(`${API}/users/${username}/followers`, { signal: controller.signal }),
+				fetch(`${API}/users/${username}/following`, { signal: controller.signal }),
+				fetch(`${API}/users/${username}/achievements`, { signal: controller.signal })
 			]);
 
 			if (!profileRes.ok) throw new Error('User not found');
@@ -75,11 +84,17 @@
 			followers = followersRes.ok ? await followersRes.json() : [];
 			following = followingRes.ok ? await followingRes.json() : [];
 			achievements = achievementsRes.ok ? await achievementsRes.json() : null;
-			// Non-OK responses for lists are treated as empty (addressed Copilot feedback)
 		} catch (e) {
-			error = 'Profile not found or unavailable.';
+			if (controller.signal.aborted && !profile) {
+				error = 'Request timed out. Please try again.';
+			} else {
+				error = 'Profile not found or unavailable.';
+			}
 		} finally {
-			loading = false;
+			clearTimeout(timer);
+			if (controller === currentController) {
+				loading = false;
+			}
 		}
 	}
 
