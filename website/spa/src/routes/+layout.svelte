@@ -7,8 +7,11 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>FastTrack — Social</title>
-	<meta name="description" content="Discover public leaderboards and driver profiles on FastTrack." />
+	<title>FastTrack — Performance Driving App</title>
+	<meta name="description" content="FastTrack records speed, route, and acceleration data for your performance driving runs. Track 0-60, quarter mile, and G-force with your iPhone." />
+	<meta property="og:title" content="FastTrack — Performance Driving App" />
+	<meta property="og:description" content="Track 0-60, quarter mile, and G-force with your iPhone." />
+	<meta name="twitter:card" content="summary" />
 </svelte:head>
 
 <nav>

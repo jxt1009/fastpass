@@ -281,7 +281,8 @@ const termsPageHTML = `<!DOCTYPE html>
 </html>`
 
 func registerPublicPageRoutes(r *gin.Engine) {
-	r.GET("/app", servePublicPage(homePageHTML))
+	// /app was the old marketing page; redirect to the SPA homepage.
+	r.GET("/app", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/") })
 	r.GET("/privacy", servePublicPage(privacyPageHTML))
 	r.GET("/terms", servePublicPage(termsPageHTML))
 }
