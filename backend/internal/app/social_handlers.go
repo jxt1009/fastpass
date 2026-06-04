@@ -427,7 +427,7 @@ func getFollowers(c *gin.Context) {
 		return
 	}
 
-	var entries []FollowUserEntry
+	entries := make([]FollowUserEntry, 0)
 	db.Raw(`
 		SELECT u.id AS user_id, u.username, u.country
 		FROM follows f
@@ -446,7 +446,7 @@ func getFollowing(c *gin.Context) {
 		return
 	}
 
-	var entries []FollowUserEntry
+	entries := make([]FollowUserEntry, 0)
 	db.Raw(`
 		SELECT u.id AS user_id, u.username, u.country
 		FROM follows f
