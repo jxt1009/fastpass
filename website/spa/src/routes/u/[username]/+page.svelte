@@ -104,6 +104,28 @@
 		}
 	}
 
+	function sfSymbolToEmoji(icon: string): string {
+		const map: Record<string, string> = {
+			'car.fill': '🚗',
+			'gauge.with.needle': '🏎️',
+			'speedometer': '🎯',
+			'bolt.fill': '⚡',
+			'map.fill': '🗺️',
+			'road.lanes': '🛣️',
+			'globe': '🌍',
+			'circle.fill': '⭕',
+			'award.fill': '🏆',
+			'checkmark.circle.fill': '✅',
+			'calendar': '📅',
+			'star.fill': '⭐',
+			'timer': '⏱️',
+			'waveform.path': '〰️',
+			'moon.stars.fill': '🌙',
+			'sun.max': '☀️',
+		};
+		return map[icon] || icon;
+	}
+
 	function unlockedLookup() {
 		const m = new Map<string, UserAchievement>();
 		if (achievements) for (const u of achievements.unlocked) m.set(u.achievement_id, u);
@@ -212,13 +234,13 @@
 						{@const href = unlock?.source_drive_id ? `/d/${unlock.source_drive_id}` : null}
 						{#if href}
 							<a class="achievement-tile unlocked" href={href} title="View source drive">
-								<div class="achievement-icon">{entry.icon}</div>
+								<div class="achievement-icon">{sfSymbolToEmoji(entry.icon)}</div>
 								<div class="achievement-title">{entry.title}</div>
 								<div class="achievement-desc">{entry.description}</div>
 							</a>
 						{:else}
 							<div class="achievement-tile {unlock ? 'unlocked' : 'locked'}" title={unlock ? 'Unlocked' : 'Locked'}>
-								<div class="achievement-icon">{unlock ? entry.icon : '🔒'}</div>
+								<div class="achievement-icon">{unlock ? sfSymbolToEmoji(entry.icon) : '🔒'}</div>
 								<div class="achievement-title">{entry.title}</div>
 								<div class="achievement-desc">{entry.description}</div>
 							</div>
