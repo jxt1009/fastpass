@@ -176,7 +176,7 @@ footer a:hover{color:var(--text)}
 const LB = '/api/v1/leaderboard'
 function fmtSpeed(ms) { return (ms * 2.23694).toFixed(1) + '<span style="font-weight:400;font-size:.75rem;color:var(--muted);margin-left:2px"> mph</span>' }
 function fmtTime(s) { return s.toFixed(1) + '<span style="font-weight:400;font-size:.75rem;color:var(--muted);margin-left:2px">s</span>' }
-function fmtNum(n) { return n.toLocaleString() }
+function fmtDist(m) { return (m / 1609.34).toFixed(1) + '<span style="font-weight:400;font-size:.75rem;color:var(--muted);margin-left:2px"> mi</span>' }
 
 function setStrip(id, valueHtml, driverLabel) {
   const card = document.getElementById(id)
@@ -186,6 +186,9 @@ function setStrip(id, valueHtml, driverLabel) {
   if (drv && driverLabel) drv.textContent = driverLabel
 }
 
+// NOTE: homePageHTML is currently dead — the live / route serves the Svelte SPA
+// via serveSPAIndex. The strip fetches below are kept in sync with the live SPA
+// home page so this template stays accurate if it is ever re-enabled.
 fetch(LB + '?category=top_speed&scope=global&period=all_time')
   .then(r => r.ok ? r.json() : [])
   .then(entries => {
@@ -202,12 +205,12 @@ fetch(LB + '?category=best_060&scope=global&period=all_time')
       setStrip('stat-best-060', fmtTime(e.value), e.car_make ? e.username + ' \u00b7 ' + e.car_make + (e.car_model ? ' ' + e.car_model : '') : e.username)
     }
   })
-fetch(LB + '?category=drive_count&scope=global&period=all_time')
+fetch(LB + '?category=total_distance&scope=global&period=all_time')
   .then(r => r.ok ? r.json() : [])
   .then(entries => {
     if (entries.length) {
       const e = entries[0]
-      setStrip('stat-total-drives', fmtNum(e.value), e.username)
+      setStrip('stat-total-distance', fmtDist(e.value), e.car_make ? e.username + ' \u00b7 ' + e.car_make + (e.car_model ? ' ' + e.car_model : '') : e.username)
     }
   })
 </script>
