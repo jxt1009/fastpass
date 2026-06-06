@@ -24,7 +24,7 @@ end. Per-car photos are not possible at all today.
 4. Move Social to the second tab; History and Analytics shift left by one.
 5. Improve the public profile: narrow header, garage overview with per-car
    photo and short stats, tappable Followers/Following lists, tap-avatar-to-
-   zoom, move Best 0–60 above Top Speed.
+   zoom, move Best 0–60 directly under Top Speed in the stats list.
 6. Mirror the same improvements on the user's own profile and add per-car
    photo upload in the garage editor.
 
@@ -34,7 +34,7 @@ end. Per-car photos are not possible at all today.
 |---|---|
 | Per-car photo storage | Add `photo_url: string \| null` to `UserCar` inside the `User.Garage` JSON blob. New `PUT /api/v1/garage/cars/:carId/photo` endpoint mirrors the existing `PUT /api/v1/profile/avatar` pattern. |
 | Drive → car grouping | Group by `Drive.CarID`; fall back to `LOWER(TRIM(car_make)) \|\| '\|' \|\| LOWER(TRIM(car_model))` when `CarID` is null. Same key in both leaderboard subquery and the per-user aggregation. |
-| Per-user entry cap | 3 rows per user per category. Enforced server-side via `ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY value)`. |
+| Per-user entry cap | 3 rows per user per category. Enforced server-side via `ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY <agg_expr> <direction>)`; the `<direction>` is per-category — `DESC` for `top_speed` / `total_distance`, `ASC` for `best_060` — so the cap keeps the user's best 3 cars by the metric's natural sort. |
 | Default period | All Time (unchanged). |
 | PR strategy | 5 PRs, split by area. |
 | Wire format | Additive. New fields default sensibly so old clients keep working. New `period` values rejected with `400` by old backend. |
@@ -71,8 +71,9 @@ type LeaderboardEntry struct {
 ## Out of scope
 
 - "Month" timeframe. (Easy follow-up if the three values feel sparse.)
-- Web profile page at `/u/:username/+page.svelte` (only `/leaderboard` SPA
-  is updated to match the new API).
+- Web profile page at `website/spa/src/routes/u/[username]/+page.svelte`
+  (served at URL `/u/:username`). Only the `/leaderboard` SPA is updated
+  to match the new API; the profile page is left for a follow-up.
 - iOS deep-link to a specific leaderboard category.
 - New achievements. (Car-per-row is informational only.)
 - Server-side janitor for orphan `uploads/garage_cars/*` files. Best-effort
@@ -296,8 +297,8 @@ LIMIT 50;
 - `xcodebuild test` green.
 - Manual: visit a friend's public profile, tap Followers, see list, tap a
   follower, see their profile, tap their avatar, see full-screen zoom.
-- Manual: own profile, tap avatar, see zoom; verify 0–60 appears above
-  Top Speed.
+- Manual: own profile, tap avatar, see zoom; verify 0–60 appears
+  directly under Top Speed.
 
 ---
 
