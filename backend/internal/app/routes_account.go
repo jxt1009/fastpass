@@ -14,5 +14,7 @@ func registerAccountRoutes(r *gin.Engine) {
 		api.GET("/stats", getCarStats)
 		api.PUT("/stats", putCarStats)
 		api.PUT("/display-settings", putDisplaySettings)
+		api.PUT("/garage/cars/:carId/photo", uploadCarPhoto)
+		api.DELETE("/garage/cars/:carId/photo", deleteCarPhoto)
 	}
 }
