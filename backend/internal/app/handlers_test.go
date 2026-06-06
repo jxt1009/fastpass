@@ -1054,6 +1054,9 @@ func TestLeaderboard_PrivateUsersExcluded(t *testing.T) {
 	}
 	if entries[0].Username != "publiclb" {
 		t.Errorf("expected publiclb in the result, got %q", entries[0].Username)
+	}
+}
+
 // ─── Per-car photo upload tests ──────────────────────────────────────────────
 
 func TestUploadCarPhoto_RoundTrips(t *testing.T) {
@@ -1275,5 +1278,23 @@ func TestDeleteCarPhoto_RemovesFileAndField(t *testing.T) {
 	// so the round-trip is simple. iOS treats empty and missing equivalently.
 	if !strings.Contains(meResp.Garage, `"photo_url":""`) {
 		t.Errorf("expected /me garage to contain empty photo_url after delete, got %q", meResp.Garage)
+	}
+}
+
+func TestResolveBaseURL_TrimsTrailingSlash(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"", "https://fast.toper.dev"},
+		{"https://fast.toper.dev", "https://fast.toper.dev"},
+		{"https://fast.toper.dev/", "https://fast.toper.dev"},
+		{"https://fast.toper.dev///", "https://fast.toper.dev"},
+		{"http://localhost:8080/", "http://localhost:8080"},
+	}
+	for _, tc := range cases {
+		t.Setenv("BASE_URL", tc.in)
+		if got := resolveBaseURL(); got != tc.want {
+			t.Errorf("resolveBaseURL() with BASE_URL=%q = %q, want %q", tc.in, got, tc.want)
+		}
 	}
 }

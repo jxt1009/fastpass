@@ -391,20 +391,8 @@ func uploadCarPhoto(c *gin.Context) {
 		return
 	}
 
-	baseURL := os.Getenv("BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://fast.toper.dev"
-	}
+	baseURL := resolveBaseURL()
 	photoURL := fmt.Sprintf("%s/uploads/garage_cars/%s", baseURL, filename)
-
-	// Best-effort: unlink the old file if it lived under our uploads dir.
-	if oldURL != "" {
-		if oldPath, ok := stripBaseURLPath(oldURL, baseURL, "garage_cars"); ok {
-			if err := os.Remove(oldPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-				logWithRequestID(c).Warn("failed to remove previous car photo", "path", oldPath, "err", err.Error())
-			}
-		}
-	}
 
 	// Mutate the JSON blob: set the matching car's photo_url and marshal back.
 	updated, err := setCarPhotoURLInGarage(cars, carID, photoURL)
@@ -418,8 +406,23 @@ func uploadCarPhoto(c *gin.Context) {
 		return
 	}
 	if err := db.Model(&User{}).Where("id = ?", userID).Update("garage", string(blob)).Error; err != nil {
+		// Rollback: unlink the new file we just wrote so we don't leave an
+		// orphan on disk. The user's garage JSON is unchanged, so no further
+		// compensation is required.
+		if rmErr := os.Remove(dst); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
+			logWithRequestID(c).Warn("failed to rollback new car photo", "path", dst, "err", rmErr.Error())
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to persist garage"})
 		return
+	}
+
+	// Now that the DB points at photoURL, best-effort unlink the old file.
+	if oldURL != "" {
+		if oldPath, ok := stripBaseURLPath(oldURL, baseURL, "garage_cars"); ok {
+			if err := os.Remove(oldPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+				logWithRequestID(c).Warn("failed to remove previous car photo", "path", oldPath, "err", err.Error())
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, CarPhotoResponse{PhotoURL: photoURL})
@@ -469,10 +472,7 @@ func deleteCarPhoto(c *gin.Context) {
 	}
 
 	if oldURL != "" {
-		baseURL := os.Getenv("BASE_URL")
-		if baseURL == "" {
-			baseURL = "https://fast.toper.dev"
-		}
+		baseURL := resolveBaseURL()
 		if oldPath, ok := stripBaseURLPath(oldURL, baseURL, "garage_cars"); ok {
 			if err := os.Remove(oldPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 				logWithRequestID(c).Warn("failed to remove car photo on delete", "path", oldPath, "err", err.Error())
@@ -532,6 +532,17 @@ func stripBaseURLPath(url, baseURL, subdir string) (string, bool) {
 		return "", false
 	}
 	return filepath.Join("uploads", subdir, rel), true
+}
+
+// resolveBaseURL returns the public base URL with any trailing slash
+// stripped, so URL construction and stripBaseURLPath agree on the prefix
+// even when BASE_URL is configured with a trailing slash.
+func resolveBaseURL() string {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://fast.toper.dev"
+	}
+	return strings.TrimRight(baseURL, "/")
 }
 
 // getCarStats returns the stored car stats JSON blob for the authenticated user.

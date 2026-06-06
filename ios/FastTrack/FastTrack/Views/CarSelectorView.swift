@@ -75,6 +75,7 @@ struct AddCarView: View {
     @State private var pickedImage: UIImage?
     @State private var uploadedPhotoURL: String?
     @State private var isUploadingPhoto = false
+    @State private var isSavingProfile = false
     @State private var photoError: String?
 
     var body: some View {
@@ -136,7 +137,7 @@ struct AddCarView: View {
                                 .disabled(isUploadingPhoto)
                             }
 
-                            if isUploadingPhoto {
+                            if isUploadingPhoto || isSavingProfile {
                                 ProgressView()
                                     .controlSize(.small)
                             }
@@ -156,10 +157,10 @@ struct AddCarView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button(isSavingProfile ? "Saving…" : "Save") {
                         saveCar()
                     }
-                    .disabled(!carSelection.isComplete || isUploadingPhoto)
+                    .disabled(!carSelection.isComplete || isUploadingPhoto || isSavingProfile)
                 }
             }
             .sheet(isPresented: $showingCarPicker) {
@@ -207,14 +208,31 @@ struct AddCarView: View {
         )
 
         profile.addCarToGarage(newCar)
-        profileManager.saveProfile(profile)
+        isSavingProfile = true
+        let saveTask = profileManager.saveProfile(profile)
 
-        // If a photo was picked, upload it now that the car has an id.
-        if let pickedImage {
-            Task { await uploadPhoto(for: newCar.id, image: pickedImage) }
+        // Await the server save before doing anything that depends on the
+        // server having the new car in its garage (e.g. the photo upload,
+        // which would 404 "car not found in garage" otherwise). The sheet
+        // stays open so the user sees upload progress and errors.
+        Task {
+            do {
+                try await saveTask.value
+            } catch {
+                await MainActor.run {
+                    self.photoError = "Profile save failed"
+                    self.isSavingProfile = false
+                }
+                return
+            }
+            if let pickedImage {
+                await uploadPhoto(for: newCar.id, image: pickedImage)
+            }
+            await MainActor.run {
+                self.isSavingProfile = false
+                self.dismiss()
+            }
         }
-
-        dismiss()
     }
 
     private func uploadPhoto(for carId: String, image: UIImage) async {
