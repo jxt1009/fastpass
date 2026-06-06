@@ -2,7 +2,9 @@ package app
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"image"
@@ -13,10 +15,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+func generateUniqueUsername() string {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("user_%d", time.Now().UnixMilli())
+	}
+	return "user_" + hex.EncodeToString(b)
+}
 
 func appleSignIn(c *gin.Context) {
 	var req AppleSignInRequest
@@ -44,6 +55,7 @@ func appleSignIn(c *gin.Context) {
 			AppleUserID:  &appleUserID,
 			Email:        claims.Email,
 			FullName:     req.FullName,
+			Username:     generateUniqueUsername(),
 			AuthProvider: "apple",
 		}
 
