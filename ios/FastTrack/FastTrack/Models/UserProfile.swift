@@ -204,23 +204,24 @@ class ProfileManager: ObservableObject {
         }
     }
 
-    func saveProfile(_ p: UserProfile) {
+    /// Saves the profile locally (UserDefaults, immediate) and kicks off a
+    /// server sync. Returns the in-flight server-sync Task so callers that
+    /// depend on the server state (e.g. a follow-up API call) can await it.
+    /// Existing fire-and-forget callers can ignore the return value — the
+    /// server sync still logs success/failure internally.
+    @discardableResult
+    func saveProfile(_ p: UserProfile) -> Task<Void, Error> {
         profile = p
         if let data = try? JSONEncoder().encode(p) {
             UserDefaults.standard.set(data, forKey: profileKey)
         }
-        
-        // Update on server with error handling
-        Task {
+        return Task {
             do {
                 try await APIService.shared.updateProfile(p)
                 print("✅ Profile saved to server successfully")
             } catch {
                 print("❌ Failed to save profile to server: \(error)")
-                // For now, just log the error. In a production app, you might want to:
-                // - Show an error alert
-                // - Queue for retry
-                // - Mark as dirty for later sync
+                throw error
             }
         }
     }
