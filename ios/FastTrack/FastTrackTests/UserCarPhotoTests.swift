@@ -140,4 +140,82 @@ final class UserCarPhotoTests: XCTestCase {
         profile.updateCarPhotoUrl(id: "a", url: "")
         XCTAssertNil(profile.garage[0].photoUrl)
     }
+
+    // MARK: - EditCarView round-trip
+
+    /// Simulates the EditCarView save flow: build a UserProfile with one car,
+    /// mutate nickname and photoUrl, apply via `updateCarInGarage`, and verify
+    /// the edited values stick while identity fields (id, make, model, year,
+    /// trim) and the rest of the garage are preserved.
+    func testEditCarView_RoundTripsNicknameAndPhotoUrl() {
+        var profile = UserProfile(username: "tester", country: "US", garage: [], selectedCarId: nil)
+        let original = UserCar(
+            id: "car-1",
+            make: "Honda",
+            model: "Civic Type R",
+            year: 2018,
+            trim: "Limited Edition",
+            nickname: "Old Name",
+            photoUrl: "https://fast.toper.dev/uploads/garage_cars/old.png"
+        )
+        let other = UserCar(
+            id: "car-2",
+            make: "Toyota",
+            model: "GR86",
+            year: 2023,
+            trim: "",
+            nickname: "Weekend",
+            photoUrl: "https://fast.toper.dev/uploads/garage_cars/other.png"
+        )
+        profile.addCarToGarage(original)
+        profile.addCarToGarage(other)
+
+        var edited = original
+        edited.nickname = "Track Toy"
+        edited.photoUrl = "https://fast.toper.dev/uploads/garage_cars/new.jpg"
+        profile.updateCarInGarage(edited)
+
+        XCTAssertEqual(profile.garage.count, 2)
+        XCTAssertEqual(profile.garage[0].id, "car-1")
+        XCTAssertEqual(profile.garage[0].make, "Honda")
+        XCTAssertEqual(profile.garage[0].model, "Civic Type R")
+        XCTAssertEqual(profile.garage[0].year, 2018)
+        XCTAssertEqual(profile.garage[0].trim, "Limited Edition")
+        XCTAssertEqual(profile.garage[0].nickname, "Track Toy")
+        XCTAssertEqual(profile.garage[0].photoUrl, "https://fast.toper.dev/uploads/garage_cars/new.jpg")
+        XCTAssertTrue(profile.garage[0].hasPhoto)
+
+        // Sibling car is untouched
+        XCTAssertEqual(profile.garage[1].id, "car-2")
+        XCTAssertEqual(profile.garage[1].nickname, "Weekend")
+        XCTAssertEqual(profile.garage[1].photoUrl, "https://fast.toper.dev/uploads/garage_cars/other.png")
+    }
+
+    /// When the user removes a photo in EditCarView, the saved car must have
+    /// `photoUrl == nil` and `hasPhoto == false`. Mirrors the
+    /// `workingPhotoUrl == nil && originalPhotoUrl != nil` branch in the
+    /// view's save() — the actual `deleteCarPhoto` API call is not invoked
+    /// here (it would require a network mock), but the model-level mutation
+    /// is what EditCarView would persist before/after that call.
+    func testEditCarView_RemovingPhotoClearsPhotoUrl() {
+        var profile = UserProfile(username: "tester", country: "US", garage: [], selectedCarId: nil)
+        let car = UserCar(
+            id: "car-1",
+            make: "Honda",
+            model: "Civic",
+            photoUrl: "https://fast.toper.dev/uploads/garage_cars/old.png"
+        )
+        profile.addCarToGarage(car)
+
+        var edited = car
+        edited.photoUrl = nil
+        profile.updateCarInGarage(edited)
+
+        XCTAssertNil(profile.garage[0].photoUrl)
+        XCTAssertFalse(profile.garage[0].hasPhoto)
+        // Other identity fields preserved
+        XCTAssertEqual(profile.garage[0].id, "car-1")
+        XCTAssertEqual(profile.garage[0].make, "Honda")
+        XCTAssertEqual(profile.garage[0].model, "Civic")
+    }
 }
