@@ -770,6 +770,7 @@ struct CarGarageCard: View {
 
     @StateObject private var carStatsManager = CarStatsManager.shared
     @State private var showingStats = false
+    @State private var editingCar: EditingCarTarget?
 
     private var carStats: CarStats? {
         carStatsManager.getStats(for: car.id)
@@ -829,12 +830,35 @@ struct CarGarageCard: View {
             }
             .padding(.vertical, showingStats ? 8 : 4)
         }
+        .contentShape(Rectangle())
         .onTapGesture {
             if !showingStats {
                 onSelect()
             }
         }
+        .contextMenu {
+            Button {
+                editingCar = EditingCarTarget(id: car.id)
+            } label: {
+                Label("Edit Car", systemImage: "pencil")
+            }
+            if !isSelected {
+                Button {
+                    onSelect()
+                } label: {
+                    Label("Select as Active", systemImage: "checkmark.circle")
+                }
+            }
+        }
+        .sheet(item: $editingCar) { target in
+            EditCarView(carId: target.id)
+        }
     }
+}
+
+/// Wrapper so `.sheet(item:)` can drive a `carId` (String is not Identifiable).
+private struct EditingCarTarget: Identifiable {
+    let id: String
 }
 
 /// Small rounded thumbnail for a car's photo. Falls back to a tinted car icon
