@@ -11,8 +11,8 @@
 		avatar_url?: string;
 	}
 
-	let category = $state<'top_speed' | 'best_060' | 'total_distance' | 'drive_count'>('top_speed');
-	let period = $state<'all_time' | 'week'>('all_time');
+	let category = $state<'top_speed' | 'best_060' | 'total_distance'>('top_speed');
+	let period = $state<'all_time' | 'last_7_days' | 'last_24h'>('all_time');
 	let carMake = $state('');
 	let carModel = $state('');
 	let entries = $state<LeaderboardEntry[]>([]);
@@ -25,8 +25,7 @@
 	const categories = [
 		{ value: 'top_speed', label: 'Top Speed', unit: 'mph' },
 		{ value: 'best_060', label: '0-60', unit: 's' },
-		{ value: 'total_distance', label: 'Distance', unit: 'mi' },
-		{ value: 'drive_count', label: 'Drives', unit: '' }
+		{ value: 'total_distance', label: 'Distance', unit: 'mi' }
 	] as const;
 
 	let initialLoadDone = $state(false);
@@ -115,8 +114,11 @@
 			<button class="filter-pill {period === 'all_time' ? 'active' : ''}" onclick={() => { if (period === 'all_time') return; period = 'all_time'; loadLeaderboard(); }}>
 				All Time
 			</button>
-			<button class="filter-pill {period === 'week' ? 'active' : ''}" onclick={() => { if (period === 'week') return; period = 'week'; loadLeaderboard(); }}>
-				This Week
+			<button class="filter-pill {period === 'last_7_days' ? 'active' : ''}" onclick={() => { if (period === 'last_7_days') return; period = 'last_7_days'; loadLeaderboard(); }}>
+				Last 7 Days
+			</button>
+			<button class="filter-pill {period === 'last_24h' ? 'active' : ''}" onclick={() => { if (period === 'last_24h') return; period = 'last_24h'; loadLeaderboard(); }}>
+				Last 24h
 			</button>
 		</div>
 
