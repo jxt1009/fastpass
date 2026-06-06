@@ -15,3 +15,4 @@
 - [ ] PR title follows semantic format (`feat:`, `fix:`, `chore:`, etc.)
 - [ ] Documentation updated (or not needed)
 - [ ] No secrets added
+- [ ] Backward compatible (old clients won't break)
