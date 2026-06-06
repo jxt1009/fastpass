@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -306,6 +307,231 @@ func deleteAvatarFiles(userID uint) error {
 		}
 	}
 	return nil
+}
+
+// uploadCarPhoto handles PUT /api/v1/garage/cars/:carId/photo
+// Accepts {"image_data": "<base64 image>"} and writes a validated image to
+// uploads/garage_cars/, then mutates the matching UserCar.photo_url inside
+// the user's `garage` JSON blob. The blob is treated as opaque JSON to match
+// the looser approach used by the avatar endpoint.
+func uploadCarPhoto(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	carID := strings.TrimSpace(c.Param("carId"))
+	if carID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "carId required"})
+		return
+	}
+
+	var req struct {
+		ImageData string `json:"image_data" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "image_data required"})
+		return
+	}
+
+	data, err := base64.StdEncoding.DecodeString(req.ImageData)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid base64"})
+		return
+	}
+
+	if len(data) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "image_data required"})
+		return
+	}
+
+	// Reject payloads larger than 8 MB decoded
+	if len(data) > 8*1024*1024 {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "image too large (max 8 MB)"})
+		return
+	}
+
+	ext, err := detectAvatarExtension(data)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	dir := filepath.Join("uploads", "garage_cars")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage error"})
+		return
+	}
+
+	var user User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Locate the matching car in the existing JSON blob. We do not parse it
+	// as a typed struct — match the looser approach used by the avatar
+	// endpoint and the rest of the garage round-trip path.
+	cars, oldURL, err := findCarInGarage(user.Garage, carID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	saltBytes := make([]byte, 16)
+	if _, err := rand.Read(saltBytes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage error"})
+		return
+	}
+	filename := fmt.Sprintf("%d_%s_%s%s", userID, carID, hex.EncodeToString(saltBytes), ext)
+	dst := filepath.Join(dir, filename)
+	if err := os.WriteFile(dst, data, 0o644); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "write error"})
+		return
+	}
+
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://fast.toper.dev"
+	}
+	photoURL := fmt.Sprintf("%s/uploads/garage_cars/%s", baseURL, filename)
+
+	// Best-effort: unlink the old file if it lived under our uploads dir.
+	if oldURL != "" {
+		if oldPath, ok := stripBaseURLPath(oldURL, baseURL, "garage_cars"); ok {
+			if err := os.Remove(oldPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+				logWithRequestID(c).Warn("failed to remove previous car photo", "path", oldPath, "err", err.Error())
+			}
+		}
+	}
+
+	// Mutate the JSON blob: set the matching car's photo_url and marshal back.
+	updated, err := setCarPhotoURLInGarage(cars, carID, photoURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to mutate garage"})
+		return
+	}
+	blob, err := json.Marshal(updated)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal garage"})
+		return
+	}
+	if err := db.Model(&User{}).Where("id = ?", userID).Update("garage", string(blob)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to persist garage"})
+		return
+	}
+
+	c.JSON(http.StatusOK, CarPhotoResponse{PhotoURL: photoURL})
+}
+
+// deleteCarPhoto handles DELETE /api/v1/garage/cars/:carId/photo
+// Clears the matching UserCar.photo_url inside the user's `garage` JSON
+// blob and best-effort unlinks the file from disk.
+func deleteCarPhoto(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	carID := strings.TrimSpace(c.Param("carId"))
+	if carID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "carId required"})
+		return
+	}
+
+	var user User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	cars, oldURL, err := findCarInGarage(user.Garage, carID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	updated, err := setCarPhotoURLInGarage(cars, carID, "")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to mutate garage"})
+		return
+	}
+	blob, err := json.Marshal(updated)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal garage"})
+		return
+	}
+	if err := db.Model(&User{}).Where("id = ?", userID).Update("garage", string(blob)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to persist garage"})
+		return
+	}
+
+	if oldURL != "" {
+		baseURL := os.Getenv("BASE_URL")
+		if baseURL == "" {
+			baseURL = "https://fast.toper.dev"
+		}
+		if oldPath, ok := stripBaseURLPath(oldURL, baseURL, "garage_cars"); ok {
+			if err := os.Remove(oldPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+				logWithRequestID(c).Warn("failed to remove car photo on delete", "path", oldPath, "err", err.Error())
+			}
+		}
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// findCarInGarage parses the user's `garage` JSON blob (treating it as
+// opaque JSON) and locates the car with the given id. Returns the parsed
+// cars slice (for re-marshalling) and the car.photo_url of the match
+// (empty string if absent).
+func findCarInGarage(blob string, carID string) ([]map[string]any, string, error) {
+	raw := []byte(blob)
+	if len(bytes.TrimSpace(raw)) == 0 {
+		raw = []byte("[]")
+	}
+	var cars []map[string]any
+	if err := json.Unmarshal(raw, &cars); err != nil {
+		return nil, "", errors.New("garage blob is not valid JSON")
+	}
+	for _, car := range cars {
+		if id, ok := car["id"].(string); ok && id == carID {
+			url, _ := car["photo_url"].(string)
+			return cars, url, nil
+		}
+	}
+	return nil, "", errors.New("car not found in garage")
+}
+
+// setCarPhotoURLInGarage mutates the parsed cars slice in place, setting
+// the matching car.photo_url to the supplied value. Returns the slice
+// ready for marshalling.
+func setCarPhotoURLInGarage(cars []map[string]any, carID string, photoURL string) ([]map[string]any, error) {
+	for i, car := range cars {
+		if id, ok := car["id"].(string); ok && id == carID {
+			cars[i]["photo_url"] = photoURL
+			return cars, nil
+		}
+	}
+	return nil, errors.New("car not found in garage")
+}
+
+// stripBaseURLPath returns the local filesystem path for a URL we
+// previously emitted, scoped to uploads/<subdir>/. Returns ok=false
+// if the URL does not belong to us.
+func stripBaseURLPath(url, baseURL, subdir string) (string, bool) {
+	prefix := fmt.Sprintf("%s/uploads/%s/", baseURL, subdir)
+	if !strings.HasPrefix(url, prefix) {
+		return "", false
+	}
+	rel := strings.TrimPrefix(url, prefix)
+	// Defensive: reject path traversal.
+	if strings.Contains(rel, "..") || strings.Contains(rel, "/") {
+		return "", false
+	}
+	return filepath.Join("uploads", subdir, rel), true
 }
 
 // getCarStats returns the stored car stats JSON blob for the authenticated user.

@@ -86,3 +86,8 @@ type UserInfo struct {
 	Email    string `json:"email"`
 	FullName string `json:"full_name"`
 }
+
+// CarPhotoResponse is the body returned by PUT /api/v1/garage/cars/:carId/photo.
+type CarPhotoResponse struct {
+	PhotoURL string `json:"photo_url"`
+}

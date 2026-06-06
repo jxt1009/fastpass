@@ -2,12 +2,17 @@ package app
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -67,6 +72,51 @@ func tokenForUser(t *testing.T, user User) string {
 		t.Fatalf("failed to generate test JWT: %v", err)
 	}
 	return tok
+}
+
+// makeGaragePhotoRouter returns a router that includes the new car-photo
+// routes, for use in TestUploadCarPhoto_* and TestDeleteCarPhoto_*.
+func makeGaragePhotoRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	api := r.Group("/api/v1")
+	api.Use(authMiddleware())
+	{
+		api.GET("/me", getCurrentUser)
+		api.PUT("/garage/cars/:carId/photo", uploadCarPhoto)
+		api.DELETE("/garage/cars/:carId/photo", deleteCarPhoto)
+	}
+	return r
+}
+
+// tinyPNG returns the bytes of a 1x1 fully-opaque red PNG. Used to drive
+// image.DecodeConfig on the upload path.
+func tinyPNG(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, color.RGBA{R: 255, A: 255})
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("encode tiny PNG: %v", err)
+	}
+	return buf.Bytes()
+}
+
+// seedUserWithCar creates a user whose garage JSON contains a single car
+// with the given carID, and returns the user.
+func seedUserWithCar(t *testing.T, email, username, carID string) User {
+	t.Helper()
+	garageBlob := fmt.Sprintf(`[{"id":%q,"make":"Honda","model":"Civic","year":2018,"trim":"","nickname":"Daily"}]`, carID)
+	user := User{
+		Email:    email,
+		Username: username,
+		AuthProvider: "google",
+		Garage:   garageBlob,
+	}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	return user
 }
 
 func TestDriveOwnership_CannotReadOtherUsersDrive(t *testing.T) {
@@ -1004,5 +1054,226 @@ func TestLeaderboard_PrivateUsersExcluded(t *testing.T) {
 	}
 	if entries[0].Username != "publiclb" {
 		t.Errorf("expected publiclb in the result, got %q", entries[0].Username)
+// ─── Per-car photo upload tests ──────────────────────────────────────────────
+
+func TestUploadCarPhoto_RoundTrips(t *testing.T) {
+	jwtSecret = []byte("carphoto-test-secret-32-bytes-long!")
+	setupTestDB(t)
+
+	// Run uploads from a temp working directory so the writes are isolated.
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	tempDir := t.TempDir()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer func() { _ = os.Chdir(wd) }()
+
+	const carID = "11111111-1111-1111-1111-111111111111"
+	user := seedUserWithCar(t, "carphoto@test.com", "carphoto-user", carID)
+
+	router := makeGaragePhotoRouter()
+	pngBytes := tinyPNG(t)
+	body, _ := json.Marshal(map[string]string{
+		"image_data": base64.StdEncoding.EncodeToString(pngBytes),
+	})
+	req, _ := http.NewRequest("PUT", "/api/v1/garage/cars/"+carID+"/photo", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
+	}
+	var resp CarPhotoResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.PhotoURL == "" {
+		t.Fatalf("expected non-empty photo_url in response")
+	}
+	if !strings.Contains(resp.PhotoURL, "/uploads/garage_cars/") {
+		t.Errorf("expected photo_url to be in /uploads/garage_cars/, got %q", resp.PhotoURL)
+	}
+	if !strings.Contains(resp.PhotoURL, carID) {
+		t.Errorf("expected photo_url to contain carID %q, got %q", carID, resp.PhotoURL)
+	}
+
+	// File should be on disk under our tempDir's uploads/garage_cars/.
+	// Resolve by listing the dir — the filename is salted with a UUID so we
+	// can't predict it directly from the URL.
+	entries, err := os.ReadDir(filepath.Join("uploads", "garage_cars"))
+	if err != nil {
+		t.Fatalf("read garage_cars dir: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 file in garage_cars/, got %d", len(entries))
+	}
+	if !strings.HasSuffix(entries[0].Name(), ".png") {
+		t.Errorf("expected .png file, got %q", entries[0].Name())
+	}
+
+	// GET /me should return the updated garage JSON with photo_url set.
+	getReq, _ := http.NewRequest("GET", "/api/v1/me", nil)
+	getReq.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	getW := httptest.NewRecorder()
+	router.ServeHTTP(getW, getReq)
+	if getW.Code != http.StatusOK {
+		t.Fatalf("GET /me: expected 200, got %d (body: %s)", getW.Code, getW.Body.String())
+	}
+	var meResp User
+	if err := json.Unmarshal(getW.Body.Bytes(), &meResp); err != nil {
+		t.Fatalf("decode /me: %v", err)
+	}
+	if !strings.Contains(meResp.Garage, `"photo_url"`) {
+		t.Errorf("expected /me garage to contain photo_url, got %q", meResp.Garage)
+	}
+	if !strings.Contains(meResp.Garage, resp.PhotoURL) {
+		t.Errorf("expected /me garage to contain %q, got %q", resp.PhotoURL, meResp.Garage)
+	}
+}
+
+func TestUploadCarPhoto_NilData400(t *testing.T) {
+	jwtSecret = []byte("carphoto-nil-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	const carID = "22222222-2222-2222-2222-222222222222"
+	user := seedUserWithCar(t, "carphoto-nil@test.com", "carphoto-nil", carID)
+
+	router := makeGaragePhotoRouter()
+
+	// Body with image_data explicitly empty.
+	body, _ := json.Marshal(map[string]string{"image_data": ""})
+	req, _ := http.NewRequest("PUT", "/api/v1/garage/cars/"+carID+"/photo", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("empty image_data: expected 400, got %d (body: %s)", w.Code, w.Body.String())
+	}
+
+	// No body at all — the `binding:"required"` tag should also fire.
+	req2, _ := http.NewRequest("PUT", "/api/v1/garage/cars/"+carID+"/photo", nil)
+	req2.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusBadRequest {
+		t.Fatalf("missing body: expected 400, got %d (body: %s)", w2.Code, w2.Body.String())
+	}
+}
+
+func TestUploadCarPhoto_RejectsOversizeImage(t *testing.T) {
+	jwtSecret = []byte("carphoto-big-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	tempDir := t.TempDir()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer func() { _ = os.Chdir(wd) }()
+
+	const carID = "33333333-3333-3333-3333-333333333333"
+	user := seedUserWithCar(t, "carphoto-big@test.com", "carphoto-big", carID)
+
+	router := makeGaragePhotoRouter()
+
+	// 9 MB of arbitrary bytes — well above the 8 MB cap.
+	oversize := bytes.Repeat([]byte("A"), 9*1024*1024)
+	body, _ := json.Marshal(map[string]string{
+		"image_data": base64.StdEncoding.EncodeToString(oversize),
+	})
+	req, _ := http.NewRequest("PUT", "/api/v1/garage/cars/"+carID+"/photo", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversize image: expected 413, got %d (body: %s)", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteCarPhoto_RemovesFileAndField(t *testing.T) {
+	jwtSecret = []byte("carphoto-del-secret-32-bytes-long!!")
+	setupTestDB(t)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	tempDir := t.TempDir()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer func() { _ = os.Chdir(wd) }()
+
+	const carID = "44444444-4444-4444-4444-444444444444"
+	user := seedUserWithCar(t, "carphoto-del@test.com", "carphoto-del", carID)
+
+	router := makeGaragePhotoRouter()
+
+	// Upload a photo first.
+	pngBytes := tinyPNG(t)
+	body, _ := json.Marshal(map[string]string{
+		"image_data": base64.StdEncoding.EncodeToString(pngBytes),
+	})
+	req, _ := http.NewRequest("PUT", "/api/v1/garage/cars/"+carID+"/photo", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("upload: expected 200, got %d (body: %s)", w.Code, w.Body.String())
+	}
+	var resp CarPhotoResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	entries, err := os.ReadDir(filepath.Join("uploads", "garage_cars"))
+	if err != nil {
+		t.Fatalf("read garage_cars dir: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 file in garage_cars/, got %d", len(entries))
+	}
+	localPath := filepath.Join("uploads", "garage_cars", entries[0].Name())
+
+	// Delete the photo.
+	delReq, _ := http.NewRequest("DELETE", "/api/v1/garage/cars/"+carID+"/photo", nil)
+	delReq.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	delW := httptest.NewRecorder()
+	router.ServeHTTP(delW, delReq)
+	if delW.Code != http.StatusNoContent {
+		t.Fatalf("delete: expected 204, got %d (body: %s)", delW.Code, delW.Body.String())
+	}
+
+	// File should be gone.
+	if _, err := os.Stat(localPath); !os.IsNotExist(err) {
+		t.Fatalf("expected photo file to be removed, stat err = %v", err)
+	}
+
+	// /me garage should no longer contain the URL.
+	getReq, _ := http.NewRequest("GET", "/api/v1/me", nil)
+	getReq.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	getW := httptest.NewRecorder()
+	router.ServeHTTP(getW, getReq)
+	if getW.Code != http.StatusOK {
+		t.Fatalf("GET /me: expected 200, got %d", getW.Code)
+	}
+	var meResp User
+	_ = json.Unmarshal(getW.Body.Bytes(), &meResp)
+	if strings.Contains(meResp.Garage, resp.PhotoURL) {
+		t.Errorf("expected /me garage to not contain %q, got %q", resp.PhotoURL, meResp.Garage)
+	}
+	// Per the implementation contract: the field is set to "" (not removed)
+	// so the round-trip is simple. iOS treats empty and missing equivalently.
+	if !strings.Contains(meResp.Garage, `"photo_url":""`) {
+		t.Errorf("expected /me garage to contain empty photo_url after delete, got %q", meResp.Garage)
 	}
 }
