@@ -58,3 +58,21 @@ After pushing a branch, always create a PR with `gh pr create` and populate both
 For any multi-step implementation (feature work, refactors, or non-trivial fixes), create and maintain a plan in `docs/plans/` using a date-prefixed filename (for example `2026-05-31-testflight-release-notes.md`).
 
 Treat these plans as version-controlled project artifacts: keep them in-repo, update them at major milestones, and avoid keeping substantive implementation plans only in ephemeral session files.
+
+## 5. Backward Compatibility
+
+We have external users who may not update the app immediately. Every server-side
+change must tolerate old clients unless explicitly justified.
+
+- **API contract is additive only.** Never remove or rename JSON response fields.
+  Old clients gracefully ignore unknown fields; new clients can use added fields.
+- **Database migrations are additive by default.** New columns must be nullable
+  or have safe defaults. Avoid drops, type changes, and renames. If a rename is
+  necessary, it must be guarded (check old column exists and new doesn't) and
+  have a documented cutover plan.
+- **Client-aware changes.** If a change genuinely requires an app update (e.g. a
+  new request format), document the cutover plan in the plan artifact and PR
+  body. The PR title or body should call out the compatibility break.
+- **Litmus test for every change:** "Would this break someone running last
+  week's app release?" If the answer is yes, rethink the approach or document
+  the coordination required.

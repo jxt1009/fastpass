@@ -100,6 +100,27 @@ If a commit with an invalid conventional commit message (e.g. header > 100 chars
 - For multi-step implementation work, create and maintain a plan under `docs/plans/` with a date-prefixed filename (for example `2026-05-31-testflight-release-notes.md`).
 - Treat plans as version-controlled project artifacts: update them at major milestones and keep the canonical plan in the repository (not only in ephemeral session files).
 
+## Backward Compatibility
+
+We have external users who may not update the iOS app immediately. All backend
+changes must tolerate old clients unless explicitly justified.
+
+- **API contract is additive only.** Never remove or rename JSON response fields.
+  Old iOS clients gracefully ignore unknown fields via default `Decodable`
+  behavior. Add new fields; don't reshape existing ones.
+- **Database migrations are additive by default.** New columns must be nullable
+  or have safe defaults. Avoid drops, type changes, and renames. If a rename is
+  necessary, it must be guarded (check old column exists and new doesn't) and
+  have a documented backward-compatibility plan. See
+  `backend/internal/app/migrations.go` for the actual pattern — most migrations
+  add columns/indexes; the `RenameColumn` at `2026053103` shows the guarded
+  approach.
+- **Client-aware changes.** If a change requires a forced app update, document
+  the cutover in the plan artifact and PR body. Mark the PR title clearly
+  if it breaks compatibility.
+- **Litmus test:** "Would this break last week's App Store release?" If yes,
+  rethink or coordinate.
+
 ## Key conventions
 
 - The backend JSON contract is snake_case, and the iOS models mirror it with explicit `CodingKeys`. When adding or renaming API fields, update both sides together.
