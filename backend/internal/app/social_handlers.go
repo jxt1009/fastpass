@@ -178,6 +178,10 @@ func getLeaderboard(c *gin.Context) {
 		CarNickname *string `gorm:"column:car_nickname"`
 	}
 
+	// car_key is repeated verbatim in GROUP BY because PostgreSQL does not
+	// allow SELECT-list aliases in the same query's GROUP BY (SQLite does,
+	// which is why the in-memory test suite passed; this would 500 in prod).
+	carKeyExpr := "COALESCE(d.car_id, LOWER(TRIM(COALESCE(d.car_make, ''))) || '|' || LOWER(TRIM(COALESCE(d.car_model, ''))))"
 	sqlQuery := fmt.Sprintf(`
 		SELECT r.user_id, u.username, u.country, u.avatar_url,
 		       r.value, r.car_id, r.car_key,
@@ -185,7 +189,7 @@ func getLeaderboard(c *gin.Context) {
 		FROM (
 		  SELECT
 		    d.user_id,
-		    COALESCE(d.car_id, LOWER(TRIM(COALESCE(d.car_make, ''))) || '|' || LOWER(TRIM(COALESCE(d.car_model, '')))) AS car_key,
+		    %s AS car_key,
 		    MAX(d.car_id) AS car_id,
 		    MAX(COALESCE(d.car_make, '')) AS car_make,
 		    MAX(COALESCE(d.car_model, '')) AS car_model,
@@ -196,14 +200,16 @@ func getLeaderboard(c *gin.Context) {
 		    ROW_NUMBER() OVER (PARTITION BY d.user_id ORDER BY %s %s) AS rn
 		  FROM drives d
 		  WHERE 1=1 %s %s %s %s
-		  GROUP BY d.user_id, car_key
+		  GROUP BY d.user_id, %s
 		) r
 		JOIN users u ON u.id = r.user_id
 		WHERE u.is_public = true AND r.rn <= 3 AND r.value IS NOT NULL
 		ORDER BY r.value %s
 		LIMIT 50`,
+		carKeyExpr,
 		agg.expr, agg.expr, agg.order,
 		agg.extraWhere, periodWhere, scopeWhere, carWhere,
+		carKeyExpr,
 		agg.order)
 
 	var rows []rawRow
