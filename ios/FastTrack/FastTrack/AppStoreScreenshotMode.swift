@@ -8,6 +8,7 @@ enum AppStoreScreenshotMode {
 
     enum Screen: String {
         case track
+        case social
         case history
         case analytics
         case profile
@@ -61,6 +62,8 @@ struct AppStoreScreenshotRootView: View {
         switch AppStoreScreenshotMode.Screen.current {
         case .track:
             ContentView()
+        case .social:
+            SocialView()
         case .history:
             DriveHistoryView()
         case .analytics:

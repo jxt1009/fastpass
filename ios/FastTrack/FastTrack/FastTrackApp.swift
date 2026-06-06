@@ -57,6 +57,8 @@ struct FastTrackApp: App {
     }
 }
 
+private let socialTabTag = 1
+
 struct RootView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
@@ -111,16 +113,16 @@ struct RootView: View {
                 ContentView()
                     // Tab 0 (Track) is NOT reset — preserves active recordings across tab switches
                     .tabItem { Label("Track", systemImage: "location.fill") }.tag(0)
-                DriveHistoryView()
-                    .id(tabResetIDs[1])
-                    .tabItem { Label("History", systemImage: "clock.fill") }.tag(1)
-                AnalyticsView()
-                    .id(tabResetIDs[2])
-                    .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }.tag(2)
                 SocialView()
                     // NOT reset on tab switch — leaderboard data is expensive to reload and
                     // the view manages its own nav stack; internal filter changes re-fetch via .task(id:)
-                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(3)
+                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(socialTabTag)
+                DriveHistoryView()
+                    .id(tabResetIDs[2])
+                    .tabItem { Label("History", systemImage: "clock.fill") }.tag(2)
+                AnalyticsView()
+                    .id(tabResetIDs[3])
+                    .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }.tag(3)
                 ProfileView()
                     .id(tabResetIDs[4])
                     .tabItem { Label("Profile", systemImage: "person.fill") }.tag(4)
@@ -141,7 +143,7 @@ struct RootView: View {
             }
             .onChange(of: selectedTab) { oldTab, _ in
                 // Reset the tab being left (but never Track or Social)
-                if oldTab > 0 && oldTab != 3 {
+                if oldTab > 0 && oldTab != socialTabTag {
                     tabResetIDs[oldTab] = UUID()
                 }
             }
