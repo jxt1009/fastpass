@@ -14,18 +14,18 @@
 
 	let topSpeed = $state<{ value: string; driver: string } | null>(null);
 	let best060 = $state<{ value: string; driver: string } | null>(null);
-	let mostDrives = $state<{ value: string; driver: string } | null>(null);
+	let topDistance = $state<{ value: string; driver: string } | null>(null);
 	let statsLoading = $state(true);
 
 	onMount(() => {
 		fetchStat('top_speed', (v) => `${(v * 2.23694).toFixed(1)}<span class="su"> mph</span>`, (e) => setTopSpeed(e));
 		fetchStat('best_060', (v) => `${v.toFixed(1)}<span class="su">s</span>`, (e) => setBest060(e));
-		fetchStat('drive_count', (v) => Math.round(v).toLocaleString(), (e) => setMostDrives(e));
+		fetchStat('total_distance', (v) => `${(v / 1609.34).toFixed(1)}<span class="su"> mi</span>`, (e) => setTopDistance(e));
 	});
 
 	function setTopSpeed(e: LbEntry) { topSpeed = { value: fmtSpeed(e.value), driver: driverLabel(e) }; }
 	function setBest060(e: LbEntry) { best060 = { value: fmt060(e.value), driver: driverLabel(e) }; }
-	function setMostDrives(e: LbEntry) { mostDrives = { value: Math.round(e.value).toLocaleString(), driver: e.username }; }
+	function setTopDistance(e: LbEntry) { topDistance = { value: `${(e.value / 1609.34).toFixed(1)}<span class="su"> mi</span>`, driver: driverLabel(e) }; }
 
 	function fmtSpeed(ms: number) { return `${(ms * 2.23694).toFixed(1)}<span class="su"> mph</span>`; }
 	function fmt060(s: number) { return `${s.toFixed(1)}<span class="su">s</span>`; }
@@ -90,15 +90,15 @@
 		<div class="strip-card">
 			{#if statsLoading}
 				<div class="strip-skel"></div>
-			{:else if mostDrives}
-				<div class="strip-value blue">{@html mostDrives.value}</div>
+			{:else if topDistance}
+				<div class="strip-value blue">{@html topDistance.value}</div>
 				<div class="strip-divider"></div>
-				<div class="strip-label">Total Drives</div>
-				<div class="strip-driver">{mostDrives.driver}</div>
+				<div class="strip-label">Total Distance</div>
+				<div class="strip-driver">{topDistance.driver}</div>
 			{:else}
 				<div class="strip-value blue">—</div>
 				<div class="strip-divider"></div>
-				<div class="strip-label">Total Drives</div>
+				<div class="strip-label">Total Distance</div>
 				<div class="strip-driver">Be the first</div>
 			{/if}
 		</div>
