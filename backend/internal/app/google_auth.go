@@ -105,6 +105,7 @@ func handleGoogleSignIn(c *gin.Context) {
 				GoogleUserID: &userInfo.Sub,
 				Email:        userInfo.Email,
 				FullName:     userInfo.Name,
+				Username:     generateUniqueUsername(),
 				AuthProvider: "google",
 			}
 			if err := db.Create(&user).Error; err != nil {
