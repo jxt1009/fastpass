@@ -12,14 +12,20 @@ import (
 // ─── Response types ──────────────────────────────────────────────────────────
 
 type LeaderboardEntry struct {
-	Rank      int     `json:"rank"`
-	UserID    uint    `json:"user_id"`
-	Username  string  `json:"username"`
-	Country   string  `json:"country"`
-	AvatarURL string  `json:"avatar_url"`
-	Value     float64 `json:"value"`
-	CarMake   string  `json:"car_make"`
-	CarModel  string  `json:"car_model"`
+	Rank        int     `json:"rank"`
+	UserID      uint    `json:"user_id"`
+	Username    string  `json:"username"`
+	Country     string  `json:"country"`
+	AvatarURL   string  `json:"avatar_url"`
+	Value       float64 `json:"value"`
+	CarID       *string `json:"car_id"`
+	CarKey      string  `json:"car_key"`
+	CarMake     string  `json:"car_make"`
+	CarModel    string  `json:"car_model"`
+	CarYear     *int    `json:"car_year"`
+	CarTrim     *string `json:"car_trim"`
+	CarNickname *string `json:"car_nickname"`
+	CarPhotoURL *string `json:"car_photo_url"`
 }
 
 type PublicProfileResponse struct {
@@ -55,15 +61,18 @@ type UserSearchResult struct {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// startOfCurrentWeek returns 00:00:00 UTC on the most recent Monday.
-func startOfCurrentWeek() time.Time {
+// startOfLast7Days returns the cutoff timestamp for the rolling "last 7 days"
+// period: 00:00:00 UTC seven days before the current UTC date.
+func startOfLast7Days() time.Time {
 	now := time.Now().UTC()
-	weekday := int(now.Weekday())
-	if weekday == 0 {
-		weekday = 7 // treat Sunday as day 7
-	}
-	monday := now.AddDate(0, 0, -(weekday - 1))
-	return time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, time.UTC)
+	cutoff := now.AddDate(0, 0, -7)
+	return time.Date(cutoff.Year(), cutoff.Month(), cutoff.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// startOfLast24Hours returns the cutoff timestamp for the "last 24 hours"
+// period: now minus 24 hours.
+func startOfLast24Hours() time.Time {
+	return time.Now().UTC().Add(-24 * time.Hour)
 }
 
 // placeholders returns n comma-separated "?" tokens for use in SQL IN clauses.
@@ -79,9 +88,13 @@ func placeholders(n int) string {
 // getLeaderboard handles GET /api/v1/leaderboard
 // Query params:
 //
-//	category: top_speed | total_distance | best_060 | drive_count  (default: top_speed)
-//	scope:    global | following                                     (default: global)
-//	period:   week | all_time                                        (default: all_time)
+//	category: top_speed | best_060 | total_distance             (default: top_speed)
+//	scope:    global | following                               (default: global)
+//	period:   last_24h | last_7_days | all_time                (default: all_time)
+//
+// One user can appear on the leaderboard up to three times — once per car.
+// The synthetic car_key groups drives by car_id when present, otherwise by
+// LOWER(TRIM(car_make)) || '|' || LOWER(TRIM(car_model)).
 func getLeaderboard(c *gin.Context) {
 	currentUserID, _ := getUserID(c)
 
@@ -90,34 +103,38 @@ func getLeaderboard(c *gin.Context) {
 	period := c.DefaultQuery("period", "all_time")
 
 	type aggConfig struct {
-		expr        string
-		order       string
-		extraWhere  string
-		subColOrder string // ORDER BY for the per-user car subquery (uses d2.col not alias)
+		expr       string
+		order      string // direction only: "DESC" or "ASC", applied to both the row_number ordering and the outer ORDER BY
+		extraWhere string
 	}
 
 	aggMap := map[string]aggConfig{
-		"top_speed":      {expr: "MAX(d.max_speed)", order: "value DESC", subColOrder: "d2.max_speed DESC"},
-		"total_distance": {expr: "SUM(d.distance)", order: "value DESC", subColOrder: "d2.distance DESC"},
-		"best_060":       {expr: "MIN(d.best_060_time)", order: "value ASC", extraWhere: "AND d.best_060_time IS NOT NULL", subColOrder: "d2.best_060_time ASC"},
-		"drive_count":    {expr: "COUNT(d.id)", order: "value DESC", subColOrder: "d2.id DESC"},
+		"top_speed":      {expr: "MAX(d.max_speed)", order: "DESC", extraWhere: ""},
+		"total_distance": {expr: "SUM(d.distance)", order: "DESC", extraWhere: ""},
+		"best_060":       {expr: "MIN(d.best_060_time)", order: "ASC", extraWhere: "AND d.best_060_time IS NOT NULL"},
 	}
 
 	agg, ok := aggMap[category]
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category; use top_speed, total_distance, best_060, or drive_count"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category; use top_speed, best_060, or total_distance"})
 		return
 	}
 
-	args := []interface{}{}
-
 	// Period filter
-	periodWhere := ""
-	subPeriodWhere := ""
-	if period == "week" {
+	var periodWhere string
+	args := []interface{}{}
+	switch period {
+	case "all_time":
+		// no time bound
+	case "last_7_days":
 		periodWhere = "AND d.start_time >= ?"
-		subPeriodWhere = "AND d2.start_time >= ?"
-		args = append(args, startOfCurrentWeek())
+		args = append(args, startOfLast7Days())
+	case "last_24h":
+		periodWhere = "AND d.start_time >= ?"
+		args = append(args, startOfLast24Hours())
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid period; use last_24h, last_7_days, or all_time"})
+		return
 	}
 
 	// Scope filter — restrict to people the current user follows (+ themselves)
@@ -137,89 +154,77 @@ func getLeaderboard(c *gin.Context) {
 	carMakeFilter := strings.TrimSpace(c.Query("car_make"))
 	carModelFilter := strings.TrimSpace(c.Query("car_model"))
 	carWhere := ""
-	subCarWhere := ""
 	if carMakeFilter != "" {
-		carWhere += " AND LOWER(d.car_make) = LOWER(?)"
-		subCarWhere += " AND LOWER(d2.car_make) = LOWER(?)"
+		carWhere += " AND LOWER(COALESCE(d.car_make, '')) = LOWER(?)"
 		args = append(args, carMakeFilter)
 	}
 	if carModelFilter != "" {
-		carWhere += " AND LOWER(d.car_model) = LOWER(?)"
-		subCarWhere += " AND LOWER(d2.car_model) = LOWER(?)"
+		carWhere += " AND LOWER(COALESCE(d.car_model, '')) = LOWER(?)"
 		args = append(args, carModelFilter)
 	}
 
 	type rawRow struct {
-		UserID    uint    `gorm:"column:user_id"`
-		Username  string  `gorm:"column:username"`
-		Country   string  `gorm:"column:country"`
-		AvatarURL string  `gorm:"column:avatar_url"`
-		Value     float64 `gorm:"column:value"`
-		CarMake   string  `gorm:"column:car_make"`
-		CarModel  string  `gorm:"column:car_model"`
+		UserID      uint    `gorm:"column:user_id"`
+		Username    string  `gorm:"column:username"`
+		Country     string  `gorm:"column:country"`
+		AvatarURL   string  `gorm:"column:avatar_url"`
+		Value       float64 `gorm:"column:value"`
+		CarID       *string `gorm:"column:car_id"`
+		CarKey      string  `gorm:"column:car_key"`
+		CarMake     string  `gorm:"column:car_make"`
+		CarModel    string  `gorm:"column:car_model"`
+		CarYear     *int    `gorm:"column:car_year"`
+		CarTrim     *string `gorm:"column:car_trim"`
+		CarNickname *string `gorm:"column:car_nickname"`
 	}
 
-	// Build subquery-specific WHERE clauses (use d2. alias for inner table)
-	subExtraWhere := strings.ReplaceAll(agg.extraWhere, "d.", "d2.")
-
-	// For each user, also surface which car achieved their best value.
-	// We use a subquery to find the drive that produced the aggregate value.
 	sqlQuery := fmt.Sprintf(`
-		SELECT d.user_id, u.username, u.country, u.avatar_url,
-		       %s AS value,
-		       COALESCE((
-		           SELECT d2.car_make FROM drives d2
-		           WHERE d2.user_id = d.user_id %s %s %s
-		           ORDER BY %s LIMIT 1
-		       ), '') AS car_make,
-		       COALESCE((
-		           SELECT d2.car_model FROM drives d2
-		           WHERE d2.user_id = d.user_id %s %s %s
-		           ORDER BY %s LIMIT 1
-		       ), '') AS car_model
-		FROM drives d
-		JOIN users u ON d.user_id = u.id
-		WHERE u.is_public = true %s %s %s %s
-		GROUP BY d.user_id, u.username, u.country, u.avatar_url
-		ORDER BY %s
+		SELECT r.user_id, u.username, u.country, u.avatar_url,
+		       r.value, r.car_id, r.car_key,
+		       r.car_make, r.car_model, r.car_year, r.car_trim, r.car_nickname
+		FROM (
+		  SELECT
+		    d.user_id,
+		    COALESCE(d.car_id, LOWER(TRIM(COALESCE(d.car_make, ''))) || '|' || LOWER(TRIM(COALESCE(d.car_model, '')))) AS car_key,
+		    MAX(d.car_id) AS car_id,
+		    MAX(COALESCE(d.car_make, '')) AS car_make,
+		    MAX(COALESCE(d.car_model, '')) AS car_model,
+		    MAX(d.car_year) AS car_year,
+		    MAX(d.car_trim) AS car_trim,
+		    MAX(d.car_nickname) AS car_nickname,
+		    %s AS value,
+		    ROW_NUMBER() OVER (PARTITION BY d.user_id ORDER BY %s %s) AS rn
+		  FROM drives d
+		  WHERE 1=1 %s %s %s %s
+		  GROUP BY d.user_id, car_key
+		) r
+		JOIN users u ON u.id = r.user_id
+		WHERE u.is_public = true AND r.rn <= 3 AND r.value IS NOT NULL
+		ORDER BY r.value %s
 		LIMIT 50`,
-		agg.expr,
-		// subquery for car_make
-		subExtraWhere, subPeriodWhere, subCarWhere, agg.subColOrder,
-		// subquery for car_model
-		subExtraWhere, subPeriodWhere, subCarWhere, agg.subColOrder,
-		// main WHERE
+		agg.expr, agg.expr, agg.order,
 		agg.extraWhere, periodWhere, scopeWhere, carWhere,
 		agg.order)
 
-	// Build full args: [subquery1 args] + [subquery2 args] + [main args]
-	subArgs := []interface{}{}
-	if period == "week" {
-		subArgs = append(subArgs, startOfCurrentWeek())
-	}
-	if carMakeFilter != "" {
-		subArgs = append(subArgs, carMakeFilter)
-	}
-	if carModelFilter != "" {
-		subArgs = append(subArgs, carModelFilter)
-	}
-	fullArgs := append(subArgs, subArgs...)
-	fullArgs = append(fullArgs, args...)
-
 	var rows []rawRow
-	db.Raw(sqlQuery, fullArgs...).Scan(&rows)
+	db.Raw(sqlQuery, args...).Scan(&rows)
 
 	entries := make([]LeaderboardEntry, len(rows))
 	for i, r := range rows {
 		entries[i] = LeaderboardEntry{
-			Rank:      i + 1,
-			UserID:    r.UserID,
-			Username:  r.Username,
-			Country:   r.Country,
-			AvatarURL: r.AvatarURL,
-			Value:     r.Value,
-			CarMake:   r.CarMake,
-			CarModel:  r.CarModel,
+			Rank:        i + 1,
+			UserID:      r.UserID,
+			Username:    r.Username,
+			Country:     r.Country,
+			AvatarURL:   r.AvatarURL,
+			Value:       r.Value,
+			CarID:       r.CarID,
+			CarKey:      r.CarKey,
+			CarMake:     r.CarMake,
+			CarModel:    r.CarModel,
+			CarYear:     r.CarYear,
+			CarTrim:     r.CarTrim,
+			CarNickname: r.CarNickname,
 		}
 	}
 
