@@ -324,6 +324,26 @@ class APIService {
         struct Res: Decodable { let avatarURL: String; enum CodingKeys: String, CodingKey { case avatarURL = "avatar_url" } }
         let _: Res = try await put(endpoint: "/profile/avatar", body: Req(imageData: imageData.base64EncodedString()))
     }
+
+    // MARK: - Garage Car Photo Methods
+
+    /// Uploads a JPEG/PNG/GIF for the given car. Returns the canonical photo
+    /// URL stored on the server (it lives under `<BASE_URL>/uploads/garage_cars/`).
+    func uploadCarPhoto(carId: String, data: Data) async throws -> String {
+        struct Req: Encodable { let imageData: String; enum CodingKeys: String, CodingKey { case imageData = "image_data" } }
+        struct Res: Decodable { let photoURL: String; enum CodingKeys: String, CodingKey { case photoURL = "photo_url" } }
+        let res: Res = try await put(
+            endpoint: "/garage/cars/\(carId)/photo",
+            body: Req(imageData: data.base64EncodedString())
+        )
+        return res.photoURL
+    }
+
+    /// Deletes the photo for the given car. The matching UserCar.photo_url
+    /// is cleared server-side; the file is unlinked best-effort.
+    func deleteCarPhoto(carId: String) async throws {
+        try await delete(endpoint: "/garage/cars/\(carId)/photo")
+    }
 }
 
 private struct _EmptyBody: Encodable {}
