@@ -740,3 +740,269 @@ func TestAchievementEvaluation_ConsecutiveDayStreakUnlocks(t *testing.T) {
 		t.Errorf("expected streak_3 to be unlocked; got %v", ids)
 	}
 }
+
+// ─── Leaderboard tests ─────────────────────────────────────────────────────
+
+// makeLeaderboardRouter returns a router exposing /api/v1/leaderboard with
+// the same optional auth middleware the production router uses.
+func makeLeaderboardRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	api := r.Group("/api/v1")
+	api.Use(optionalAuthMiddleware())
+	api.GET("/leaderboard", getLeaderboard)
+	return r
+}
+
+// lbStringPtr is a test-local helper for taking the address of a string literal.
+func lbStringPtr(s string) *string { return &s }
+
+// lbIntPtr is a test-local helper for taking the address of an int literal.
+func lbIntPtr(i int) *int { return &i }
+
+// fetchLeaderboard issues a GET against the leaderboard endpoint and decodes
+// the JSON response into a slice of LeaderboardEntry.
+func fetchLeaderboard(t *testing.T, router *gin.Engine, query string) []LeaderboardEntry {
+	t.Helper()
+	req, _ := http.NewRequest("GET", "/api/v1/leaderboard?"+query, nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
+	}
+	var entries []LeaderboardEntry
+	if err := json.NewDecoder(w.Body).Decode(&entries); err != nil {
+		t.Fatalf("failed to decode leaderboard response: %v", err)
+	}
+	return entries
+}
+
+// fetchLeaderboardStatus issues a GET and returns the status code (used for
+// validation-error tests).
+func fetchLeaderboardStatus(t *testing.T, router *gin.Engine, query string) int {
+	t.Helper()
+	req, _ := http.NewRequest("GET", "/api/v1/leaderboard?"+query, nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	return w.Code
+}
+
+// seedLeaderboardDrive is a convenience for inserting a drive with the
+// fields the leaderboard cares about.
+func seedLeaderboardDrive(userID uint, start time.Time, maxSpeed, distance float64, best060 *float64,
+	carID, carMake, carModel *string, carYear *int, carNickname *string) Drive {
+	d := Drive{
+		UserID:      userID,
+		StartTime:   start,
+		EndTime:     start.Add(time.Minute),
+		MaxSpeed:    maxSpeed,
+		Distance:    distance,
+		Best060Time: best060,
+		CarID:       carID,
+		CarMake:     carMake,
+		CarModel:    carModel,
+		CarYear:     carYear,
+		CarNickname: carNickname,
+	}
+	if err := db.Create(&d).Error; err != nil {
+		panic(err)
+	}
+	return d
+}
+
+func TestLeaderboard_OneUserMultipleCarsAppearAsSeparateRows(t *testing.T) {
+	jwtSecret = []byte("lb-multicar-test-secret-32-bytes!!!")
+	setupTestDB(t)
+
+	user := User{Email: "multi@test.com", Username: "multicar", AuthProvider: "google"}
+	db.Create(&user)
+
+	now := time.Now().UTC()
+	seedLeaderboardDrive(user.ID, now.Add(-48*time.Hour), 50, 1000, nil,
+		lbStringPtr("c1"), lbStringPtr("BMW"), lbStringPtr("M3"), lbIntPtr(2020), lbStringPtr("Beemer"))
+	seedLeaderboardDrive(user.ID, now.Add(-48*time.Hour), 70, 2000, nil,
+		lbStringPtr("c2"), lbStringPtr("Audi"), lbStringPtr("A4"), lbIntPtr(2022), lbStringPtr("Audy"))
+
+	router := makeLeaderboardRouter()
+	entries := fetchLeaderboard(t, router, "category=top_speed&period=all_time&scope=global")
+
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 rows for one user with 2 cars, got %d: %+v", len(entries), entries)
+	}
+	if entries[0].CarID == nil || *entries[0].CarID != "c2" {
+		t.Errorf("expected rank-1 car_id=c2, got %v", entries[0].CarID)
+	}
+	if entries[1].CarID == nil || *entries[1].CarID != "c1" {
+		t.Errorf("expected rank-2 car_id=c1, got %v", entries[1].CarID)
+	}
+	if entries[0].CarKey != "c2" {
+		t.Errorf("expected car_key=c2 for rank-1, got %q", entries[0].CarKey)
+	}
+}
+
+func TestLeaderboard_LegacyDrivesWithoutCarID_GroupedByMakeModel(t *testing.T) {
+	jwtSecret = []byte("lb-legacy-test-secret-32-bytes!!!!")
+	setupTestDB(t)
+
+	user := User{Email: "legacy@test.com", Username: "legacy", AuthProvider: "google"}
+	db.Create(&user)
+
+	now := time.Now().UTC()
+	// Three drives for the same car (no car_id, just make/model)
+	seedLeaderboardDrive(user.ID, now.Add(-72*time.Hour), 50, 1000, nil,
+		nil, lbStringPtr("BMW"), lbStringPtr("M3"), lbIntPtr(2020), nil)
+	seedLeaderboardDrive(user.ID, now.Add(-48*time.Hour), 60, 1500, nil,
+		nil, lbStringPtr("BMW"), lbStringPtr("M3"), nil, nil)
+	seedLeaderboardDrive(user.ID, now.Add(-24*time.Hour), 55, 1200, nil,
+		nil, lbStringPtr("BMW"), lbStringPtr("M3"), lbIntPtr(2020), lbStringPtr("Beemer"))
+
+	router := makeLeaderboardRouter()
+	entries := fetchLeaderboard(t, router, "category=top_speed&period=all_time&scope=global")
+
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 row for legacy drives grouped by make/model, got %d: %+v", len(entries), entries)
+	}
+	if entries[0].CarID != nil {
+		t.Errorf("expected car_id=nil, got %v", *entries[0].CarID)
+	}
+	if entries[0].CarKey != "bmw|m3" {
+		t.Errorf("expected car_key=bmw|m3, got %q", entries[0].CarKey)
+	}
+	if entries[0].CarMake != "BMW" || entries[0].CarModel != "M3" {
+		t.Errorf("expected make=BMW model=M3, got %q %q", entries[0].CarMake, entries[0].CarModel)
+	}
+}
+
+func TestLeaderboard_PeriodLast24Hours(t *testing.T) {
+	jwtSecret = []byte("lb-24h-test-secret-32-bytes!!!!!!")
+	setupTestDB(t)
+
+	user := User{Email: "p24h@test.com", Username: "p24h", AuthProvider: "google"}
+	db.Create(&user)
+
+	now := time.Now().UTC()
+	// 23h ago: included
+	seedLeaderboardDrive(user.ID, now.Add(-23*time.Hour), 50, 1000, nil,
+		lbStringPtr("c1"), lbStringPtr("BMW"), lbStringPtr("M3"), nil, nil)
+	// 25h ago: excluded
+	seedLeaderboardDrive(user.ID, now.Add(-25*time.Hour), 80, 2000, nil,
+		lbStringPtr("c2"), lbStringPtr("Audi"), lbStringPtr("A4"), nil, nil)
+
+	router := makeLeaderboardRouter()
+	entries := fetchLeaderboard(t, router, "category=top_speed&period=last_24h&scope=global")
+
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 row in last 24h window, got %d: %+v", len(entries), entries)
+	}
+	if entries[0].CarID == nil || *entries[0].CarID != "c1" {
+		t.Errorf("expected only the 23h-old drive (c1), got car_id=%v", entries[0].CarID)
+	}
+}
+
+func TestLeaderboard_PeriodLast7Days(t *testing.T) {
+	jwtSecret = []byte("lb-7d-test-secret-32-bytes!!!!!!!")
+	setupTestDB(t)
+
+	user := User{Email: "p7d@test.com", Username: "p7d", AuthProvider: "google"}
+	db.Create(&user)
+
+	now := time.Now().UTC()
+	// 5 days ago: included
+	seedLeaderboardDrive(user.ID, now.Add(-5*24*time.Hour), 50, 1000, nil,
+		lbStringPtr("c1"), lbStringPtr("BMW"), lbStringPtr("M3"), nil, nil)
+	// 10 days ago: excluded
+	seedLeaderboardDrive(user.ID, now.Add(-10*24*time.Hour), 80, 2000, nil,
+		lbStringPtr("c2"), lbStringPtr("Audi"), lbStringPtr("A4"), nil, nil)
+
+	router := makeLeaderboardRouter()
+	entries := fetchLeaderboard(t, router, "category=top_speed&period=last_7_days&scope=global")
+
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 row in last-7-days window, got %d: %+v", len(entries), entries)
+	}
+	if entries[0].CarID == nil || *entries[0].CarID != "c1" {
+		t.Errorf("expected only the 5d-old drive (c1), got car_id=%v", entries[0].CarID)
+	}
+}
+
+func TestLeaderboard_DriveCountCategoryRejected(t *testing.T) {
+	jwtSecret = []byte("lb-dc-test-secret-32-bytes!!!!!!!!!")
+	setupTestDB(t)
+
+	router := makeLeaderboardRouter()
+	code := fetchLeaderboardStatus(t, router, "category=drive_count&period=all_time&scope=global")
+	if code != http.StatusBadRequest {
+		t.Errorf("expected 400 for drive_count category, got %d", code)
+	}
+}
+
+func TestLeaderboard_WeekCategoryRejected(t *testing.T) {
+	jwtSecret = []byte("lb-week-test-secret-32-bytes!!!!!!!!")
+	setupTestDB(t)
+
+	router := makeLeaderboardRouter()
+	code := fetchLeaderboardStatus(t, router, "category=top_speed&period=week&scope=global")
+	if code != http.StatusBadRequest {
+		t.Errorf("expected 400 for period=week, got %d", code)
+	}
+}
+
+func TestLeaderboard_CapAt3CarsPerUser(t *testing.T) {
+	jwtSecret = []byte("lb-cap3-test-secret-32-bytes!!!!!!!")
+	setupTestDB(t)
+
+	user := User{Email: "cap@test.com", Username: "capthree", AuthProvider: "google"}
+	db.Create(&user)
+
+	now := time.Now().UTC()
+	// 5 distinct cars for the same user
+	for i, speed := range []float64{50, 60, 70, 80, 90} {
+		cid := fmt.Sprintf("c%d", i+1)
+		seedLeaderboardDrive(user.ID, now.Add(-time.Duration(i+1)*time.Hour), speed, 1000, nil,
+			&cid, nil, nil, nil, nil)
+	}
+
+	router := makeLeaderboardRouter()
+	entries := fetchLeaderboard(t, router, "category=top_speed&period=all_time&scope=global")
+
+	if len(entries) != 3 {
+		t.Fatalf("expected exactly 3 rows per user cap, got %d: %+v", len(entries), entries)
+	}
+	// Ordered by value DESC: c5(90), c4(80), c3(70)
+	wantOrder := []string{"c5", "c4", "c3"}
+	for i, want := range wantOrder {
+		if entries[i].CarID == nil || *entries[i].CarID != want {
+			t.Errorf("rank %d: expected car_id=%s, got %v", i, want, entries[i].CarID)
+		}
+	}
+}
+
+func TestLeaderboard_PrivateUsersExcluded(t *testing.T) {
+	jwtSecret = []byte("lb-priv-test-secret-32-bytes!!!!!!!!")
+	setupTestDB(t)
+
+	pub := User{Email: "pub@test.com", Username: "publiclb", AuthProvider: "google", IsPublic: true}
+	priv := User{Email: "priv@test.com", Username: "privatelb", AuthProvider: "google"}
+	db.Create(&pub)
+	db.Create(&priv)
+	// Force private user to actually be private (GORM default quirk).
+	db.Model(&priv).Update("is_public", false)
+
+	now := time.Now().UTC()
+	// Public user has a strong drive
+	seedLeaderboardDrive(pub.ID, now.Add(-time.Hour), 50, 1000, nil,
+		lbStringPtr("c1"), lbStringPtr("BMW"), lbStringPtr("M3"), nil, nil)
+	// Private user has a stronger drive — should be filtered out
+	seedLeaderboardDrive(priv.ID, now.Add(-time.Hour), 200, 5000, nil,
+		lbStringPtr("c2"), lbStringPtr("Audi"), lbStringPtr("A4"), nil, nil)
+
+	router := makeLeaderboardRouter()
+	entries := fetchLeaderboard(t, router, "category=top_speed&period=all_time&scope=global")
+
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 row (private user excluded), got %d: %+v", len(entries), entries)
+	}
+	if entries[0].Username != "publiclb" {
+		t.Errorf("expected publiclb in the result, got %q", entries[0].Username)
+	}
+}
