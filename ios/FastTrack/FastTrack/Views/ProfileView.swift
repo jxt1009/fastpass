@@ -767,19 +767,20 @@ struct CarGarageCard: View {
     let car: UserCar
     let isSelected: Bool
     let onSelect: () -> Void
-    
+
     @StateObject private var carStatsManager = CarStatsManager.shared
     @State private var showingStats = false
-    
+
     private var carStats: CarStats? {
         carStatsManager.getStats(for: car.id)
     }
-    
+
     var body: some View {
         InstrumentCard {
             VStack(spacing: 8) {
                 // Main car info
-                HStack {
+                HStack(spacing: 12) {
+                    CarPhotoThumbnail(photoURL: car.photoUrl, size: 56)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(car.shortDisplay)
                             .font(.headline)
@@ -790,7 +791,7 @@ struct CarGarageCard: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    
+
                     VStack(alignment: .trailing, spacing: 4) {
                         if isSelected {
                             Text("SELECTED")
@@ -802,7 +803,7 @@ struct CarGarageCard: View {
                                 .background(Color.blue.opacity(0.2))
                                 .cornerRadius(8)
                         }
-                        
+
                         Button {
                             showingStats.toggle()
                         } label: {
@@ -811,11 +812,11 @@ struct CarGarageCard: View {
                         }
                     }
                 }
-                
+
                 // Stats section (collapsible)
                 if showingStats {
                     Divider()
-                    
+
                     if let stats = carStats {
                         CarStatsRow(stats: stats)
                     } else {
@@ -832,6 +833,50 @@ struct CarGarageCard: View {
             if !showingStats {
                 onSelect()
             }
+        }
+    }
+}
+
+/// Small rounded thumbnail for a car's photo. Falls back to a tinted car icon
+/// placeholder when no usable photo URL is set.
+struct CarPhotoThumbnail: View {
+    let photoURL: String?
+    var size: CGFloat = 56
+
+    var body: some View {
+        Group {
+            if let photoURL, !photoURL.isEmpty, let url = URL(string: photoURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        placeholder
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .failure:
+                        placeholder
+                    @unknown default:
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.secondary.opacity(0.15), lineWidth: 0.5)
+        )
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.blue.opacity(0.15))
+            Image(systemName: "car.fill")
+                .font(.system(size: size * 0.45))
+                .foregroundColor(.blue)
         }
     }
 }

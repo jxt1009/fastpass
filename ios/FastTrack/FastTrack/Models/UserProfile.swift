@@ -11,7 +11,13 @@ struct UserCar: Codable, Identifiable, Equatable {
     var year: Int?
     var trim: String
     var nickname: String // e.g., "Daily Driver", "Weekend Car", etc.
-    
+    var photoUrl: String? // optional per-car photo URL (set via /garage/cars/:carId/photo)
+
+    enum CodingKeys: String, CodingKey {
+        case id, make, model, year, trim, nickname
+        case photoUrl = "photo_url"
+    }
+
     var displayString: String {
         let parts: [String] = [
             year.map { String($0) } ?? "",
@@ -21,7 +27,7 @@ struct UserCar: Codable, Identifiable, Equatable {
         ].filter { !$0.isEmpty }
         return parts.isEmpty ? "Unknown Car" : parts.joined(separator: " ")
     }
-    
+
     var shortDisplay: String {
         if !nickname.isEmpty {
             return nickname
@@ -29,14 +35,22 @@ struct UserCar: Codable, Identifiable, Equatable {
         let parts = [make, model].filter { !$0.isEmpty }
         return parts.isEmpty ? "Unknown Car" : parts.joined(separator: " ")
     }
-    
-    init(id: String = UUID().uuidString, make: String, model: String, year: Int? = nil, trim: String = "", nickname: String = "") {
+
+    /// True when a usable photo URL is set. The server writes "" when a
+    /// photo is deleted, so we treat empty and nil as "no photo".
+    var hasPhoto: Bool {
+        guard let photoUrl else { return false }
+        return !photoUrl.isEmpty
+    }
+
+    init(id: String = UUID().uuidString, make: String, model: String, year: Int? = nil, trim: String = "", nickname: String = "", photoUrl: String? = nil) {
         self.id = id
         self.make = make
         self.model = model
         self.year = year
         self.trim = trim
         self.nickname = nickname
+        self.photoUrl = photoUrl
     }
 }
 
@@ -96,6 +110,17 @@ struct UserProfile: Codable {
         if let index = garage.firstIndex(where: { $0.id == car.id }) {
             garage[index] = car
         }
+    }
+
+    /// Updates the photoUrl of the car with the given id. No-op if the car
+    /// is not in the garage. Pass nil or an empty string to clear the photo.
+    mutating func updateCarPhotoUrl(id: String, url: String?) {
+        guard let index = garage.firstIndex(where: { $0.id == id }) else { return }
+        let normalized: String? = {
+            guard let url, !url.isEmpty else { return nil }
+            return url
+        }()
+        garage[index].photoUrl = normalized
     }
     
     mutating func selectCar(id: String?) {

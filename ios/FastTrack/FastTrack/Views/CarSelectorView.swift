@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 struct CarSelectorView: View {
     @EnvironmentObject var profileManager: ProfileManager
@@ -68,7 +70,13 @@ struct AddCarView: View {
     @State private var carSelection = CarSelection()
     @State private var nickname = ""
     @State private var showingCarPicker = false
-    
+
+    @State private var pickedPhoto: PhotosPickerItem?
+    @State private var pickedImage: UIImage?
+    @State private var uploadedPhotoURL: String?
+    @State private var isUploadingPhoto = false
+    @State private var photoError: String?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -89,9 +97,56 @@ struct AddCarView: View {
                         }
                     }
                 }
-                
+
                 Section("Nickname (Optional)") {
                     TextField("e.g., Daily Driver, Track Car", text: $nickname)
+                }
+
+                Section("Photo") {
+                    HStack(spacing: 12) {
+                        Group {
+                            if let pickedImage {
+                                Image(uiImage: pickedImage)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.blue.opacity(0.15))
+                                    Image(systemName: "car.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                                Text(pickedImage == nil ? "Set Photo" : "Change Photo")
+                            }
+                            .disabled(isUploadingPhoto)
+
+                            if pickedImage != nil || uploadedPhotoURL != nil {
+                                Button(role: .destructive) {
+                                    removePhoto()
+                                } label: {
+                                    Text("Remove Photo")
+                                }
+                                .disabled(isUploadingPhoto)
+                            }
+
+                            if isUploadingPhoto {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                            if let photoError {
+                                Text(photoError)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("Add Car")
@@ -104,19 +159,45 @@ struct AddCarView: View {
                     Button("Save") {
                         saveCar()
                     }
-                    .disabled(!carSelection.isComplete)
+                    .disabled(!carSelection.isComplete || isUploadingPhoto)
                 }
             }
             .sheet(isPresented: $showingCarPicker) {
                 CarPickerView(selection: $carSelection)
             }
+            .onChange(of: pickedPhoto) { _, item in
+                Task { await loadPickedPhoto(item) }
+            }
         }
     }
-    
+
+    private func loadPickedPhoto(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        photoError = nil
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let img = UIImage(data: data) else {
+                photoError = "Could not load photo"
+                return
+            }
+            let resized = img.resizedForAvatar(maxDimension: 800)
+            pickedImage = resized
+        } catch {
+            photoError = "Failed to load photo"
+        }
+    }
+
+    private func removePhoto() {
+        pickedPhoto = nil
+        pickedImage = nil
+        uploadedPhotoURL = nil
+        photoError = nil
+    }
+
     private func saveCar() {
         guard let make = carSelection.make,
               var profile = profileManager.profile else { return }
-        
+
         let newCar = UserCar(
             make: make.displayName,
             model: carSelection.model,
@@ -124,10 +205,38 @@ struct AddCarView: View {
             trim: carSelection.trim,
             nickname: nickname.trimmingCharacters(in: .whitespacesAndNewlines)
         )
-        
+
         profile.addCarToGarage(newCar)
         profileManager.saveProfile(profile)
+
+        // If a photo was picked, upload it now that the car has an id.
+        if let pickedImage {
+            Task { await uploadPhoto(for: newCar.id, image: pickedImage) }
+        }
+
         dismiss()
+    }
+
+    private func uploadPhoto(for carId: String, image: UIImage) async {
+        isUploadingPhoto = true
+        defer { isUploadingPhoto = false }
+        guard let data = image.jpegData(compressionQuality: 0.8) else {
+            photoError = "Failed to encode photo"
+            return
+        }
+        do {
+            let url = try await APIService.shared.uploadCarPhoto(carId: carId, data: data)
+            await MainActor.run {
+                guard var p = self.profileManager.profile else { return }
+                p.updateCarPhotoUrl(id: carId, url: url)
+                self.profileManager.saveProfile(p)
+                self.uploadedPhotoURL = url
+            }
+        } catch {
+            await MainActor.run {
+                self.photoError = "Photo upload failed"
+            }
+        }
     }
 }
 
