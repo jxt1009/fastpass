@@ -170,13 +170,17 @@ struct PublicCarDetailView: View {
                             label: "Total Distance",
                             value: settings.distanceDisplay(stats.totalDistance))
                     Divider().padding(.vertical, 8)
+                    // Use `data.bestTopSpeed` (the same Double? the gauges
+                    // consume) so the `bestTopSpeed == 0` "no drives"
+                    // sentinel renders as "—" instead of a misleading
+                    // "0 mph" / "City Car".
                     statRow(icon: "speedometer", color: .red,
                             label: "Top Speed",
-                            value: settings.speedDisplay(stats.bestTopSpeed))
+                            value: data.bestTopSpeed.map { settings.speedDisplay($0) } ?? "—")
                     Divider().padding(.vertical, 8)
                     statRow(icon: "tag.fill", color: .purple,
                             label: "Category",
-                            value: stats.performanceCategory)
+                            value: data.bestTopSpeed == nil ? "—" : stats.performanceCategory)
                 }
             }
         } else {

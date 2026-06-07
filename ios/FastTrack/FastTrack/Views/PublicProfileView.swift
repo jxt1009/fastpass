@@ -79,7 +79,8 @@ struct PublicProfileView: View {
             if let garage = decodedGarage(from: profile), !garage.isEmpty {
                 Section("Garage") {
                     // Decode the per-car stats blob once for the section
-                    // rather than once per row — see PR 4 review thread.
+                    // rather than re-parsing the JSON for every row inside
+                    // the ForEach.
                     let statsByCarId = statsByCarId(blob: profile.carStatsData)
                     ForEach(garage) { car in
                         NavigationLink {

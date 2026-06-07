@@ -56,6 +56,23 @@ final class PublicProfileRedesignTests: XCTestCase {
         let source = try readPublicGarageCardSource()
         XCTAssertFalse(source.contains("onTapGesture"),
             "PublicGarageCard must let the parent NavigationLink own the tap; the card itself should not install an onTapGesture")
+        // Strip comments before scanning for `Button` so the file-level
+        // doc comment (which legitimately mentions "Button" in prose)
+        // doesn't trip the guard. We only care about code that actually
+        // instantiates a `Button` view.
+        let codeOnly = source
+            .split(separator: "\n")
+            .map { line -> String in
+                if let commentStart = line.range(of: "//") {
+                    return String(line[..<commentStart.lowerBound])
+                }
+                return String(line)
+            }
+            .joined(separator: "\n")
+        XCTAssertFalse(codeOnly.contains("Button("),
+            "PublicGarageCard must not wrap its body in a Button(...) initializer; the parent NavigationLink is the tap handler.")
+        XCTAssertFalse(codeOnly.contains("Button {"),
+            "PublicGarageCard must not wrap its body in a Button { ... } trailing-closure init; the parent NavigationLink is the tap handler.")
     }
 
     // MARK: - Helpers
