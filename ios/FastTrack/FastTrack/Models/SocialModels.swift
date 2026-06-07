@@ -2,56 +2,87 @@ import Foundation
 
 // MARK: - Leaderboard Types
 
-struct LeaderboardEntry: Identifiable, Decodable {
+/// One row on the leaderboard. With the car-centric backend, the same user
+/// can appear on the board up to three times — once per car. The optional
+/// car fields are decoded additively so an older server that doesn't emit
+/// them (e.g. an interim deploy during a backend cutover) still decodes.
+struct LeaderboardEntry: Identifiable, Codable {
     let rank: Int
     let userId: Int
     let username: String
     let country: String
     let avatarURL: String
     let value: Double
+    let carId: String?
+    let carKey: String
     let carMake: String
     let carModel: String
+    let carYear: Int?
+    let carTrim: String?
+    let carNickname: String?
+    let carPhotoUrl: String?
 
-    var id: Int { userId }
+    /// Stable, unique id for SwiftUI ForEach — same user with multiple cars
+    /// gets multiple distinct rows, so userId alone is not unique.
+    var id: String { "\(userId)-\(carKey)" }
 
+    /// "2024 BMW M3" — or "BMW M3" when year is nil. Empty when both make
+    /// and model are blank.
     var carDisplayString: String {
-        let parts = [carMake, carModel].filter { !$0.isEmpty }
+        let parts: [String] = [
+            carYear.map { String($0) } ?? "",
+            carMake,
+            carModel
+        ].filter { !$0.isEmpty }
         return parts.joined(separator: " ")
+    }
+
+    /// "2024 BMW M3 \"Track Toy\"" — nickname appended in straight quotes
+    /// when present. Falls back to `carDisplayString` when nickname is nil
+    /// or blank.
+    var carDisplayStringWithNickname: String {
+        let base = carDisplayString
+        let nick = carNickname?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if nick.isEmpty { return base }
+        return base.isEmpty ? "\"\(nick)\"" : "\(base) \"\(nick)\""
     }
 
     enum CodingKeys: String, CodingKey {
         case rank
-        case userId    = "user_id"
+        case userId        = "user_id"
         case username
         case country
-        case avatarURL = "avatar_url"
+        case avatarURL     = "avatar_url"
         case value
-        case carMake   = "car_make"
-        case carModel  = "car_model"
+        case carId         = "car_id"
+        case carKey        = "car_key"
+        case carMake       = "car_make"
+        case carModel      = "car_model"
+        case carYear       = "car_year"
+        case carTrim       = "car_trim"
+        case carNickname   = "car_nickname"
+        case carPhotoUrl   = "car_photo_url"
     }
 }
 
-enum LeaderboardCategory: String, CaseIterable {
+enum LeaderboardCategory: String, CaseIterable, Codable {
     case topSpeed      = "top_speed"
-    case totalDistance = "total_distance"
     case best060       = "best_060"
-    case driveCount    = "drive_count"
+    case totalDistance = "total_distance"
 
     var displayName: String {
         switch self {
         case .topSpeed:      return "Top Speed"
-        case .totalDistance: return "Distance"
         case .best060:       return "0-60"
-        case .driveCount:    return "Drives"
+        case .totalDistance: return "Total Distance"
         }
     }
 
     var icon: String {
         switch self {
         case .topSpeed:      return "speedometer"
-        case .totalDistance: return "map.fill"
         case .best060:       return "timer"
-        case .driveCount:    return "flag.fill"
+        case .totalDistance: return "map.fill"
         }
     }
 
@@ -67,13 +98,11 @@ enum LeaderboardCategory: String, CaseIterable {
             return s.distanceDisplay(value)
         case .best060:
             return String(format: "%.2fs", value)
-        case .driveCount:
-            return "\(Int(value))"
         }
     }
 }
 
-enum LeaderboardScope: String, CaseIterable {
+enum LeaderboardScope: String, CaseIterable, Codable {
     case global    = "global"
     case following = "following"
 
@@ -85,14 +114,16 @@ enum LeaderboardScope: String, CaseIterable {
     }
 }
 
-enum LeaderboardPeriod: String, CaseIterable {
-    case week    = "week"
-    case allTime = "all_time"
+enum LeaderboardPeriod: String, CaseIterable, Codable {
+    case last24Hours = "last_24h"
+    case last7Days   = "last_7_days"
+    case allTime     = "all_time"
 
     var displayName: String {
         switch self {
-        case .week:    return "This Week"
-        case .allTime: return "All Time"
+        case .last24Hours: return "Last 24h"
+        case .last7Days:   return "Last 7 Days"
+        case .allTime:     return "All Time"
         }
     }
 }

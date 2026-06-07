@@ -13,8 +13,8 @@ struct SocialView: View {
     @State private var carFilter: String = ""
     @FocusState private var carFilterFocused: Bool
 
-    private var currentUsername: String? {
-        profileManager.profile?.username
+    private var currentSelectedCarId: String? {
+        profileManager.profile?.selectedCarId
     }
 
     var body: some View {
@@ -152,11 +152,12 @@ struct SocialView: View {
                                 LeaderboardRow(
                                     entry: entry,
                                     category: selectedCategory,
-                                    isCurrentUser: entry.username == currentUsername
+                                    isCurrentUserCar: entry.carId != nil
+                                        && entry.carId == currentSelectedCarId
                                 )
                             }
                             .listRowBackground(
-                                entry.username == currentUsername
+                                (entry.carId != nil && entry.carId == currentSelectedCarId)
                                     ? Color.blue.opacity(0.08)
                                     : Color.ftCardBg
                             )
@@ -220,7 +221,7 @@ struct SocialView: View {
 private struct LeaderboardRow: View {
     let entry: LeaderboardEntry
     let category: LeaderboardCategory
-    let isCurrentUser: Bool
+    let isCurrentUserCar: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -229,33 +230,19 @@ private struct LeaderboardRow: View {
                 .font(.headline)
                 .monospacedDigit()
                 .foregroundStyle(rankColor)
-                .frame(width: 40, alignment: .leading)
+                .frame(width: 32, alignment: .leading)
 
-            // Avatar
-            Group {
-                if !entry.avatarURL.isEmpty, let url = URL(string: entry.avatarURL) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                                .frame(width: 36, height: 36)
-                                .clipShape(Circle())
-                        default:
-                            avatarFallback(entry.username)
-                        }
-                    }
-                } else {
-                    avatarFallback(entry.username)
-                }
-            }
+            // Car photo thumbnail (40pt, rounded) — falls back to tinted car icon
+            CarThumbnail(urlString: entry.carPhotoUrl, size: 40)
 
-            // User info
+            // Car info (primary) + username (supporting)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text("@\(entry.username)")
+                    Text(entry.carDisplayStringWithNickname)
                         .font(.body)
-                        .fontWeight(isCurrentUser ? .semibold : .regular)
-                    if isCurrentUser {
+                        .fontWeight(isCurrentUserCar ? .semibold : .regular)
+                        .lineLimit(1)
+                    if isCurrentUserCar {
                         Text("You")
                             .font(.caption2)
                             .fontWeight(.semibold)
@@ -265,46 +252,33 @@ private struct LeaderboardRow: View {
                             .background(Color.blue, in: Capsule())
                     }
                 }
-                // Car that achieved the best result
-                if !entry.carDisplayString.isEmpty {
-                    Text(entry.carDisplayString)
+                HStack(spacing: 6) {
+                    Text("@\(entry.username)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else if !entry.country.isEmpty {
-                    Text(entry.country)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                if !entry.carDisplayString.isEmpty && !entry.country.isEmpty {
-                    Text(entry.country)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                    if !entry.country.isEmpty {
+                        Text("·")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        Text(entry.country)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
             // Stat value
             Text(category.formattedValue(entry.value))
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
+                .monospacedDigit()
         }
         .padding(.vertical, 2)
-    }
-
-    private func avatarFallback(_ username: String) -> some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(
-                    colors: [.blue, .purple],
-                    startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 36, height: 36)
-            Text(String(username.prefix(1)).uppercased())
-                .font(.subheadline)
-                .fontWeight(.bold)
-                .foregroundStyle(.white)
-        }
     }
 
     private var rankColor: Color {
@@ -313,6 +287,44 @@ private struct LeaderboardRow: View {
         case 2: return Color(white: 0.7)
         case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
         default: return .secondary
+        }
+    }
+}
+
+// MARK: - Car Thumbnail
+
+/// 40-48pt rounded thumbnail for a car photo. Falls back to a tinted
+/// car icon when the URL is nil/empty or the image fails to load.
+private struct CarThumbnail: View {
+    let urlString: String?
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if let urlString, !urlString.isEmpty, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.blue.opacity(0.15))
+            Image(systemName: "car.fill")
+                .foregroundStyle(.blue)
+                .font(.system(size: size * 0.5))
         }
     }
 }

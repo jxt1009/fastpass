@@ -116,8 +116,8 @@ struct AppStoreScreenshotRootView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         HStack(spacing: 10) {
-                            leaderboardPill(title: "Global", systemImage: "globe", isSelected: true)
-                            leaderboardPill(title: "Month", systemImage: "calendar", isSelected: false)
+                            leaderboardPill(title: "All Time", systemImage: "calendar", isSelected: true)
+                            leaderboardPill(title: "Last 7 Days", systemImage: "clock", isSelected: false)
                             leaderboardPill(title: "Top Speed", systemImage: "speedometer", isSelected: false)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
