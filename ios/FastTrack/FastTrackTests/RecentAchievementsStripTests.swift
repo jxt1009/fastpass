@@ -100,6 +100,34 @@ final class RecentAchievementsStripTests: XCTestCase {
         XCTAssertEqual(recent.map(\.id), ["dated", "nil-1", "nil-2"])
     }
 
+    /// Two achievements sharing the same non-nil `unlockedDate` must
+    /// tiebreak on `id` ascending. `sorted` is not stable, so without
+    /// the tiebreak the relative order of two equal-dated entries is
+    /// implementation-defined and can make this test (and the UI)
+    /// flaky across runs.
+    func testRecentUnlocks_TiebreakByID() {
+        let fixed = Date(timeIntervalSince1970: 1_700_000_000)
+        let achievements: [Achievement] = (0..<2).map { i in
+            Achievement(
+                id: i == 0 ? "b-tie" : "a-tie",
+                title: "Tie \(i)",
+                description: "",
+                category: .milestone,
+                icon: "circle",
+                requirement: AchievementRequirement(type: .driveCount, value: 1, condition: nil),
+                isUnlocked: true,
+                unlockedDate: fixed,
+                progress: 1.0,
+                sourceDriveId: nil
+            )
+        }
+
+        let recent = RecentAchievementsStripLogic.recentUnlocks(
+            from: achievements, maxCount: 5
+        )
+        XCTAssertEqual(recent.map(\.id), ["a-tie", "b-tie"])
+    }
+
     // MARK: - Source-drive resolution
 
     /// If the source drive is in `driveManager.drives`, the strip's
