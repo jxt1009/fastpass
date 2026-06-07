@@ -34,7 +34,7 @@ struct PublicProfileView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadProfile() }
         .fullScreenCover(item: $zoomedAvatar) { target in
-            AvatarZoomView(url: target.url) {
+            AvatarZoomView(url: target.url, image: target.image) {
                 zoomedAvatar = nil
             }
         }
@@ -90,10 +90,13 @@ struct PublicProfileView: View {
             // Garage (per the redesign, read-only with photos + short stats)
             if let garage = decodedGarage(from: profile), !garage.isEmpty {
                 Section("Garage") {
+                    // Decode the per-car stats blob once for the section
+                    // rather than once per row — see PR 4 review thread.
+                    let statsByCarId = statsByCarId(blob: profile.carStatsData)
                     ForEach(garage) { car in
                         PublicGarageCard(
                             car: car,
-                            stats: statsForCar(id: car.id, blob: profile.carStatsData)
+                            stats: statsByCarId[car.id]
                         )
                     }
                 }
@@ -189,10 +192,10 @@ struct PublicProfileView: View {
     }
 
     private func bioLine(_ profile: PublicProfile) -> String {
-        var parts: [String] = []
-        if !profile.fullName.isEmpty { parts.append(profile.fullName) }
-        if !profile.country.isEmpty { parts.append(profile.country) }
-        return parts.joined(separator: " · ")
+        // The display name already includes `fullName` as the headline
+        // when present (see `displayName(_:)`); keep this secondary line
+        // strictly to non-redundant context like country.
+        profile.country
     }
 
     // MARK: - Subviews (counters + stat rows)
@@ -249,12 +252,19 @@ struct PublicProfileView: View {
     /// `car_stats_data` JSON blob the server stores on each user. Returns
     /// nil if the blob is missing/empty/malformed or the car is not in
     /// the blob.
-    private func statsForCar(id: String, blob: String?) -> CarStats? {
+    @available(*, unavailable, message: "Decode the blob once via statsByCarId(blob:) and look up by id.")
+    private func statsForCar(id: String, blob: String?) -> CarStats? { nil }
+
+    /// Decode the per-car stats blob once into a `[carId: CarStats]`
+    /// dictionary so the garage section can index by id without
+    /// re-parsing the JSON for every row. Returns an empty dictionary
+    /// when the blob is missing, empty, or malformed.
+    private func statsByCarId(blob: String?) -> [String: CarStats] {
         guard let blob, !blob.isEmpty,
               let data = blob.data(using: .utf8),
-              let all = try? JSONDecoder().decode([String: CarStats].self, from: data)
-        else { return nil }
-        return all[id]
+              let decoded = try? JSONDecoder().decode([String: CarStats].self, from: data)
+        else { return [:] }
+        return decoded
     }
 
     private func presentAvatarZoom(_ profile: PublicProfile) {

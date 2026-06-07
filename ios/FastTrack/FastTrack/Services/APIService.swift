@@ -310,13 +310,22 @@ class APIService {
     }
 
     func fetchFollowers(username: String) async throws -> [FollowUserEntry] {
-        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
+        let encoded = Self.percentEncodePathSegment(username)
         return try await get(endpoint: "/users/\(encoded)/followers")
     }
 
     func fetchFollowing(username: String) async throws -> [FollowUserEntry] {
-        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
+        let encoded = Self.percentEncodePathSegment(username)
         return try await get(endpoint: "/users/\(encoded)/following")
+    }
+
+    /// Percent-encodes a value for use as a single URL path segment, so
+    /// `/` (and other path-significant characters) become `%2F` instead
+    /// of splitting the URL into multiple segments.
+    private static func percentEncodePathSegment(_ value: String) -> String {
+        var set = CharacterSet.urlPathAllowed
+        set.remove(charactersIn: "/")
+        return value.addingPercentEncoding(withAllowedCharacters: set) ?? value
     }
 
     func searchUsers(query: String) async throws -> [UserSearchResult] {

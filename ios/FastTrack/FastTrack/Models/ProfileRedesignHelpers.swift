@@ -60,32 +60,42 @@ enum PublicProfileStats {
 // single inline string like
 //   "Top: 124 mph · Best 0-60: 4.32s · Total: 1.2 mi"
 // Hidden entirely when all three are zero.
+//
+// The formatter is intentionally side-effect free: callers pass in the
+// unit label + conversion factors so the helper doesn't have to
+// instantiate `AppSettings` (whose `unitSystem` setter writes
+// UserDefaults and triggers a server sync, which would surprise tests
+// and view renderers alike).
 
 enum GarageCardShortStats {
 
     /// Returns the formatted short-stats line, or `nil` if every stat is
     /// zero (or the input has no stats at all). The caller can then decide
     /// to render an "empty" placeholder or simply omit the line.
-    static func formattedLine(for stats: CarStats?, unitSystem: UnitSystem) -> String? {
+    static func formattedLine(
+        for stats: CarStats?,
+        speedUnit: String,
+        distanceUnit: String,
+        speedFactor: Double,
+        distanceFactor: Double
+    ) -> String? {
         guard let stats else { return nil }
-        let settings = AppSettings()
-        settings.unitSystem = unitSystem
 
         let segments: [String] = [
-            topSpeedSegment(stats: stats, settings: settings),
+            topSpeedSegment(stats: stats, speedUnit: speedUnit, speedFactor: speedFactor),
             best060Segment(stats: stats),
-            totalDistanceSegment(stats: stats, settings: settings),
+            totalDistanceSegment(stats: stats, distanceUnit: distanceUnit, distanceFactor: distanceFactor),
         ].compactMap { $0 }
 
         return segments.isEmpty ? nil : segments.joined(separator: " · ")
     }
 
-    static func topSpeedSegment(stats: CarStats, settings: AppSettings) -> String? {
+    static func topSpeedSegment(stats: CarStats, speedUnit: String, speedFactor: Double) -> String? {
         guard stats.bestTopSpeed > 0 else { return nil }
         return String(
             format: "Top: %.0f %@",
-            settings.speedValue(stats.bestTopSpeed),
-            settings.speedUnit
+            stats.bestTopSpeed * speedFactor,
+            speedUnit
         )
     }
 
@@ -94,12 +104,12 @@ enum GarageCardShortStats {
         return String(format: "Best 0-60: %.2fs", time)
     }
 
-    static func totalDistanceSegment(stats: CarStats, settings: AppSettings) -> String? {
+    static func totalDistanceSegment(stats: CarStats, distanceUnit: String, distanceFactor: Double) -> String? {
         guard stats.totalDistance > 0 else { return nil }
         return String(
             format: "Total: %.1f %@",
-            settings.distanceValue(stats.totalDistance),
-            settings.distanceUnit
+            stats.totalDistance * distanceFactor,
+            distanceUnit
         )
     }
 }
@@ -112,13 +122,22 @@ enum GarageCardShortStats {
 
 enum FollowListEndpoint {
 
+    /// Single path-segment character set: everything in `.urlPathAllowed`
+    /// except `/`, so a username containing `/` is encoded as `%2F`
+    /// instead of being treated as a path separator.
+    private static var pathSegment: CharacterSet {
+        var set = CharacterSet.urlPathAllowed
+        set.remove(charactersIn: "/")
+        return set
+    }
+
     static func followersPath(username: String) -> String {
-        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
+        let encoded = username.addingPercentEncoding(withAllowedCharacters: pathSegment) ?? username
         return "/users/\(encoded)/followers"
     }
 
     static func followingPath(username: String) -> String {
-        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
+        let encoded = username.addingPercentEncoding(withAllowedCharacters: pathSegment) ?? username
         return "/users/\(encoded)/following"
     }
 }

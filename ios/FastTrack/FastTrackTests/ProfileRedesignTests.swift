@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import FastTrack
 
 // PR 4 of #57: profile redesign. These tests cover the pure helpers
@@ -48,13 +49,21 @@ final class ProfileRedesignTests: XCTestCase {
     /// short-stats line is nil so the view can hide it entirely.
     func testGarageCardShortStats_NilWhenAllZero() {
         let stats = CarStats(carId: "x")
-        XCTAssertNil(GarageCardShortStats.formattedLine(for: stats, unitSystem: .imperial))
+        XCTAssertNil(GarageCardShortStats.formattedLine(
+            for: stats,
+            speedUnit: "mph", distanceUnit: "mi",
+            speedFactor: 2.23694, distanceFactor: 0.000621371
+        ))
     }
 
     /// Nil input also returns nil (matches what the view sees when the
     /// server has no `car_stats_data` blob for this user).
     func testGarageCardShortStats_NilForMissingStats() {
-        XCTAssertNil(GarageCardShortStats.formattedLine(for: nil, unitSystem: .imperial))
+        XCTAssertNil(GarageCardShortStats.formattedLine(
+            for: nil,
+            speedUnit: "mph", distanceUnit: "mi",
+            speedFactor: 2.23694, distanceFactor: 0.000621371
+        ))
     }
 
     /// All three segments show when each has a non-zero value, separated
@@ -65,7 +74,11 @@ final class ProfileRedesignTests: XCTestCase {
         stats.bestZeroToSixty = 4.20      // 4.20s
         stats.totalDistance = 1609.344    // 1.0 mi
 
-        let line = GarageCardShortStats.formattedLine(for: stats, unitSystem: .imperial)
+        let line = GarageCardShortStats.formattedLine(
+            for: stats,
+            speedUnit: "mph", distanceUnit: "mi",
+            speedFactor: 2.23694, distanceFactor: 0.000621371
+        )
         XCTAssertEqual(line, "Top: 67 mph · Best 0-60: 4.20s · Total: 1.0 mi")
     }
 
@@ -77,7 +90,11 @@ final class ProfileRedesignTests: XCTestCase {
         stats.bestZeroToSixty = 0
         stats.totalDistance = 1609.344
 
-        let line = GarageCardShortStats.formattedLine(for: stats, unitSystem: .imperial)
+        let line = GarageCardShortStats.formattedLine(
+            for: stats,
+            speedUnit: "mph", distanceUnit: "mi",
+            speedFactor: 2.23694, distanceFactor: 0.000621371
+        )
         XCTAssertEqual(line, "Top: 67 mph · Total: 1.0 mi")
         XCTAssertFalse(line?.contains("0-60") ?? true)
     }
@@ -87,7 +104,11 @@ final class ProfileRedesignTests: XCTestCase {
         var stats = CarStats(carId: "x")
         stats.bestTopSpeed = 27.7778   // 100 km/h
         stats.totalDistance = 1000.0    // 1.0 km
-        let line = GarageCardShortStats.formattedLine(for: stats, unitSystem: .metric)
+        let line = GarageCardShortStats.formattedLine(
+            for: stats,
+            speedUnit: "km/h", distanceUnit: "km",
+            speedFactor: 3.6, distanceFactor: 0.001
+        )
         XCTAssertEqual(line, "Top: 100 km/h · Total: 1.0 km")
     }
 
@@ -117,6 +138,19 @@ final class ProfileRedesignTests: XCTestCase {
         XCTAssertEqual(
             FollowListEndpoint.followersPath(username: "fast driver"),
             "/users/fast%20driver/followers"
+        )
+    }
+
+    /// `/` must be encoded as `%2F` so a hostile username can't be
+    /// treated as a path separator and route to the wrong endpoint.
+    func testFollowListEndpoint_EncodesForwardSlash() {
+        XCTAssertEqual(
+            FollowListEndpoint.followersPath(username: "fast/driver"),
+            "/users/fast%2Fdriver/followers"
+        )
+        XCTAssertEqual(
+            FollowListEndpoint.followingPath(username: "fast/driver"),
+            "/users/fast%2Fdriver/following"
         )
     }
 

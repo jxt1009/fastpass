@@ -115,7 +115,7 @@ struct ProfileView: View {
                 AddCarView()
             }
             .fullScreenCover(item: $zoomedAvatar) { target in
-                AvatarZoomView(url: target.url) {
+                AvatarZoomView(url: target.url, image: target.image) {
                     zoomedAvatar = nil
                 }
             }
