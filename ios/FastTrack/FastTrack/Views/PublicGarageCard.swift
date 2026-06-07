@@ -13,6 +13,8 @@ struct PublicGarageCard: View {
     let car: UserCar
     let stats: CarStats?
 
+    @ObservedObject private var settings = AppSettings.shared
+
     var body: some View {
         InstrumentCard {
             VStack(alignment: .leading, spacing: 10) {
@@ -33,15 +35,25 @@ struct PublicGarageCard: View {
                     Spacer(minLength: 0)
                 }
 
-                if let line = GarageCardShortStats.formattedLine(
-                    for: stats,
-                    unitSystem: AppSettings.shared.unitSystem
-                ) {
+                if let line = shortStatsLine(for: stats) {
                     Text(line)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
         }
+    }
+
+    /// Read the live unit system from the shared `AppSettings` (no
+    /// mutation, no extra `AppSettings()` instance) and ask the
+    /// formatter to build the short-stats line.
+    private func shortStatsLine(for stats: CarStats?) -> String? {
+        GarageCardShortStats.formattedLine(
+            for: stats,
+            speedUnit: settings.speedUnit,
+            distanceUnit: settings.distanceUnit,
+            speedFactor: settings.speedFactor,
+            distanceFactor: settings.distanceFactor
+        )
     }
 }
