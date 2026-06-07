@@ -36,9 +36,9 @@ All worktrees branch off `origin/main` and follow the `git fetch origin main && 
 
 ```
 Phase 1 (parallel, 4 tracks, no inter-deps) ─────────────────────────────────
-  Track A: leaderboard You-marker fix           (1 file, 1 PR)
-  Track B: PB top-speed History marker          (1 file, 1 PR)
-  Track C: profile layout reorder + achievements surfacing (1 file, 1 PR)
+  Track A: leaderboard You-marker fix           (1 PR, multiple files)
+  Track B: PB top-speed History marker          (1 PR, multiple files)
+  Track C: profile layout reorder + achievements surfacing (1 PR, multiple files)
   Track D: reactions no-op grep + close-out note in plan (no PR; just a doc check)
        │
        └─► rebase + merge all → main
@@ -82,10 +82,24 @@ Tracks inside a phase can run in parallel. Phases are sequential because the pla
    let isCurrentUserCar = entry.carId != nil
        && entry.carId == currentSelectedCarId
    ```
-   with:
+   with a call to a pure helper that does the nil-guard properly (extracted for testability — `entry.userId` is `Int` while `profileManager.profile?.id` is `Int?`, so the predicate needs an explicit unwrap, not a `&&` against an optional):
    ```swift
-   let isCurrentUserRow = profileManager.profile?.id != nil
-       && entry.userId == profileManager.profile?.id
+   let isCurrentUserRow = LeaderboardYouMarker.isCurrentUser(
+       entry: entry,
+       currentUserId: profileManager.profile?.id
+   )
+   ```
+   with the helper defined as a small, unit-testable free function (in `Models/LeaderboardYouMarker.swift` or alongside `SocialModels.swift`):
+   ```swift
+   enum LeaderboardYouMarker {
+       static func isCurrentUser(
+           entry: LeaderboardEntry,
+           currentUserId: Int?
+       ) -> Bool {
+           guard let currentUserId else { return false }
+           return entry.userId == currentUserId
+       }
+   }
    ```
 2. Rename the prop on `LeaderboardRow` from `isCurrentUserCar` to `isCurrentUserRow` (one-line rename — the existing badge/background logic is correct, just wrongly scoped).
 3. In `UserProfile`, add `let id: Int?` (optional, decode-if-present from `User.id`). Backward-compatible — old client/server data without `id` decodes fine.
@@ -110,8 +124,8 @@ Tracks inside a phase can run in parallel. Phases are sequential because the pla
 - Tests: `FastTrackTests/DriveCalculationTests.swift` or a new `PersonalBestsTests.swift` — `testPBTopSpeedDriveId_PrefersCenturyClubSourceDrive`, `testPBTopSpeedDriveId_FallsBackToLocalScan`
 
 **Plan for the precedence rule** (mirror the 0-60 rule from `DriveManager.swift:353-373`):
-1. Server-authoritative `century_club` (100 mph) or `speed_150` (150 mph) source drive — whichever the user has most recently unlocked, take its `sourceDriveId`.
-2. Server-authoritative `speed_100` (the iOS-side catalog id; server is `century_club`) — same precedence.
+1. Server-authoritative `speed_150` (150 mph) source drive — take its `sourceDriveId`.
+2. Server-authoritative `speed_100` (100 mph, "Century Club") source drive — same precedence (fallback when no `speed_150` unlock exists).
 3. Fallback: most recent drive whose `maxSpeed == MAX(maxSpeed)`.
 
 The "showy" requirement applies here too — the pill should animate in (a small springy entry) when the row is the new PB.
@@ -164,7 +178,13 @@ The "consolidate analytics + achievements" bullet is addressed in spirit by the 
 ### Track D — Reactions bullet close-out
 **Issue:** The issue's last bullet is "Reactions are currently unavailable." My read of the codebase shows no reactions code anywhere — no model, no endpoint, no UI, no Svelte component, no migration. The user's answer was "skip — no code change."
 
-**Action:** Grep the repo one more time (defensively) for any string matching `/react|emoji|fire|love|thumbs|like/i` near UI text, to be 100% sure there's no stale "Reactions" UI to remove. If the grep returns no on-screen text, no PR is opened. Mention in the closing comment of the issue that the bullet is informational; reactions are not in scope for #64 and would be a follow-up issue if prioritized.
+**Action:** Grep the repo one more time (defensively) for any string matching reactions-flavored UI text, to be 100% sure there's no stale "Reactions" UI to remove. Run the following from the repo root (uses `rg` / ripgrep; adjust excludes if your checkout adds new vendor trees):
+```bash
+rg -nI -i -e 'react|emoji|fire|love|thumbs|like' \
+  ios/ backend/ website/spa/ docs/ \
+  -g '!ios/Pods' -g '!*.lock'
+```
+If the grep returns no on-screen text, no PR is opened. Mention in the closing comment of the issue that the bullet is informational; reactions are not in scope for #64 and would be a follow-up issue if prioritized.
 
 **Worktree:** none (no code change).
 **PR:** none.
@@ -301,18 +321,19 @@ Additive only — no column changes, no drops, no renames.
 **Commit/PR:** `feat(backend): in-app notification feed with PB-event fan-out`
 
 ### Track H — iOS notification feed view + polling
+**Note on naming:** the iOS model and manager are named `InAppNotification` / `InAppNotificationsManager` to avoid shadowing `Foundation.Notification` (which collides with the same name and is heavily used for `NotificationCenter` foreground/background observers). The HTTP endpoint path stays `GET /api/v1/me/notifications` (no collision server-side, and the Svelte SPA's `notification` type is unaffected — only Swift needs the prefix).
 **Files (iOS):**
-- New: `ios/FastTrack/FastTrack/Services/NotificationsManager.swift` — `@MainActor ObservableObject` polling the `/me/notifications` endpoint on a 30-second timer (paused when app is backgrounded), exposing `[Notification]` and `unreadCount`
-- New: `ios/FastTrack/FastTrack/Models/Notification.swift` — `Notification` struct + `NotificationsResponse` envelope + `NotificationActor` sub-struct
+- New: `ios/FastTrack/FastTrack/Services/InAppNotificationsManager.swift` — `@MainActor ObservableObject` polling the `/me/notifications` endpoint on a 30-second timer (paused when app is backgrounded), exposing `[InAppNotification]` and `unreadCount`
+- New: `ios/FastTrack/FastTrack/Models/InAppNotification.swift` — `InAppNotification` struct + `InAppNotificationsResponse` envelope + `InAppNotificationActor` sub-struct
 - New: `ios/FastTrack/FastTrack/Views/NotificationsView.swift` — full-screen `List` view of notifications, grouped by day, with an unread badge
 - New: `ios/FastTrack/FastTrack/Views/NotificationsBell.swift` — small `bell` icon with a red unread-count badge, rendered in the leaderboard's top-right toolbar (and later, the profile tab)
 - Modified: `ios/FastTrack/FastTrack/Services/APIService.swift` — add `fetchNotifications(cursor:)`, `markNotificationRead(id:)`, `markAllNotificationsRead()`, `fetchUnreadNotificationCount()`
 - Modified: `ios/FastTrack/FastTrack/Views/SocialView.swift` (or wherever the leaderboard toolbar lives) — add the `NotificationsBell` with badge
-- Modified: `ios/FastTrack/FastTrack/FastTrackApp.swift` — inject `NotificationsManager` as an `@StateObject` in `FastTrackApp` and pass via `environmentObject`; start polling on sign-in, stop on sign-out
+- Modified: `ios/FastTrack/FastTrack/FastTrackApp.swift` — inject `InAppNotificationsManager` as an `@StateObject` in `FastTrackApp` and pass via `environmentObject`; start polling on sign-in, stop on sign-out
 - Tests:
-  - `FastTrackTests/NotificationsTests.swift` — `testNotificationsManager_StopsPollingOnSignOut`, `testNotification_DeepLinkToActorProfile`, `testUnreadBadge_ShowsCountForUnreadOnly`
+  - `FastTrackTests/NotificationsTests.swift` — `testInAppNotificationsManager_StopsPollingOnSignOut`, `testInAppNotification_DeepLinkToActorProfile`, `testUnreadBadge_ShowsCountForUnreadOnly`
 
-**Wire contract is purely additive.** Old clients just don't call the new endpoints. New `Notification` model is decodable with `decodeIfPresent` for all fields so any old server returns an empty feed.
+**Wire contract is purely additive.** Old clients just don't call the new endpoints. New `InAppNotification` model is decodable with `decodeIfPresent` for all fields so any old server returns an empty feed.
 
 **Acceptance:**
 - Bell shows on the leaderboard with a red badge when unread > 0.
