@@ -5,9 +5,15 @@ import SwiftUI
 // Read-only variant of `CarGarageCard` for the public profile garage
 // section. Renders a per-car photo thumbnail, year/make/model/trim, the
 // nickname (in quotes, when set), and a compact short-stats line drawn
-// from the matching `CarStats` if one is present. The whole card is
-// tappable; per the redesign, the per-car detail view is a follow-up, so
-// for now we just no-op on tap.
+// from the matching `CarStats` if one is present.
+//
+// The card is a pure content view — it does NOT own a `Button` or any
+// tap gesture. The parent (`PublicProfileView`'s garage section) wraps
+// each card in a `NavigationLink` with `.buttonStyle(.plain)`, which
+// suppresses the system disclosure indicator and lets this view's
+// trailing chevron hint serve as the "tap to view" affordance without
+// doubling up. (We learned this lesson from the own-profile card — the
+// card and the system chevron on top of each other look noisy.)
 
 struct PublicGarageCard: View {
     let car: UserCar
@@ -33,6 +39,15 @@ struct PublicGarageCard: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer(minLength: 0)
+                    // Trailing chevron hint — "tap to view". The parent
+                    // wraps this card in a NavigationLink with
+                    // .buttonStyle(.plain), so the system disclosure
+                    // indicator is suppressed and this is the only
+                    // chevron the user sees.
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityLabel("View car details")
                 }
 
                 if let line = shortStatsLine(for: stats) {
