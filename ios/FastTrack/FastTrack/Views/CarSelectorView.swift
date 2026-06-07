@@ -180,6 +180,7 @@ struct AddCarView: View {
         }
     }
 
+    @MainActor
     private func loadPickedPhoto(_ item: PhotosPickerItem?) async {
         guard let item else { return }
         photoError = nil

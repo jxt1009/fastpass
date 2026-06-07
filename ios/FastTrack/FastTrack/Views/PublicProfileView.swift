@@ -129,6 +129,8 @@ struct PublicProfileView: View {
                         Text("\(profile.followerCount) Followers")
                             .font(.caption)
                             .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
 
@@ -138,10 +140,10 @@ struct PublicProfileView: View {
                         Text("\(profile.followingCount) Following")
                             .font(.caption)
                             .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-
-                    Spacer(minLength: 0)
                 }
             }
 

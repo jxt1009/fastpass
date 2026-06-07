@@ -84,6 +84,13 @@ struct PhotoCropView: View {
                 }
                 .onEnded { _ in
                     savedScale = scale
+                    let bound = maxOffset
+                    let clamped = CGSize(
+                        width: clamp(offset.width, limit: bound.width),
+                        height: clamp(offset.height, limit: bound.height)
+                    )
+                    offset = clamped
+                    savedOffset = clamped
                 },
             DragGesture()
                 .onChanged { value in
