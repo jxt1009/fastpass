@@ -26,8 +26,10 @@ struct LeaderboardEntry: Identifiable, Codable {
     /// gets multiple distinct rows, so userId alone is not unique.
     var id: String { "\(userId)-\(carKey)" }
 
-    /// "2024 BMW M3" — or "BMW M3" when year is nil. Empty when both make
-    /// and model are blank.
+    /// "2024 BMW M3" — or "BMW M3" when year is nil. Only the year is
+    /// emitted when both make and model are blank (e.g. "2024"); an
+    /// entirely empty row would mean year, make, and model are all
+    /// blank.
     var carDisplayString: String {
         let parts: [String] = [
             carYear.map { String($0) } ?? "",

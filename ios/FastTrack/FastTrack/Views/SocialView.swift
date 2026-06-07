@@ -148,16 +148,17 @@ struct SocialView: View {
                     }
                     Section {
                         ForEach(entries) { entry in
+                            let isCurrentUserCar = entry.carId != nil
+                                && entry.carId == currentSelectedCarId
                             NavigationLink(destination: PublicProfileView(username: entry.username)) {
                                 LeaderboardRow(
                                     entry: entry,
                                     category: selectedCategory,
-                                    isCurrentUserCar: entry.carId != nil
-                                        && entry.carId == currentSelectedCarId
+                                    isCurrentUserCar: isCurrentUserCar
                                 )
                             }
                             .listRowBackground(
-                                (entry.carId != nil && entry.carId == currentSelectedCarId)
+                                isCurrentUserCar
                                     ? Color.blue.opacity(0.08)
                                     : Color.ftCardBg
                             )
