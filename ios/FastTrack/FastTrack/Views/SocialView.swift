@@ -13,10 +13,6 @@ struct SocialView: View {
     @State private var carFilter: String = ""
     @FocusState private var carFilterFocused: Bool
 
-    private var currentSelectedCarId: String? {
-        profileManager.profile?.selectedCarId
-    }
-
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -148,17 +144,19 @@ struct SocialView: View {
                     }
                     Section {
                         ForEach(entries) { entry in
-                            let isCurrentUserCar = entry.carId != nil
-                                && entry.carId == currentSelectedCarId
+                            let isCurrentUserRow = LeaderboardYouMarker.isCurrentUser(
+                                entry: entry,
+                                currentUserId: profileManager.profile?.id
+                            )
                             NavigationLink(destination: PublicProfileView(username: entry.username)) {
                                 LeaderboardRow(
                                     entry: entry,
                                     category: selectedCategory,
-                                    isCurrentUserCar: isCurrentUserCar
+                                    isCurrentUserRow: isCurrentUserRow
                                 )
                             }
                             .listRowBackground(
-                                isCurrentUserCar
+                                isCurrentUserRow
                                     ? Color.blue.opacity(0.08)
                                     : Color.ftCardBg
                             )
@@ -222,7 +220,7 @@ struct SocialView: View {
 private struct LeaderboardRow: View {
     let entry: LeaderboardEntry
     let category: LeaderboardCategory
-    let isCurrentUserCar: Bool
+    let isCurrentUserRow: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -241,9 +239,9 @@ private struct LeaderboardRow: View {
                 HStack(spacing: 4) {
                     Text(entry.carDisplayStringWithNickname)
                         .font(.body)
-                        .fontWeight(isCurrentUserCar ? .semibold : .regular)
+                        .fontWeight(isCurrentUserRow ? .semibold : .regular)
                         .lineLimit(1)
-                    if isCurrentUserCar {
+                    if isCurrentUserRow {
                         Text("You")
                             .font(.caption2)
                             .fontWeight(.semibold)

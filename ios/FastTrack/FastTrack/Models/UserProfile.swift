@@ -57,17 +57,18 @@ struct UserCar: Codable, Identifiable, Equatable {
 // MARK: - UserProfile Model
 
 struct UserProfile: Codable {
+    var id: Int?
     var username: String
     var country: String
     var garage: [UserCar]  // User's collection of cars
     var selectedCarId: String?
     var isPublic: Bool = true
-    
+
     var selectedCar: UserCar? {
         guard let selectedCarId = selectedCarId else { return garage.first }
         return garage.first { $0.id == selectedCarId }
     }
-    
+
     // Legacy car properties for backward compatibility
     var carMake: String { selectedCar?.make ?? "" }
     var carModel: String { selectedCar?.model ?? "" }
@@ -83,9 +84,25 @@ struct UserProfile: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case username, country, garage
+        case id, username, country, garage
         case selectedCarId = "selected_car_id"
         case isPublic      = "is_public"
+    }
+
+    init(
+        id: Int? = nil,
+        username: String,
+        country: String,
+        garage: [UserCar],
+        selectedCarId: String?,
+        isPublic: Bool = true
+    ) {
+        self.id = id
+        self.username = username
+        self.country = country
+        self.garage = garage
+        self.selectedCarId = selectedCarId
+        self.isPublic = isPublic
     }
 
     static var empty: UserProfile {
@@ -249,6 +266,7 @@ class ProfileManager: ObservableObject {
         // Restore only if local is empty or server has a more complete garage
         if localIsEmpty || serverGarage.count > (profile?.garage.count ?? 0) {
             let restored = UserProfile(
+                id: serverUser.id,
                 username: serverUsername,
                 country: serverUser.country ?? profile?.country ?? "",
                 garage: serverGarage.isEmpty ? (profile?.garage ?? []) : serverGarage,
@@ -259,6 +277,19 @@ class ProfileManager: ObservableObject {
                 UserDefaults.standard.set(data, forKey: profileKey)
             }
             print("✅ Profile restored from server: \(serverUsername)")
+        }
+
+        // Always backfill the id from the server when the local copy is missing
+        // it. This is independent of the garage-size comparison so upgraded
+        // clients (who already have a non-empty local profile from a previous
+        // app version) get their id set, otherwise the leaderboard "You" marker
+        // never appears.
+        if self.profile?.id == nil, serverUser.id != 0 {
+            self.profile?.id = serverUser.id
+            if let p = self.profile, let data = try? JSONEncoder().encode(p) {
+                UserDefaults.standard.set(data, forKey: profileKey)
+            }
+            print("✅ Profile id backfilled from server: \(serverUser.id)")
         }
 
         // Restore avatar from server URL if we don't have one locally

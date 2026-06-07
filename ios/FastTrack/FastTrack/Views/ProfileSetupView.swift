@@ -115,8 +115,10 @@ struct ProfileSetupView: View {
         guard isValid else { return }
         isSaving = true
         
-        // Preserve existing garage and car selection
+        // Preserve existing id, garage, and car selection so editing the
+        // profile doesn't clobber the leaderboard "You" marker or garage.
         var updatedProfile = UserProfile(
+            id: profileManager.profile?.id,
             username: username,
             country: country,
             garage: profileManager.profile?.garage ?? [],
