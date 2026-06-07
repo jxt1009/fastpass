@@ -9,6 +9,7 @@ struct PublicProfileView: View {
     @State private var errorMessage: String?
     @State private var isFollowing = false
     @State private var followLoading = false
+    @State private var zoomedAvatar: AvatarZoomTarget?
 
     private var isOwnProfile: Bool {
         profileManager.profile?.username == username
@@ -32,6 +33,11 @@ struct PublicProfileView: View {
         .navigationTitle(username)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadProfile() }
+        .fullScreenCover(item: $zoomedAvatar) { target in
+            AvatarZoomView(url: target.url) {
+                zoomedAvatar = nil
+            }
+        }
     }
 
     // MARK: - Profile Content
@@ -39,125 +45,169 @@ struct PublicProfileView: View {
     @ViewBuilder
     private func profileContent(_ profile: PublicProfile) -> some View {
         List {
-            // Header section
+            // Narrow header section: avatar | name + bio | follow button.
+            // The follow button lives in the header's trailing edge (not
+            // below) so the layout reads top-to-bottom as identity →
+            // counters → stats → garage.
             Section {
-                VStack(spacing: 16) {
-                    // Avatar
-                    Group {
-                        if !profile.avatarURL.isEmpty, let url = URL(string: profile.avatarURL) {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().scaledToFill()
-                                        .frame(width: 80, height: 80)
-                                        .clipShape(Circle())
-                                default:
-                                    avatarFallback(initial: String(profile.username.prefix(1)))
-                                }
-                            }
-                        } else {
-                            avatarFallback(initial: String(profile.username.prefix(1)))
-                        }
-                    }
+                narrowHeader(profile)
+            }
+            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
 
-                    VStack(spacing: 4) {
-                        // Username is the primary identity
-                        Text("@\(profile.username)")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        if !profile.fullName.isEmpty {
-                            Text(profile.fullName)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        if !profile.country.isEmpty {
-                            Text(profile.country)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("Member since \(profile.memberSince.formatted(.dateTime.month(.wide).year()))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    // Follower / following counts
-                    HStack(spacing: 32) {
+            // Follower / following counts (tappable)
+            Section {
+                HStack(spacing: 24) {
+                    NavigationLink {
+                        FollowersListView(username: profile.username)
+                    } label: {
                         countView(value: profile.followerCount, label: "Followers")
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        FollowingListView(username: profile.username)
+                    } label: {
                         countView(value: profile.followingCount, label: "Following")
                     }
-
-                    // Follow / Unfollow button
-                    if !isOwnProfile {
-                        Button {
-                            Task { await toggleFollow() }
-                        } label: {
-                            if followLoading {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                            } else {
-                                Text(isFollowing ? "Following" : "Follow")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(isFollowing ? .secondary : .blue)
-                        .disabled(followLoading)
-                    }
+                    .buttonStyle(.plain)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
             }
 
-            // Stats section
+            // Stats (Top Speed, Best 0-60, Total Distance)
             Section("Stats") {
-                statRow(
-                    icon: "speedometer", color: .red,
-                    label: "Top Speed",
-                    value: AppSettings.shared.speedDisplay(profile.topSpeed)
-                )
-                statRow(
-                    icon: "map.fill", color: .blue,
-                    label: "Total Distance",
-                    value: AppSettings.shared.distanceDisplay(profile.totalDistance)
-                )
-                statRow(
-                    icon: "flag.fill", color: .green,
-                    label: "Total Drives",
-                    value: "\(profile.driveCount)"
-                )
-                if let best060 = profile.best060Time {
+                ForEach(PublicProfileStats.rows(for: profile)) { row in
                     statRow(
-                        icon: "timer", color: .orange,
-                        label: "Best 0-60",
-                        value: String(format: "%.2f sec", best060)
+                        icon: row.icon,
+                        color: row.color,
+                        label: row.label,
+                        value: row.value
                     )
-                } else {
-                    statRow(
-                        icon: "timer", color: .orange,
-                        label: "Best 0-60",
-                        value: "N/A"
-                    )
+                }
+            }
+
+            // Garage (per the redesign, read-only with photos + short stats)
+            if let garage = decodedGarage(from: profile), !garage.isEmpty {
+                Section("Garage") {
+                    ForEach(garage) { car in
+                        PublicGarageCard(
+                            car: car,
+                            stats: statsForCar(id: car.id, blob: profile.carStatsData)
+                        )
+                    }
                 }
             }
         }
         .listStyle(.insetGrouped)
     }
 
-    // MARK: - Subviews
+    // MARK: - Narrow header
+
+    private func narrowHeader(_ profile: PublicProfile) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            avatarView(profile)
+                .onTapGesture { presentAvatarZoom(profile) }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(displayName(profile))
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                Text("@\(profile.username)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                if !bioLine(profile).isEmpty {
+                    Text(bioLine(profile))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if !isOwnProfile {
+                followButton
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func avatarView(_ profile: PublicProfile) -> some View {
+        if !profile.avatarURL.isEmpty, let url = URL(string: profile.avatarURL) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                default:
+                    avatarFallback(initial: String(profile.username.prefix(1)))
+                }
+            }
+            .frame(width: 56, height: 56)
+            .clipShape(Circle())
+            .overlay(
+                Circle()
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 0.5)
+            )
+        } else {
+            avatarFallback(initial: String(profile.username.prefix(1)))
+                .frame(width: 56, height: 56)
+        }
+    }
+
+    private var followButton: some View {
+        Button {
+            Task { await toggleFollow() }
+        } label: {
+            if followLoading {
+                ProgressView()
+                    .frame(width: 80, height: 28)
+            } else {
+                Text(isFollowing ? "Following" : "Follow")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(isFollowing ? .secondary : .white)
+                    .frame(width: 80, height: 28)
+                    .background(
+                        isFollowing
+                            ? Color(.systemFill)
+                            : Color.blue,
+                        in: Capsule()
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(followLoading)
+    }
+
+    // MARK: - Bio helpers
+
+    private func displayName(_ profile: PublicProfile) -> String {
+        profile.fullName.isEmpty ? profile.username : profile.fullName
+    }
+
+    private func bioLine(_ profile: PublicProfile) -> String {
+        var parts: [String] = []
+        if !profile.fullName.isEmpty { parts.append(profile.fullName) }
+        if !profile.country.isEmpty { parts.append(profile.country) }
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Subviews (counters + stat rows)
 
     private func countView(value: Int, label: String) -> some View {
         VStack(spacing: 2) {
             Text("\(value)")
-                .font(.title2)
+                .font(.title3)
                 .fontWeight(.bold)
+                .foregroundColor(.primary)
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondary)
         }
+        .contentShape(Rectangle())
     }
 
     private func statRow(icon: String, color: Color, label: String, value: String) -> some View {
@@ -182,12 +232,36 @@ struct PublicProfileView: View {
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))
-                .frame(width: 80, height: 80)
             Text(initial.uppercased())
-                .font(.largeTitle)
+                .font(.title3)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
         }
+    }
+
+    // MARK: - Garage + per-car stats parsing
+
+    private func decodedGarage(from profile: PublicProfile) -> [UserCar]? {
+        GarageBlob.decode(profile.garage)
+    }
+
+    /// Returns the `CarStats` for a given car id by parsing the raw
+    /// `car_stats_data` JSON blob the server stores on each user. Returns
+    /// nil if the blob is missing/empty/malformed or the car is not in
+    /// the blob.
+    private func statsForCar(id: String, blob: String?) -> CarStats? {
+        guard let blob, !blob.isEmpty,
+              let data = blob.data(using: .utf8),
+              let all = try? JSONDecoder().decode([String: CarStats].self, from: data)
+        else { return nil }
+        return all[id]
+    }
+
+    private func presentAvatarZoom(_ profile: PublicProfile) {
+        let url: URL? = profile.avatarURL.isEmpty
+            ? nil
+            : URL(string: profile.avatarURL)
+        zoomedAvatar = AvatarZoomTarget(url: url)
     }
 
     // MARK: - Data Loading
@@ -209,42 +283,40 @@ struct PublicProfileView: View {
 
     private func toggleFollow() async {
         followLoading = true
+        defer { followLoading = false }
+        guard var current = profile else { return }
         do {
             if isFollowing {
                 try await APIService.shared.unfollowUser(username: username)
                 isFollowing = false
-                profile = profile.map {
-                    PublicProfile(
-                        username: $0.username, fullName: $0.fullName, country: $0.country,
-                        avatarURL: $0.avatarURL,
-                        memberSince: $0.memberSince, topSpeed: $0.topSpeed,
-                        totalDistance: $0.totalDistance, driveCount: $0.driveCount,
-                        best060Time: $0.best060Time,
-                        followerCount: $0.followerCount - 1,
-                        followingCount: $0.followingCount,
-                        isFollowedByMe: false
-                    )
-                }
+                current = PublicProfile(
+                    username: current.username, fullName: current.fullName, country: current.country,
+                    avatarURL: current.avatarURL, memberSince: current.memberSince,
+                    topSpeed: current.topSpeed, totalDistance: current.totalDistance,
+                    driveCount: current.driveCount, best060Time: current.best060Time,
+                    followerCount: max(0, current.followerCount - 1),
+                    followingCount: current.followingCount,
+                    isFollowedByMe: false,
+                    garage: current.garage, carStatsData: current.carStatsData
+                )
             } else {
                 try await APIService.shared.followUser(username: username)
                 isFollowing = true
-                profile = profile.map {
-                    PublicProfile(
-                        username: $0.username, fullName: $0.fullName, country: $0.country,
-                        avatarURL: $0.avatarURL,
-                        memberSince: $0.memberSince, topSpeed: $0.topSpeed,
-                        totalDistance: $0.totalDistance, driveCount: $0.driveCount,
-                        best060Time: $0.best060Time,
-                        followerCount: $0.followerCount + 1,
-                        followingCount: $0.followingCount,
-                        isFollowedByMe: true
-                    )
-                }
+                current = PublicProfile(
+                    username: current.username, fullName: current.fullName, country: current.country,
+                    avatarURL: current.avatarURL, memberSince: current.memberSince,
+                    topSpeed: current.topSpeed, totalDistance: current.totalDistance,
+                    driveCount: current.driveCount, best060Time: current.best060Time,
+                    followerCount: current.followerCount + 1,
+                    followingCount: current.followingCount,
+                    isFollowedByMe: true,
+                    garage: current.garage, carStatsData: current.carStatsData
+                )
             }
+            profile = current
         } catch {
             // Silently ignore; state stays unchanged
         }
-        followLoading = false
     }
 }
 

@@ -58,6 +58,7 @@ struct ProfileView: View {
     @State private var showingDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @State private var deleteAccountError: String?
+    @State private var zoomedAvatar: AvatarZoomTarget?
     private var stats: UserStats {
         UserStats.from(drives: driveManager.drives)
     }
@@ -113,6 +114,11 @@ struct ProfileView: View {
             .sheet(isPresented: $showingAddCar) {
                 AddCarView()
             }
+            .fullScreenCover(item: $zoomedAvatar) { target in
+                AvatarZoomView(url: target.url) {
+                    zoomedAvatar = nil
+                }
+            }
             .alert("Delete Account?", isPresented: $showingDeleteAccountConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button(isDeletingAccount ? "Deleting..." : "Delete", role: .destructive) {
@@ -148,51 +154,77 @@ struct ProfileView: View {
 
     private var profileHeader: some View {
         InstrumentCard {
-            HStack(spacing: 14) {
-                // Avatar
-                ZStack {
-                    if let img = profileManager.profileImage {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 56, height: 56)
-                            .clipShape(Circle())
-                    } else {
-                        Circle()
-                            .fill(Color.blue.opacity(0.3))
-                            .frame(width: 56, height: 56)
-                        Image(systemName: "person.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(profileManager.profile.map { "@\($0.username)" } ?? "Set up profile")
-                        .font(.title3).fontWeight(.bold)
+            HStack(alignment: .center, spacing: 12) {
+                // Avatar — tap to zoom. Mirrors the public-profile header.
+                avatarView
+                    .onTapGesture { presentAvatarZoom() }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(profileManager.profile.map { $0.username } ?? "Set up profile")
+                        .font(.headline)
+                        .fontWeight(.semibold)
                         .foregroundColor(.primary)
-                    let subtitle = [
-                        profileManager.profile?.country,
-                        profileManager.profile.flatMap { p in
-                            p.carMake.isEmpty ? nil : p.carDisplayString
-                        }
-                    ].compactMap { $0 }.joined(separator: " · ")
-                    if !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.caption)
+                        .lineLimit(1)
+                    if let username = profileManager.profile?.username, !username.isEmpty {
+                        Text("@\(username)")
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    if !bioLine.isEmpty {
+                        Text(bioLine)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(Int(settings.speedValue(locationManager.currentSpeed)))")
-                        .font(.title2).fontWeight(.bold)
-                        .foregroundColor(.primary)
-                    Text(settings.speedUnit)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+
+                Spacer(minLength: 8)
             }
         }
+    }
+
+    @ViewBuilder
+    private var avatarView: some View {
+        if let img = profileManager.profileImage {
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 56, height: 56)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 0.5)
+                )
+        } else {
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.3))
+                    .frame(width: 56, height: 56)
+                Image(systemName: "person.fill")
+                    .font(.title2)
+                    .foregroundColor(.blue)
+            }
+        }
+    }
+
+    /// Compact bio: country + active car make/model. Used in the narrow
+    /// header. Empty when nothing is set yet, so the header collapses
+    /// gracefully.
+    private var bioLine: String {
+        guard let profile = profileManager.profile else { return "" }
+        var parts: [String] = []
+        if !profile.country.isEmpty { parts.append(profile.country) }
+        if !profile.carMake.isEmpty { parts.append(profile.carDisplayString) }
+        return parts.joined(separator: " · ")
+    }
+
+    private func presentAvatarZoom() {
+        guard let image = profileManager.profileImage else { return }
+        // Use the in-memory UIImage so the zoom shows the locally-saved
+        // avatar. Persisted / uploaded URL is also available via the
+        // server, but the local copy is always current and avoids a
+        // network round-trip for the zoom.
+        zoomedAvatar = AvatarZoomTarget(image: image)
     }
 
     // MARK: - Loading skeleton (dark theme)
