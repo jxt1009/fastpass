@@ -70,6 +70,7 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
+                        RecentAchievementsStrip(driveManager: driveManager)
                         garageSection
                         if driveManager.isLoadingDrives {
                             profileStatsSkeleton
@@ -86,8 +87,6 @@ struct ProfileView: View {
                             moreStatsGrid
                         }
                         privacyToggleCard
-                        SectionHeader(title: "Achievements")
-                        achievementsSection
                         SectionHeader(title: "Settings")
                         settingsSection
                         deleteAccountButton
@@ -504,105 +503,6 @@ struct ProfileView: View {
                 }
                 .tint(.blue)
             }
-        }
-    }
-
-    // MARK: Achievements Section
-
-    private var achievementsSection: some View {
-        InstrumentCard {
-            VStack(spacing: 12) {
-                // Summary row
-                HStack(spacing: 16) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "trophy.fill").foregroundColor(.yellow)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("\(achievementManager.unlockedAchievements.count)")
-                                .font(.title3).fontWeight(.bold).foregroundColor(.primary)
-                            Text("Unlocked").font(.caption).foregroundColor(.secondary)
-                        }
-                    }
-                    Divider().frame(height: 32)
-                    HStack(spacing: 6) {
-                        Image(systemName: "chart.bar.fill").foregroundColor(.blue)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("\(achievementManager.achievements.count)")
-                                .font(.title3).fontWeight(.bold).foregroundColor(.primary)
-                            Text("Total").font(.caption).foregroundColor(.secondary)
-                        }
-                    }
-                    Spacer()
-                    NavigationLink(destination: AchievementsView()) {
-                        Text("View All")
-                            .font(.subheadline).fontWeight(.semibold)
-                            .foregroundColor(.blue)
-                    }
-                }
-
-                // Most recent unlocked achievements (up to 3)
-                let recent = achievementManager.unlockedAchievements.prefix(3)
-                if !recent.isEmpty {
-                    Divider()
-                    VStack(spacing: 8) {
-                        ForEach(Array(recent), id: \.id) { achievement in
-                            achievementRow(achievement)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: Achievements Row
-
-    @ViewBuilder
-    private func achievementRow(_ achievement: Achievement) -> some View {
-        // Try to find the source drive locally first (it's already in
-        // driveManager.drives since the unlock came from a drive save).
-        let sourceDrive: Drive? = {
-            guard let id = achievement.sourceDriveId else { return nil }
-            return driveManager.drives.first(where: { $0.id == id })
-        }()
-
-        let rowContent = HStack(spacing: 10) {
-            Image(systemName: achievement.icon)
-                .font(.title3)
-                .foregroundColor(achievement.category.color)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(achievement.title)
-                    .font(.subheadline).fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                Text(achievement.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer()
-            if achievement.sourceDriveId != nil {
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            } else {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-            }
-        }
-        .contentShape(Rectangle())
-
-        if let sourceDrive {
-            NavigationLink(destination: DriveDetailView(drive: sourceDrive)) {
-                rowContent
-            }
-            .buttonStyle(.plain)
-        } else if let driveId = achievement.sourceDriveId {
-            // Source drive is on the server but not in the local cache yet.
-            // Open a one-shot detail view that lazily fetches it.
-            NavigationLink(destination: RemoteDriveDetailLoader(driveId: driveId)) {
-                rowContent
-            }
-            .buttonStyle(.plain)
-        } else {
-            rowContent
         }
     }
 

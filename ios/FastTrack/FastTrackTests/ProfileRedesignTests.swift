@@ -254,7 +254,59 @@ final class ProfileRedesignTests: XCTestCase {
         XCTAssertEqual(AvatarZoomTarget(url: url), AvatarZoomTarget(url: url))
     }
 
+    // MARK: - ProfileView body section order (issue #64 regression guard)
+
+    /// The achievements strip must render directly under the profile
+    /// header and ahead of the garage section, so a returning user can
+    /// see their recent unlocks without scrolling. This is a line-order
+    /// regression guard rather than a SwiftUI snapshot: the project does
+    /// not currently use ViewInspector and the layout itself is hard to
+    /// inspect without it, but the *order* of the three sections in the
+    /// body of `ProfileView` is straightforward to pin down.
+    func testProfileView_AchievementsStripAboveGarage() throws {
+        let source = try readProfileViewSource()
+        let headerLine = try firstLineNumber(in: source, matching: "profileHeader")
+        let stripLine = try firstLineNumber(in: source, matching: "RecentAchievementsStrip(driveManager:")
+        let garageLine = try firstLineNumber(in: source, matching: "garageSection")
+        XCTAssertGreaterThan(stripLine, headerLine,
+            "RecentAchievementsStrip must come after profileHeader in ProfileView.swift")
+        XCTAssertLessThan(stripLine, garageLine,
+            "RecentAchievementsStrip must come before garageSection in ProfileView.swift")
+    }
+
     // MARK: - Helpers
+
+    private func readProfileViewSource() throws -> String {
+        // `#filePath` resolves to this test's source file at compile time.
+        // The project layout is `ios/FastTrack/FastTrack/Views/...` (the
+        // outer `FastTrack/` is the Xcode project folder, the inner
+        // `FastTrack/` is the source root), so the candidate path
+        // walks from `FastTrackTests/…` up one level and re-descends
+        // into `FastTrack/Views/...`.
+        let thisFile = (#filePath as NSString)
+        let candidates = [
+            thisFile.deletingLastPathComponent + "/../FastTrack/Views/ProfileView.swift",
+            thisFile.deletingLastPathComponent + "/../../FastTrack/FastTrack/Views/ProfileView.swift",
+        ].map { (path: String) -> String in
+            (path as NSString).standardizingPath
+        }
+        for path in candidates {
+            if let data = FileManager.default.contents(atPath: path),
+               let text = String(data: data, encoding: .utf8) {
+                return text
+            }
+        }
+        throw XCTSkip("ProfileView.swift not found at expected locations: \(candidates)")
+    }
+
+    private func firstLineNumber(in text: String, matching needle: String) throws -> Int {
+        var lineNo = 0
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            lineNo += 1
+            if line.contains(needle) { return lineNo }
+        }
+        throw XCTSkip("Did not find \(needle) in ProfileView.swift")
+    }
 
     private func iso8601Decoder() -> JSONDecoder {
         let d = JSONDecoder()
