@@ -10,6 +10,7 @@ struct PublicProfileView: View {
     @State private var isFollowing = false
     @State private var followLoading = false
     @State private var zoomedAvatar: AvatarZoomTarget?
+    @State private var followNavigation: FollowDestination?
 
     private var isOwnProfile: Bool {
         profileManager.profile?.username == username
@@ -33,6 +34,14 @@ struct PublicProfileView: View {
         .navigationTitle(username)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadProfile() }
+        .navigationDestination(item: $followNavigation) { destination in
+            switch destination {
+            case .followers(let username):
+                FollowersListView(username: username)
+            case .following(let username):
+                FollowingListView(username: username)
+            }
+        }
         .fullScreenCover(item: $zoomedAvatar) { target in
             AvatarZoomView(url: target.url, image: target.image) {
                 zoomedAvatar = nil
@@ -45,35 +54,10 @@ struct PublicProfileView: View {
     @ViewBuilder
     private func profileContent(_ profile: PublicProfile) -> some View {
         List {
-            // Narrow header section: avatar | name + bio | follow button.
-            // The follow button lives in the header's trailing edge (not
-            // below) so the layout reads top-to-bottom as identity →
-            // counters → stats → garage.
             Section {
                 narrowHeader(profile)
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-
-            // Follower / following counts (tappable)
-            Section {
-                HStack(spacing: 24) {
-                    NavigationLink {
-                        FollowersListView(username: profile.username)
-                    } label: {
-                        countView(value: profile.followerCount, label: "Followers")
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        FollowingListView(username: profile.username)
-                    } label: {
-                        countView(value: profile.followingCount, label: "Following")
-                    }
-                    .buttonStyle(.plain)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
-            }
 
             // Stats (Top Speed, Best 0-60, Total Distance)
             Section("Stats") {
@@ -112,20 +96,52 @@ struct PublicProfileView: View {
             avatarView(profile)
                 .onTapGesture { presentAvatarZoom(profile) }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(displayName(profile))
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
                     .lineLimit(1)
-                Text("@\(profile.username)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                if !bioLine(profile).isEmpty {
-                    Text(bioLine(profile))
-                        .font(.caption)
+
+                HStack(spacing: 6) {
+                    Text("@\(profile.username)")
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
+
+                    if !bioLine(profile).isEmpty {
+                        Text("·")
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                        Text(bioLine(profile))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                HStack(spacing: 14) {
+                    Button {
+                        followNavigation = .followers(profile.username)
+                    } label: {
+                        Text("\(profile.followerCount) Followers")
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        followNavigation = .following(profile.username)
+                    } label: {
+                        Text("\(profile.followingCount) Following")
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 0)
                 }
             }
 
@@ -201,7 +217,7 @@ struct PublicProfileView: View {
     // MARK: - Subviews (counters + stat rows)
 
     private func countView(value: Int, label: String) -> some View {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 2) {
             Text("\(value)")
                 .font(.title3)
                 .fontWeight(.bold)
@@ -210,7 +226,6 @@ struct PublicProfileView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .contentShape(Rectangle())
     }
 
     private func statRow(icon: String, color: Color, label: String, value: String) -> some View {
@@ -328,6 +343,11 @@ struct PublicProfileView: View {
             // Silently ignore; state stays unchanged
         }
     }
+}
+
+private enum FollowDestination: Hashable {
+    case followers(String)
+    case following(String)
 }
 
 #Preview {
