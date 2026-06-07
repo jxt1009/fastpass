@@ -144,6 +144,24 @@ var schemaMigrations = []schemaMigration{
 			return nil
 		},
 	},
+	{
+		version:     "2026060601",
+		description: "add notifications table for follower PB events",
+		up: func(tx *gorm.DB) error {
+			if !tx.Migrator().HasTable(&Notification{}) {
+				if err := tx.Migrator().CreateTable(&Notification{}); err != nil {
+					return err
+				}
+			}
+			if err := addIndexByNameIfMissing(tx, &Notification{}, "idx_notification_user_created"); err != nil {
+				return err
+			}
+			if err := addIndexByNameIfMissing(tx, &Notification{}, "idx_notification_user_unread"); err != nil {
+				return err
+			}
+			return nil
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB) error {
