@@ -73,6 +73,7 @@ struct AddCarView: View {
 
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var pickedImage: UIImage?
+    @State private var croppingImage: CropImageSource?
     @State private var uploadedPhotoURL: String?
     @State private var isUploadingPhoto = false
     @State private var isSavingProfile = false
@@ -169,9 +170,17 @@ struct AddCarView: View {
             .onChange(of: pickedPhoto) { _, item in
                 Task { await loadPickedPhoto(item) }
             }
+            .fullScreenCover(item: $croppingImage, onDismiss: {
+                pickedPhoto = nil
+            }) { source in
+                PhotoCropView(image: source.image) { cropped in
+                    pickedImage = cropped.resizedForAvatar(maxDimension: 800)
+                }
+            }
         }
     }
 
+    @MainActor
     private func loadPickedPhoto(_ item: PhotosPickerItem?) async {
         guard let item else { return }
         photoError = nil
@@ -181,8 +190,8 @@ struct AddCarView: View {
                 photoError = "Could not load photo"
                 return
             }
-            let resized = img.resizedForAvatar(maxDimension: 800)
-            pickedImage = resized
+            let resized = img.resizedForAvatar(maxDimension: 2048)
+            croppingImage = CropImageSource(image: resized)
         } catch {
             photoError = "Failed to load photo"
         }

@@ -12,6 +12,7 @@ struct EditCarView: View {
     @State private var workingPhotoUrl: String?
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var pickedImage: UIImage?
+    @State private var croppingImage: CropImageSource?
     @State private var isUploadingPhoto = false
     @State private var photoError: String?
     @State private var isSaving = false
@@ -69,6 +70,13 @@ struct EditCarView: View {
             .onAppear { loadInitialStateIfNeeded() }
             .onChange(of: pickedPhoto) { _, item in
                 Task { await loadPickedPhoto(item) }
+            }
+            .fullScreenCover(item: $croppingImage, onDismiss: {
+                pickedPhoto = nil
+            }) { source in
+                PhotoCropView(image: source.image) { cropped in
+                    pickedImage = cropped.resizedForAvatar(maxDimension: 800)
+                }
             }
         }
     }
@@ -167,8 +175,8 @@ struct EditCarView: View {
                 photoError = "Could not load photo"
                 return
             }
-            let resized = img.resizedForAvatar(maxDimension: 800)
-            pickedImage = resized
+            let resized = img.resizedForAvatar(maxDimension: 2048)
+            croppingImage = CropImageSource(image: resized)
         } catch {
             photoError = "Failed to load photo"
         }
