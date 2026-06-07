@@ -279,6 +279,19 @@ class ProfileManager: ObservableObject {
             print("✅ Profile restored from server: \(serverUsername)")
         }
 
+        // Always backfill the id from the server when the local copy is missing
+        // it. This is independent of the garage-size comparison so upgraded
+        // clients (who already have a non-empty local profile from a previous
+        // app version) get their id set, otherwise the leaderboard "You" marker
+        // never appears.
+        if self.profile?.id == nil, serverUser.id != 0 {
+            self.profile?.id = serverUser.id
+            if let p = self.profile, let data = try? JSONEncoder().encode(p) {
+                UserDefaults.standard.set(data, forKey: profileKey)
+            }
+            print("✅ Profile id backfilled from server: \(serverUser.id)")
+        }
+
         // Restore avatar from server URL if we don't have one locally
         if profileImage == nil, let avatarURLStr = serverUser.avatarURL,
            !avatarURLStr.isEmpty, let url = URL(string: avatarURLStr) {
