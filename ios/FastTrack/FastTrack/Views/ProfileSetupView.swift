@@ -9,6 +9,7 @@ struct ProfileSetupView: View {
     @State private var country = ""
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var avatarImage: UIImage?
+    @State private var croppingImage: CropImageSource?
     @State private var isSaving = false
     @State private var usernameError = ""
 
@@ -43,12 +44,7 @@ struct ProfileSetupView: View {
                             }
                         }
                         .onChange(of: selectedPhoto) { _, item in
-                            Task {
-                                if let data = try? await item?.loadTransferable(type: Data.self),
-                                   let img = UIImage(data: data) {
-                                    avatarImage = img
-                                }
-                            }
+                            Task { await loadPickedPhoto(item) }
                         }
                         Spacer()
                     }
@@ -92,6 +88,13 @@ struct ProfileSetupView: View {
                 }
             }
             .onAppear { loadExisting() }
+            .fullScreenCover(item: $croppingImage, onDismiss: {
+                selectedPhoto = nil
+            }) { source in
+                PhotoCropView(image: source.image) { cropped in
+                    avatarImage = cropped.resizedForAvatar(maxDimension: 800)
+                }
+            }
         }
     }
 
@@ -101,6 +104,17 @@ struct ProfileSetupView: View {
             country = p.country
         }
         avatarImage = profileManager.profileImage
+    }
+
+    @MainActor
+    private func loadPickedPhoto(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let img = UIImage(data: data) else {
+            return
+        }
+        let resized = img.resizedForAvatar(maxDimension: 2048)
+        croppingImage = CropImageSource(image: resized)
     }
 
     private func validateUsername(_ val: String) {
