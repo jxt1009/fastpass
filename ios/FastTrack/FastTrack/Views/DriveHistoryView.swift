@@ -3,6 +3,14 @@ import SwiftUI
 struct DriveHistoryView: View {
     @EnvironmentObject var driveManager: DriveManager
 
+    /// Yellow wins over red: a 0-60 PB is rarer, so when both PBs are
+    /// held by the same drive, the yellow tint takes precedence.
+    private func rowTint(isPB060: Bool, isPBTopSpeed: Bool) -> Color {
+        if isPB060        { return Color.yellow.opacity(0.15) }
+        if isPBTopSpeed   { return Color.red.opacity(0.10) }
+        return Color.ftSurfaceBg
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -20,16 +28,23 @@ struct DriveHistoryView: View {
                         description: Text("Start a drive to see your history here.")
                     )
                 } else {
+                    // Hoist PB id lookups out of the ForEach — both are
+                    // O(n) scans of `drives` and we were re-evaluating
+                    // them once per row, making the list O(n²) on render.
+                    let pb060Id = driveManager.pb060DriveId
+                    let pbTopSpeedId = driveManager.pbTopSpeedDriveId
                     List {
                         ForEach(driveManager.drives) { drive in
+                            let isPB060 = drive.id == pb060Id
+                            let isPBTopSpeed = drive.id == pbTopSpeedId
                             NavigationLink(destination: DriveDetailView(drive: drive)) {
-                                DriveRowView(drive: drive, isPersonalBest060: drive.id == driveManager.pb060DriveId)
+                                DriveRowView(
+                                    drive: drive,
+                                    isPersonalBest060: isPB060,
+                                    isPersonalBestTopSpeed: isPBTopSpeed
+                                )
                             }
-                            .listRowBackground(
-                                drive.id == driveManager.pb060DriveId
-                                    ? Color.yellow.opacity(0.15)
-                                    : Color.ftSurfaceBg
-                            )
+                            .listRowBackground(rowTint(isPB060: isPB060, isPBTopSpeed: isPBTopSpeed))
                         }
                     }
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
@@ -65,25 +80,28 @@ struct DriveRowSkeleton: View {
 struct DriveRowView: View {
     let drive: Drive
     var isPersonalBest060: Bool = false
+    var isPersonalBestTopSpeed: Bool = false
     @EnvironmentObject var settings: AppSettings
+
+    /// A stable key for the visible PB pills; when it changes (e.g. the
+    /// PB id flips after a drives refresh), the pills animate in/out via
+    /// the parent's spring animation.
+    private var pbAnimationKey: String {
+        "\(drive.id ?? 0)-\(isPersonalBest060)-\(isPersonalBestTopSpeed)"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
+            HStack(spacing: 4) {
                 Text(drive.startTime, style: .date)
                     .font(.headline)
                 if isPersonalBest060, drive.best060Time != nil {
-                    HStack(spacing: 3) {
-                        Image(systemName: "trophy.fill")
-                            .font(.system(size: 9, weight: .bold))
-                        Text("PB 0-60")
-                            .font(.caption2.weight(.bold))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.yellow)
-                    .foregroundColor(.black)
-                    .clipShape(Capsule())
+                    pbPill(text: "PB 0-60", icon: "trophy.fill", bg: Color.yellow, fg: Color.black)
+                        .transition(.scale.combined(with: .opacity))
+                }
+                if isPersonalBestTopSpeed {
+                    pbPill(text: "PB Top Speed", icon: "flame.fill", bg: Color.red, fg: Color.white)
+                        .transition(.scale.combined(with: .opacity))
                 }
                 Spacer()
                 if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
@@ -96,6 +114,7 @@ struct DriveRowView: View {
                         .cornerRadius(4)
                 }
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: pbAnimationKey)
             HStack {
                 Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
                 Spacer()
@@ -107,6 +126,20 @@ struct DriveRowView: View {
             .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
+    }
+
+    private func pbPill(text: String, icon: String, bg: Color, fg: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(text)
+                .font(.caption2.weight(.bold))
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(bg)
+        .foregroundColor(fg)
+        .clipShape(Capsule())
     }
 }
 

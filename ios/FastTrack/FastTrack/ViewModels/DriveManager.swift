@@ -372,6 +372,40 @@ class DriveManager: ObservableObject {
         return matches.max(by: { $0.startTime < $1.startTime })?.id
     }
 
+    /// The id of the drive that set the user's all-time best top speed.
+    /// Prefers the server's authoritative `speed_150` source drive, then
+    /// `speed_100` (Century Club), and finally falls back to the most
+    /// recent drive with the all-time maximum top speed. Returns nil if
+    /// the user has no drives, or if the all-time max speed is
+    /// non-positive (incomplete/legacy drives with no meaningful speed
+    /// data are never crowned as a top-speed PB).
+    ///
+    /// The 100 mph unlock uses the server-side id `speed_100`
+    /// (`UserAchievement.achievementId` is the source of truth — the local
+    /// `Achievement` catalog in `Models/Achievement.swift` uses the same
+    /// id).
+    var pbTopSpeedDriveId: Int? {
+        // 1) Server-authoritative speed_150 (most reliable — both the
+        //    source drive and the threshold are pinned by the server).
+        if let s150 = userAchievements.first(where: { $0.achievementId == "speed_150" }),
+           let driveId = s150.sourceDriveId {
+            return driveId
+        }
+        // 2) Server-authoritative speed_100 (Century Club).
+        if let s100 = userAchievements.first(where: { $0.achievementId == "speed_100" }),
+           let driveId = s100.sourceDriveId {
+            return driveId
+        }
+        // 3) Fallback: the most recent drive whose maxSpeed equals the
+        //    all-time max (lex tie-break on startTime). Ignore
+        //    non-positive maxes so incomplete/legacy drives don't get
+        //    crowned (mirrors pb060DriveId's `t > 0` filter).
+        let maxSpeed = drives.map(\.maxSpeed).max() ?? 0
+        guard maxSpeed > 0 else { return nil }
+        let matches = drives.filter { $0.maxSpeed == maxSpeed }
+        return matches.max(by: { $0.startTime < $1.startTime })?.id
+    }
+
     func startPolling() {
         guard pollTimer == nil else { return }   // already running
         fetchDrives()
