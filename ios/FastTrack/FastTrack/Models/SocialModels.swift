@@ -145,6 +145,8 @@ struct PublicProfile: Decodable {
     let followerCount: Int
     let followingCount: Int
     let isFollowedByMe: Bool
+    let garage: String?
+    let carStatsData: String?
 
     enum CodingKeys: String, CodingKey {
         case username
@@ -159,6 +161,64 @@ struct PublicProfile: Decodable {
         case followerCount  = "follower_count"
         case followingCount = "following_count"
         case isFollowedByMe = "is_followed_by_me"
+        case garage
+        case carStatsData   = "car_stats_data"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        username       = try c.decode(String.self,  forKey: .username)
+        fullName       = try c.decode(String.self,  forKey: .fullName)
+        country        = try c.decode(String.self,  forKey: .country)
+        avatarURL      = try c.decode(String.self,  forKey: .avatarURL)
+        memberSince    = try c.decode(Date.self,    forKey: .memberSince)
+        topSpeed       = try c.decode(Double.self,  forKey: .topSpeed)
+        totalDistance  = try c.decode(Double.self,  forKey: .totalDistance)
+        driveCount     = try c.decode(Int.self,     forKey: .driveCount)
+        best060Time    = try c.decodeIfPresent(Double.self, forKey: .best060Time)
+        followerCount  = try c.decode(Int.self,     forKey: .followerCount)
+        followingCount = try c.decode(Int.self,     forKey: .followingCount)
+        isFollowedByMe = try c.decode(Bool.self,    forKey: .isFollowedByMe)
+        // `garage` and `car_stats_data` are additive fields — old backends
+        // don't return them, so tolerate missing keys.
+        garage         = try c.decodeIfPresent(String.self, forKey: .garage)
+        carStatsData   = try c.decodeIfPresent(String.self, forKey: .carStatsData)
+    }
+
+    /// Memberwise initializer used by callers that need to mutate a
+    /// `PublicProfile` (e.g. toggling the local follow count after a
+    /// follow/unfollow call). The new `garage` / `carStatsData` fields
+    /// default to nil so the most common case stays terse.
+    init(
+        username: String,
+        fullName: String,
+        country: String,
+        avatarURL: String,
+        memberSince: Date,
+        topSpeed: Double,
+        totalDistance: Double,
+        driveCount: Int,
+        best060Time: Double?,
+        followerCount: Int,
+        followingCount: Int,
+        isFollowedByMe: Bool,
+        garage: String? = nil,
+        carStatsData: String? = nil
+    ) {
+        self.username       = username
+        self.fullName       = fullName
+        self.country        = country
+        self.avatarURL      = avatarURL
+        self.memberSince    = memberSince
+        self.topSpeed       = topSpeed
+        self.totalDistance  = totalDistance
+        self.driveCount     = driveCount
+        self.best060Time    = best060Time
+        self.followerCount  = followerCount
+        self.followingCount = followingCount
+        self.isFollowedByMe = isFollowedByMe
+        self.garage         = garage
+        self.carStatsData   = carStatsData
     }
 }
 

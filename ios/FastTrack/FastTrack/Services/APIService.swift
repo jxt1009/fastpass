@@ -309,6 +309,16 @@ class APIService {
         try await delete(endpoint: "/users/\(username)/follow")
     }
 
+    func fetchFollowers(username: String) async throws -> [FollowUserEntry] {
+        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
+        return try await get(endpoint: "/users/\(encoded)/followers")
+    }
+
+    func fetchFollowing(username: String) async throws -> [FollowUserEntry] {
+        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
+        return try await get(endpoint: "/users/\(encoded)/following")
+    }
+
     func searchUsers(query: String) async throws -> [UserSearchResult] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
         return try await get(endpoint: "/users/search?q=\(encoded)")
