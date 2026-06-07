@@ -109,4 +109,27 @@ final class PersonalBestsTests: XCTestCase {
         let m = makeManager(drives: [], unlocks: [])
         XCTAssertNil(m.pbTopSpeedDriveId)
     }
+
+    /// Three drives whose `maxSpeed` is all zero (incomplete / legacy
+    /// imports) must not be crowned as a top-speed PB — the local-scan
+    /// fallback should bail out the same way `pb060DriveId` ignores
+    /// non-positive 0-60 times.
+    func testPBTopSpeedDriveId_AllZeroMaxSpeedReturnsNil() {
+        let a = makeDrive(id: 30, maxSpeed: 0, startTime: Date(timeIntervalSince1970: 1_700_000_000))
+        let b = makeDrive(id: 31, maxSpeed: 0, startTime: Date(timeIntervalSince1970: 1_700_000_100))
+        let c = makeDrive(id: 32, maxSpeed: 0, startTime: Date(timeIntervalSince1970: 1_700_000_200))
+        let m = makeManager(drives: [a, b, c], unlocks: [])
+        XCTAssertNil(m.pbTopSpeedDriveId)
+    }
+
+    /// Mixed zero and positive `maxSpeed` values: the local-scan
+    /// fallback must surface the positive max (not treat the zeros as
+    /// a tie at the all-time max).
+    func testPBTopSpeedDriveId_MixedZeroAndPositive_ReturnsPositiveMax() {
+        let zero1 = makeDrive(id: 40, maxSpeed: 0, startTime: Date(timeIntervalSince1970: 1_700_000_000))
+        let zero2 = makeDrive(id: 41, maxSpeed: 0, startTime: Date(timeIntervalSince1970: 1_700_000_100))
+        let fast  = makeDrive(id: 42, maxSpeed: 50, startTime: Date(timeIntervalSince1970: 1_700_000_200))
+        let m = makeManager(drives: [zero1, zero2, fast], unlocks: [])
+        XCTAssertEqual(m.pbTopSpeedDriveId, 42)
+    }
 }

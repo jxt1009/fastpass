@@ -376,7 +376,9 @@ class DriveManager: ObservableObject {
     /// Prefers the server's authoritative `speed_150` source drive, then
     /// `speed_100` (Century Club), and finally falls back to the most
     /// recent drive with the all-time maximum top speed. Returns nil if
-    /// the user has no drives.
+    /// the user has no drives, or if the all-time max speed is
+    /// non-positive (incomplete/legacy drives with no meaningful speed
+    /// data are never crowned as a top-speed PB).
     ///
     /// The 100 mph unlock uses the server-side id `speed_100`
     /// (`UserAchievement.achievementId` is the source of truth — the local
@@ -395,8 +397,11 @@ class DriveManager: ObservableObject {
             return driveId
         }
         // 3) Fallback: the most recent drive whose maxSpeed equals the
-        //    all-time max (lex tie-break on startTime).
-        guard let maxSpeed = drives.map(\.maxSpeed).max() else { return nil }
+        //    all-time max (lex tie-break on startTime). Ignore
+        //    non-positive maxes so incomplete/legacy drives don't get
+        //    crowned (mirrors pb060DriveId's `t > 0` filter).
+        let maxSpeed = drives.map(\.maxSpeed).max() ?? 0
+        guard maxSpeed > 0 else { return nil }
         let matches = drives.filter { $0.maxSpeed == maxSpeed }
         return matches.max(by: { $0.startTime < $1.startTime })?.id
     }

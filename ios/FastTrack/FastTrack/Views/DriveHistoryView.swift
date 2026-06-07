@@ -28,10 +28,15 @@ struct DriveHistoryView: View {
                         description: Text("Start a drive to see your history here.")
                     )
                 } else {
+                    // Hoist PB id lookups out of the ForEach — both are
+                    // O(n) scans of `drives` and we were re-evaluating
+                    // them once per row, making the list O(n²) on render.
+                    let pb060Id = driveManager.pb060DriveId
+                    let pbTopSpeedId = driveManager.pbTopSpeedDriveId
                     List {
                         ForEach(driveManager.drives) { drive in
-                            let isPB060 = drive.id == driveManager.pb060DriveId
-                            let isPBTopSpeed = drive.id == driveManager.pbTopSpeedDriveId
+                            let isPB060 = drive.id == pb060Id
+                            let isPBTopSpeed = drive.id == pbTopSpeedId
                             NavigationLink(destination: DriveDetailView(drive: drive)) {
                                 DriveRowView(
                                     drive: drive,
