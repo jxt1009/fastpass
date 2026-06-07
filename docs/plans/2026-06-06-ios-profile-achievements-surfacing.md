@@ -34,8 +34,13 @@
   `InstrumentCard` so the visual weight matches the rest of the profile.
 - **Reusability for Track H**: the strip takes an `achievementManager:`
   `AchievementManager` + `driveManager: DriveManager` and a list of
-  `Achievement`s. The notification feed (Phase 3) can construct a one-off
-  manager with a single `Achievement` to render the same card.
+  `Achievement`s. `AchievementManager` only exposes `.shared` (its
+  initializer is private), so the notification feed (Phase 3) will
+  reuse the existing `RecentAchievementCard` directly: it surfaces a
+  `UserAchievement` from the server as a tile by mapping the server
+  payload into a lightweight `RecentAchievementTile` value
+  (id, title, icon, sourceDriveId, achievedAt) that the card accepts
+  as a variant input — no ad-hoc manager instance required.
 
 ## Files
 

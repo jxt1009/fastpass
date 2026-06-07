@@ -296,7 +296,9 @@ final class ProfileRedesignTests: XCTestCase {
                 return text
             }
         }
-        throw XCTSkip("ProfileView.swift not found at expected locations: \(candidates)")
+        XCTFail("ProfileView.swift not found at expected locations: \(candidates). Regression guard cannot run.")
+        struct FileNotFound: Error {}
+        throw FileNotFound()
     }
 
     private func firstLineNumber(in text: String, matching needle: String) throws -> Int {
@@ -305,7 +307,9 @@ final class ProfileRedesignTests: XCTestCase {
             lineNo += 1
             if line.contains(needle) { return lineNo }
         }
-        throw XCTSkip("Did not find \(needle) in ProfileView.swift")
+        XCTFail("Did not find \(needle) in ProfileView.swift. Section-order regression guard cannot run.")
+        struct SectionMarkerNotFound: Error {}
+        throw SectionMarkerNotFound()
     }
 
     private func iso8601Decoder() -> JSONDecoder {
