@@ -59,6 +59,7 @@ struct ProfileView: View {
     @State private var isDeletingAccount = false
     @State private var deleteAccountError: String?
     @State private var zoomedAvatar: AvatarZoomTarget?
+    @State private var croppingAvatar: CropImageSource?
     private var stats: UserStats {
         UserStats.from(drives: driveManager.drives)
     }
@@ -114,8 +115,20 @@ struct ProfileView: View {
                 AddCarView()
             }
             .fullScreenCover(item: $zoomedAvatar) { target in
-                AvatarZoomView(url: target.url, image: target.image) {
-                    zoomedAvatar = nil
+                AvatarZoomView(
+                    url: target.url,
+                    image: target.image,
+                    onDismiss: { zoomedAvatar = nil },
+                    onEdit: { image in
+                        zoomedAvatar = nil
+                        let resized = image.resizedForAvatar(maxDimension: 2048)
+                        croppingAvatar = CropImageSource(image: resized)
+                    }
+                )
+            }
+            .fullScreenCover(item: $croppingAvatar) { source in
+                PhotoCropView(image: source.image) { cropped in
+                    profileManager.saveAvatar(cropped.resizedForAvatar(maxDimension: 800))
                 }
             }
             .alert("Delete Account?", isPresented: $showingDeleteAccountConfirmation) {
