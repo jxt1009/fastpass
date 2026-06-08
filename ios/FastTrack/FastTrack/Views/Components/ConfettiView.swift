@@ -30,6 +30,11 @@ struct ConfettiView: View {
 
     private let particles: [Particle]
 
+    /// Captured the first time the view body runs. Drives the animation
+    /// via `elapsed = context.date.timeIntervalSince(startTime)` so the
+    /// confetti always starts at 0 regardless of wall-clock state.
+    @State private var startTime: Date = Date()
+
     init() {
         // Pre-randomize each particle so the animation is reproducible
         // per-instance and not subject to view-body re-renders. The
@@ -57,9 +62,8 @@ struct ConfettiView: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { context in
             Canvas { gc, size in
-                let elapsed = context.date.timeIntervalSince(context.date)
-                _ = elapsed // silence "unused" if we stop using it
-                draw(in: gc, size: size, time: context.date.timeIntervalSince1970)
+                let elapsed = context.date.timeIntervalSince(startTime)
+                draw(in: gc, size: size, time: elapsed)
             }
         }
         .allowsHitTesting(false)
@@ -67,13 +71,12 @@ struct ConfettiView: View {
     }
 
     private func draw(in gc: GraphicsContext, size: CGSize, time: TimeInterval) {
-        // Use a deterministic per-particle clock anchored on the view's
-        // own identity: the view is created on .onAppear, so `time`
-        // increases monotonically for the view's lifetime. We pin the
-        // animation to particle-local time using its `delay` so they
+        // `time` is elapsed seconds since the view first appeared, so it
+        // is stable across clock changes and always starts at 0. We pin
+        // the animation to particle-local time using its `delay` so they
         // don't all start in lockstep.
         for p in particles {
-            let localT = time.truncatingRemainder(dividingBy: 60) - p.delay
+            let localT = time - p.delay
             guard localT >= 0, localT <= duration else { continue }
             let progress = localT / duration
             // Vertical: fall from above the top to past the bottom.

@@ -17,7 +17,6 @@ struct GarageView: View {
     @StateObject private var profileManager = ProfileManager.shared
     @StateObject private var carStatsManager = CarStatsManager.shared
     @State private var showingAddCar = false
-    @State private var zoomedPhoto: AvatarZoomTarget?
 
     private var cars: [UserCar] {
         profileManager.profile?.garage ?? []
@@ -42,9 +41,7 @@ struct GarageView: View {
                             GarageCarCard(
                                 car: car,
                                 stats: carStatsManager.getStats(for: car.id)
-                            ) {
-                                zoomedPhoto = photoTarget(for: car)
-                            }
+                            )
                         }
                     }
                 }
@@ -68,11 +65,6 @@ struct GarageView: View {
         }
         .sheet(isPresented: $showingAddCar) {
             AddCarView()
-        }
-        .fullScreenCover(item: $zoomedPhoto) { target in
-            AvatarZoomView(url: target.url, image: target.image) {
-                zoomedPhoto = nil
-            }
         }
     }
 
@@ -105,16 +97,6 @@ struct GarageView: View {
             .padding(.vertical, 12)
         }
     }
-
-    // MARK: - Photo target
-
-    private func photoTarget(for car: UserCar) -> AvatarZoomTarget? {
-        guard let urlString = car.photoUrl, !urlString.isEmpty,
-              let url = URL(string: urlString) else {
-            return nil
-        }
-        return AvatarZoomTarget(url: url)
-    }
 }
 
 // MARK: - Garage Car Card
@@ -124,14 +106,17 @@ struct GarageView: View {
 // - Hero photo on top (160pt), full-width, rounded top corners
 // - Nickname (large, headline) + year/make/model/trim (caption)
 // - 2×2 mini-stat grid (drives, total distance, top speed, best 0-60)
-// - Tap to push `CarDetailView`; tap on the photo to zoom
+// - Tap to push `CarDetailView`. Photo zoom is intentionally not
+//   triggered from the card to avoid the SwiftUI double-tap hazard
+//   where a `.onTapGesture` on a child of a `NavigationLink` label
+//   fires the gesture *and* pushes the destination. The detail
+//   view's hero still offers a tap-to-zoom.
 // - Context menu offers Edit / Select as Active (matching the
 //   legacy card's behavior on the profile)
 
 struct GarageCarCard: View {
     let car: UserCar
     let stats: CarStats?
-    let onPhotoTap: () -> Void
 
     @EnvironmentObject var driveManager: DriveManager
     @ObservedObject private var profileManager = ProfileManager.shared
@@ -192,7 +177,6 @@ struct GarageCarCard: View {
                     }
                 }
                 .contentShape(Rectangle())
-                .onTapGesture { onPhotoTap() }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(car.nickname.isEmpty ? car.shortDisplay : car.nickname)

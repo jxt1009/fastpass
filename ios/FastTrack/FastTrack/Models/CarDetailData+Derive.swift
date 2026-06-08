@@ -90,7 +90,11 @@ extension CarDetailData {
 
         let confetti = carAchievements.contains { achievement in
             guard let unlocked = achievement.unlockedDate else { return false }
-            return now.timeIntervalSince(unlocked) <= confettiWindowSeconds
+            // Reject future-dated unlocks explicitly: a negative
+            // interval would otherwise pass the `<= window` check
+            // whenever the device clock drifts.
+            let interval = now.timeIntervalSince(unlocked)
+            return interval >= 0 && interval <= confettiWindowSeconds
         }
 
         return CarDetailData(
@@ -133,7 +137,9 @@ extension CarDetailData {
 
     /// Resolves the per-car best 0-60 (seconds) plus the drive that
     /// produced it. `best060Time` is `Double?` on the stats blob, so
-    /// we treat nil/zero as "no time".
+    /// we treat nil/zero as "no time". The local-scan fallback filters
+    /// out non-positive times for the same reason — a sentinel `0` in
+    /// the drive list must not become the minimum.
     static func resolveZeroToSixty(
         stats: CarStats?,
         drives: [Drive]
@@ -146,7 +152,10 @@ extension CarDetailData {
                 .min { $0.startTime < $1.startTime }
             return (t, matchingDrive?.startTime)
         }
-        guard let best = drives.compactMap({ $0.best060Time }).min(),
+        let positiveTimes = drives
+            .compactMap { $0.best060Time }
+            .filter { $0 > 0 }
+        guard let best = positiveTimes.min(),
               let bestDrive = drives.first(where: { $0.best060Time == best }) else {
             return (nil, nil)
         }

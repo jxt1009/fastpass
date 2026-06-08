@@ -247,6 +247,57 @@ final class CarDetailDataTests: XCTestCase {
         XCTAssertFalse(data.confettiEligible)
     }
 
+    /// A future-dated `unlockedDate` (e.g. device clock drifted back)
+    /// must NOT trigger the confetti — a negative interval would
+    /// otherwise pass the `<= window` check.
+    func testDerive_ConfettiEligible_FalseWhenFutureUnlockedDate() {
+        let car = sampleCar()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let drive = sampleDrive(
+            carId: car.id, startTime: now, maxSpeed: 30
+        )
+        let achievement = unlockedAchievement(
+            id: "future",
+            sourceDriveId: drive.id,
+            unlockedDate: now.addingTimeInterval(3600)   // 1h in the future
+        )
+
+        let data = CarDetailData.derive(
+            car: car,
+            drives: [drive],
+            carStats: nil,
+            achievements: [achievement],
+            now: now
+        )
+        XCTAssertFalse(data.confettiEligible)
+    }
+
+    /// 0-60 fallback must filter out non-positive `best060Time` values
+    /// from the local drives — a sentinel `0` in a legacy or aborted
+    /// drive should not become the all-time minimum.
+    func testDerive_ResolveZeroSixty_FiltersOutNonPositive() {
+        let car = sampleCar()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let drives = [
+            sampleDrive(
+                id: 1, carId: car.id, startTime: now, maxSpeed: 30, best060Time: 0
+            ),
+            sampleDrive(
+                id: 2, carId: car.id, startTime: now.addingTimeInterval(60),
+                maxSpeed: 28, best060Time: 4.5
+            ),
+            sampleDrive(
+                id: 3, carId: car.id, startTime: now.addingTimeInterval(120),
+                maxSpeed: 26, best060Time: -1   // negative sentinel
+            ),
+        ]
+
+        let data = CarDetailData.derive(
+            car: car, drives: drives, carStats: nil, achievements: [], now: now
+        )
+        XCTAssertEqual(data.bestZeroToSixty, 4.5)
+    }
+
     // MARK: - Helpers
 
     private func sampleCar() -> UserCar {
@@ -271,7 +322,8 @@ final class CarDetailDataTests: XCTestCase {
         id: Int = 1,
         carId: String,
         startTime: Date,
-        maxSpeed: Double
+        maxSpeed: Double,
+        best060Time: Double? = nil
     ) -> Drive {
         Drive(
             id: id,
@@ -303,7 +355,7 @@ final class CarDetailDataTests: XCTestCase {
             maxDeceleration: 0,
             peakGForce: 0,
             topCornerSpeed: 0,
-            best060Time: nil
+            best060Time: best060Time
         )
     }
 
