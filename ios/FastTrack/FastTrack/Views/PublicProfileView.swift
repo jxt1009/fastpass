@@ -71,17 +71,31 @@ struct PublicProfileView: View {
                 }
             }
 
-            // Garage (per the redesign, read-only with photos + short stats)
+            // Garage (per the redesign, read-only with photos + short stats).
+            // Each card is wrapped in a NavigationLink with .buttonStyle(.plain)
+            // so it pushes the read-only PublicCarDetailView for that car
+            // without the system disclosure indicator on top of the card's
+            // own chevron hint.
             if let garage = decodedGarage(from: profile), !garage.isEmpty {
                 Section("Garage") {
                     // Decode the per-car stats blob once for the section
-                    // rather than once per row — see PR 4 review thread.
+                    // rather than re-parsing the JSON for every row inside
+                    // the ForEach.
                     let statsByCarId = statsByCarId(blob: profile.carStatsData)
                     ForEach(garage) { car in
-                        PublicGarageCard(
-                            car: car,
-                            stats: statsByCarId[car.id]
-                        )
+                        NavigationLink {
+                            PublicCarDetailView(
+                                username: profile.username,
+                                car: car,
+                                stats: statsByCarId[car.id]
+                            )
+                        } label: {
+                            PublicGarageCard(
+                                car: car,
+                                stats: statsByCarId[car.id]
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
