@@ -259,6 +259,20 @@ struct ProfileView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
                 Spacer()
+                NavigationLink {
+                    GarageView()
+                } label: {
+                    HStack(spacing: 2) {
+                        Text("View Garage")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.ftBlue)
+                }
+                .accessibilityLabel("View Garage")
                 Button {
                     showingAddCar = true
                 } label: {
@@ -266,6 +280,7 @@ struct ProfileView: View {
                         .foregroundColor(.blue)
                         .font(.title2)
                 }
+                .accessibilityLabel("Add Car")
             }
             
             if let profile = profileManager.profile, !profile.garage.isEmpty {
