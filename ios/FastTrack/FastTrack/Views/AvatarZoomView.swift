@@ -44,6 +44,8 @@ struct AvatarZoomView: View {
                         .padding(20)
                 }
                 .disabled(isFetchingEditImage)
+                .accessibilityLabel("Edit avatar")
+                .accessibilityHint("Opens the cropper to adjust your avatar")
             }
         }
     }
@@ -91,20 +93,21 @@ struct AvatarZoomView: View {
             return
         }
         guard let url else { return }
-        Task { @MainActor in
-            await fetchAndForward(url: url, onEdit: onEdit)
-        }
-    }
-
-    @MainActor
-    private func fetchAndForward(url: URL, onEdit: (UIImage) -> Void) async {
         isFetchingEditImage = true
-        defer { isFetchingEditImage = false }
-        guard let (data, _) = try? await URLSession.shared.data(from: url),
-              let fetched = UIImage(data: data) else {
-            return
+        Task.detached {
+            let fetched: UIImage? = await {
+                guard let (data, _) = try? await URLSession.shared.data(from: url) else {
+                    return nil
+                }
+                return UIImage(data: data)
+            }()
+            await MainActor.run {
+                isFetchingEditImage = false
+                if let fetched {
+                    onEdit(fetched)
+                }
+            }
         }
-        onEdit(fetched)
     }
 }
 

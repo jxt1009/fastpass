@@ -111,6 +111,7 @@ struct ProfileSetupView: View {
         guard let item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let img = UIImage(data: data) else {
+            selectedPhoto = nil
             return
         }
         let resized = img.resizedForAvatar(maxDimension: 2048)
