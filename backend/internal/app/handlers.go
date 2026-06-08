@@ -136,9 +136,11 @@ func updateDrive(c *gin.Context) {
 	// affect which drive the user "set" a 0-60 PB on). Always return the
 	// same envelope shape so clients have a single decode path; an empty
 	// slice signals "nothing new unlocked".
-	var unlocked []UnlockedAchievement
+	unlocked := []UnlockedAchievement{}
 	if u, newUnlocks, evalErr := evaluateForUser(userID); evalErr == nil {
-		unlocked = u
+		if u != nil {
+			unlocked = u
+		}
 		if len(newUnlocks) > 0 {
 			var actor User
 			if err := db.First(&actor, userID).Error; err == nil {

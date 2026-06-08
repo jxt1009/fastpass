@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Notification is a single in-app feed item for a user. The server
@@ -222,9 +223,11 @@ func FanOutPBNotificationForUnlocks(actor *User, unlocks []evaluationResult) err
 
 // FanOutPBNotification inserts one Notification row per follower of
 // `actorID` (the user who just hit the PB), skipping the actor
-// themselves. Returns the number of rows inserted. The (actor, kind,
-// drive, achievement) tuple is used as a soft idempotency key so a
-// duplicate unlock event doesn't double up the feed.
+// themselves. Returns the number of rows inserted. Dedup is enforced
+// atomically by the unique index `idx_notification_dedupe` on
+// (user_id, kind, actor_id, drive_id, achievement_id) combined with
+// `INSERT ... ON CONFLICT DO NOTHING`, so concurrent unlock
+// evaluations or retries cannot create duplicate feed rows.
 func FanOutPBNotification(tx *gorm.DB, actorID uint, driveID *uint, achievementID *string, message string) (int, error) {
 	if tx == nil {
 		tx = db
@@ -244,23 +247,6 @@ func FanOutPBNotification(tx *gorm.DB, actorID uint, driveID *uint, achievementI
 		if uid == actorID {
 			continue
 		}
-		var existing int64
-		q := tx.Model(&Notification{}).
-			Where("user_id = ? AND kind = ? AND actor_id = ?", uid, "pb_set", actorID)
-		if driveID != nil {
-			q = q.Where("drive_id = ?", *driveID)
-		} else {
-			q = q.Where("drive_id IS NULL")
-		}
-		if achievementID != nil {
-			q = q.Where("achievement_id = ?", *achievementID)
-		} else {
-			q = q.Where("achievement_id IS NULL")
-		}
-		q.Count(&existing)
-		if existing > 0 {
-			continue
-		}
 		n := Notification{
 			UserID:        uid,
 			Kind:          "pb_set",
@@ -269,10 +255,11 @@ func FanOutPBNotification(tx *gorm.DB, actorID uint, driveID *uint, achievementI
 			AchievementID: achievementID,
 			Message:       message,
 		}
-		if err := tx.Create(&n).Error; err != nil {
-			return inserted, err
+		result := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&n)
+		if result.Error != nil {
+			return inserted, result.Error
 		}
-		inserted++
+		inserted += int(result.RowsAffected)
 	}
 	return inserted, nil
 }

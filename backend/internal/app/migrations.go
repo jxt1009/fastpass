@@ -162,6 +162,16 @@ var schemaMigrations = []schemaMigration{
 			return nil
 		},
 	},
+	{
+		version:     "2026060602",
+		description: "add unique index for notification dedupe",
+		up: func(tx *gorm.DB) error {
+			return tx.Exec(`
+				CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_dedupe
+				ON notifications (user_id, kind, actor_id, drive_id, achievement_id)
+			`).Error
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB) error {
