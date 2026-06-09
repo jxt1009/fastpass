@@ -100,6 +100,13 @@ struct CarDetailData {
     /// days relative to the injected `now`. The view uses this to gate
     /// the one-shot confetti animation.
     let confettiEligible: Bool
+    /// Stable token derived from currently eligible recent PB unlocks.
+    /// Changes only when the eligible set changes, allowing the view to
+    /// persist one-shot confetti behavior across revisits.
+    let confettiTriggerToken: String?
+    /// Number of recent PB unlocks currently inside the confetti window.
+    /// Used for subtle ongoing UI indication after one-shot confetti.
+    let recentPBCount: Int
     /// Smoothness score for this car (0-100).
     let smoothnessScore: Double
     /// Consistency score for this car (0-100).

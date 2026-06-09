@@ -34,10 +34,7 @@ struct CarDetailView: View {
     @State private var showConfetti = false
     @State private var confettiTask: Task<Void, Never>?
     @State private var showingEditCar = false
-    /// Guards the one-shot confetti so it doesn't replay on every
-    /// `onChange` refresh while the user remains on the view. Reset in
-    /// `handleAppear` so navigating away and back re-arms the trigger.
-    @State private var hasPlayedConfetti = false
+    @State private var lastPresentedConfettiToken: String?
 
     /// Snapshot of the data the view is rendering. Rebuilt whenever
     /// the source data changes. Nil until the first `refresh()` call
@@ -134,14 +131,13 @@ struct CarDetailView: View {
     }
 
     private func handleAppear() {
-        hasPlayedConfetti = false
         refresh()
-        triggerConfettiIfEligible()
     }
 
     private func handleDisappear() {
         confettiTask?.cancel()
         confettiTask = nil
+        showConfetti = false
     }
 
     private func setActiveCar() {
@@ -373,7 +369,26 @@ struct CarDetailView: View {
     private var perCarAchievementsSection: some View {
         if let pbs = data?.achievementPBs, !pbs.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                SectionHeader(title: "Personal Bests")
+                HStack {
+                    SectionHeader(title: "Personal Bests")
+                    Spacer()
+                    if let indicator = recentPBIndicatorText {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.ftAmber)
+                                .frame(width: 6, height: 6)
+                            Text(indicator)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(.ftAmber)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.ftAmber.opacity(0.12))
+                        )
+                    }
+                }
                 ForEach(pbs) { achievement in
                     NavigationLink {
                         destination(for: achievement)
@@ -686,6 +701,12 @@ struct CarDetailView: View {
         return String(format: "%.2f", time)
     }
 
+    private var recentPBIndicatorText: String? {
+        let count = data?.recentPBCount ?? 0
+        guard count > 0 else { return nil }
+        return count == 1 ? "Recent PB" : "\(count) recent PBs"
+    }
+
     @ViewBuilder
     private func confettiOverlay() -> some View {
         if showConfetti {
@@ -712,6 +733,7 @@ struct CarDetailView: View {
 
     private func refresh() {
         data = currentData  // currentData is CarDetailData? — nil when car removed
+        triggerConfettiIfEligible()
     }
 
     /// One-shot confetti: schedule it if the freshly-derived data says
@@ -720,7 +742,16 @@ struct CarDetailView: View {
     /// stack up multiple timers.
     private func triggerConfettiIfEligible() {
         confettiTask?.cancel()
-        guard data?.confettiEligible == true else { return }
+        guard data?.confettiEligible == true,
+              let token = data?.confettiTriggerToken else { return }
+        guard token != lastPresentedConfettiToken else { return }
+        guard UserDefaults.standard.string(forKey: confettiTokenDefaultsKey) != token else {
+            lastPresentedConfettiToken = token
+            return
+        }
+
+        lastPresentedConfettiToken = token
+        UserDefaults.standard.set(token, forKey: confettiTokenDefaultsKey)
         showConfetti = true
         confettiTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 2_500_000_000)
@@ -728,6 +759,10 @@ struct CarDetailView: View {
             showConfetti = false
             confettiTask = nil
         }
+    }
+
+    private var confettiTokenDefaultsKey: String {
+        "CarDetailView.lastConfettiToken.\(carId)"
     }
 }
 

@@ -134,14 +134,24 @@ extension CarDetailData {
                 return drives.contains { $0.id == sourceDriveId && $0.carId == car.id }
             }
 
-        let confetti = carAchievements.contains { achievement in
-            guard let unlocked = achievement.unlockedDate else { return false }
+        let recentPBUnlocks = carAchievements.compactMap { achievement -> (id: String, unlocked: Date)? in
+            guard let unlocked = achievement.unlockedDate else { return nil }
             // Reject future-dated unlocks explicitly: a negative
             // interval would otherwise pass the `<= window` check
             // whenever the device clock drifts.
             let interval = now.timeIntervalSince(unlocked)
-            return interval >= 0 && interval <= confettiWindowSeconds
+            guard interval >= 0 && interval <= confettiWindowSeconds else { return nil }
+            return (achievement.id, unlocked)
         }
+
+        let confetti = !recentPBUnlocks.isEmpty
+        let confettiToken = recentPBUnlocks
+            .sorted { lhs, rhs in
+                if lhs.unlocked != rhs.unlocked { return lhs.unlocked < rhs.unlocked }
+                return lhs.id < rhs.id
+            }
+            .map { "\($0.id):\(Int($0.unlocked.timeIntervalSince1970))" }
+            .joined(separator: "|")
 
         // New fields computation
         let smoothnessScore = carStats?.smoothnessScore ?? 0
@@ -194,6 +204,8 @@ extension CarDetailData {
             drivingStyle: style,
             achievementPBs: carAchievements,
             confettiEligible: confetti,
+            confettiTriggerToken: confettiToken.isEmpty ? nil : confettiToken,
+            recentPBCount: recentPBUnlocks.count,
             smoothnessScore: smoothnessScore,
             consistencyScore: consistencyScore,
             peakLateralG: peakLateralG,
