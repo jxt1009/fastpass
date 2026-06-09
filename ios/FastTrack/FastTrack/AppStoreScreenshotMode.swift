@@ -9,8 +9,7 @@ enum AppStoreScreenshotMode {
     enum Screen: String {
         case track
         case social
-        case history
-        case analytics
+        case garage
         case profile
         case signin
         case leaderboard
@@ -64,10 +63,8 @@ struct AppStoreScreenshotRootView: View {
             ContentView()
         case .social:
             SocialView()
-        case .history:
-            DriveHistoryView()
-        case .analytics:
-            AnalyticsView()
+        case .garage:
+            GarageView()
         case .profile:
             ProfileView()
         case .signin:
