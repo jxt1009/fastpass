@@ -394,7 +394,7 @@ struct ProfileView: View {
                     .foregroundColor(Color.orange)
                     .font(.title2)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Best 0-60 \(settings.speedUnit) time")
+                    Text("Best 0-60 mph time")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     if let t = stats.best060Time {

@@ -73,8 +73,8 @@ enum StatInfo {
     )
     static let smoothness = StatInfoEntry(
         "Driving Smoothness",
-        summary: "A 0–100 score measuring how steady and consistent your acceleration inputs are.",
-        howCalculated: "Calculated as 100 minus ten times the statistical variance of acceleration samples throughout the drive. High variance (lots of hard throttle/brake inputs) lowers the score. Scores above 80 indicate smooth, controlled driving.",
+        summary: "A 0–100 score measuring how steady and progressive your throttle, braking, and cornering inputs are.",
+        howCalculated: "Starts from a speed-efficiency base (avg speed ÷ max speed × 100), then subtracts penalties: up to 15 points for hard acceleration (> 1g), up to 15 for hard braking (> 1g), up to 20 for high peak G-force (> 2g), and up to 20 for brake events (2 points each, capped at 10 events). The per-car score is the average across all drives for that car.",
         unit: "0–100"
     )
     static let performanceCategory = StatInfoEntry(
