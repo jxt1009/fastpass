@@ -51,6 +51,45 @@ final class CarDetailGaugeProgressWiringTests: XCTestCase {
         )
     }
 
+    /// PR 1 follow-up: both gauges must gate their `progress:` on
+    /// `data` being non-nil, so a car-removed state falls back to the
+    /// decorative arc. The previous `data?.bestTopSpeed.map { ... }`
+    /// and the always-non-nil `visualProgress(zeroSixtyProgress(...))`
+    /// both leaked the minimum-visible floor into the car-removed
+    /// fallback. A regression here re-introduces the trimmed/animated
+    /// arc on the "Car Removed" screen.
+    func testCarDetailView_pbGauges_GatesProgressOnDataPresence() throws {
+        let source = try readCarDetailViewSource()
+
+        XCTAssertTrue(
+            source.contains("progress: data.map"),
+            """
+            Both CarDetailGauge `progress:` arguments must be derived \
+            via `data.map { ... }` so they evaluate to nil when `data` \
+            is nil (e.g. car removed). Found a progress: line that \
+            does not gate on `data.map`.
+            """
+        )
+
+        // Make sure neither gauge still uses the unguarded patterns
+        // the review flagged. Both are still allowed to reference
+        // `data?` for other fields (e.g. value, setOn), but the
+        // `progress:` argument specifically must gate on data.
+        let pbGaugesBody = try firstSubstringUpToNext(
+            in: source,
+            open: "private var pbGauges: some View {",
+            terminator: "    private var "
+        )
+        XCTAssertFalse(
+            pbGaugesBody.contains("data?.bestTopSpeed.map"),
+            "Top Speed progress must no longer derive from `data?.bestTopSpeed.map`; gate on data presence instead."
+        )
+        XCTAssertFalse(
+            pbGaugesBody.contains("visualProgress(\n                    CarDetailGaugeProgress.zeroSixtyProgress"),
+            "Best 0-60 progress must no longer call `visualProgress` unconditionally; gate on data presence instead."
+        )
+    }
+
     // MARK: - Helpers
 
     private func readCarDetailViewSource() throws -> String {

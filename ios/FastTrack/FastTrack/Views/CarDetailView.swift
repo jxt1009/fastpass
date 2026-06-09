@@ -232,10 +232,9 @@ struct CarDetailView: View {
                 unit: settings.speedUnit,
                 color: SpeedColor.color(for: data?.bestTopSpeed ?? 0),
                 setOn: data?.topSpeedPBDate,
-                progress: data?.bestTopSpeed.map {
-                    CarDetailGaugeProgress.visualProgress(
-                        CarDetailGaugeProgress.topSpeedProgress(speedMps: $0)
-                    )
+                progress: data.map { d in
+                    let raw = d.bestTopSpeed.map { CarDetailGaugeProgress.topSpeedProgress(speedMps: $0) } ?? 0
+                    return CarDetailGaugeProgress.visualProgress(raw)
                 }
             )
             CarDetailGauge(
@@ -244,9 +243,11 @@ struct CarDetailView: View {
                 unit: "sec",
                 color: .ftAmber,
                 setOn: data?.zeroSixtyPBDate,
-                progress: CarDetailGaugeProgress.visualProgress(
-                    CarDetailGaugeProgress.zeroSixtyProgress(seconds: data?.bestZeroToSixty)
-                )
+                progress: data.map { d in
+                    CarDetailGaugeProgress.visualProgress(
+                        CarDetailGaugeProgress.zeroSixtyProgress(seconds: d.bestZeroToSixty)
+                    )
+                }
             )
         }
     }

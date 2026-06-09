@@ -42,11 +42,13 @@ enum CarDetailGaugeProgress {
 
     /// Boosts tiny progress values up to `minimumVisible` (default
     /// 0.12) so the arc always renders a visible sliver. Values
-    /// already at or above the floor pass through unchanged. Values
-    /// above 1.0 are clamped to 1.0.
+    /// already at or above the floor pass through unchanged. Both
+    /// `value` and `minimumVisible` are clamped to `[0, 1]` so the
+    /// result always stays in `[0, 1]`.
     static func visualProgress(_ value: Double, minimumVisible: Double = 0.12) -> Double {
-        let clamped = min(max(value, 0), 1)
-        if clamped < minimumVisible { return minimumVisible }
-        return clamped
+        let clampedValue = min(max(value, 0), 1)
+        let clampedFloor = min(max(minimumVisible, 0), 1)
+        if clampedValue < clampedFloor { return clampedFloor }
+        return clampedValue
     }
 }
