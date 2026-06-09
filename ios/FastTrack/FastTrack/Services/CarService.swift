@@ -49,7 +49,10 @@ class CarService: ObservableObject {
     }
     
     private func preloadPopularMakes() async {
-        // Preload in smaller batches to improve initial app load
+        // Preload in smaller batches to improve initial app load.
+        // Uses the non-mutating fetchModels(for:) so background fetches
+        // don't overwrite the shared models/isLoading/error state while
+        // the picker is open for a different make.
         let batches = popularMakes.chunked(into: 3)
         
         for batch in batches {
@@ -57,7 +60,7 @@ class CarService: ObservableObject {
                 for make in batch {
                     if cache[make] == nil {
                         group.addTask {
-                            await self.fetchModelsInternal(for: make)
+                            _ = try? await self.fetchModels(for: make)
                         }
                     }
                 }
@@ -67,14 +70,12 @@ class CarService: ObservableObject {
         }
     }
 
+    /// Fetches models for the given make and updates shared published state.
+    /// Used by the active picker UI (ModelPickerView).
     func fetchModels(for make: PerformanceMake) async {
-        await fetchModelsInternal(for: make.nhtsa)
-    }
-    
-    private func fetchModelsInternal(for nhtsa: String) async {
-        let key = nhtsa
+        let key = make.nhtsa
 
-        // Return from cache immediately
+        // Return from cache immediately without showing a loading state
         if let cached = cache[key] {
             await MainActor.run {
                 self.models = cached.sorted()
@@ -85,20 +86,8 @@ class CarService: ObservableObject {
 
         await MainActor.run { self.isLoading = true; self.error = nil }
 
-        let urlString = "https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/\(nhtsa.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? nhtsa)?format=json"
-        guard let url = URL(string: urlString) else { return }
-
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(NHTSAResponse.self, from: data)
-            let sorted = response.Results.map(\.Model_Name).sorted()
-
-            // Persist cache
-            cache[key] = sorted
-            if let encoded = try? JSONEncoder().encode(cache) {
-                UserDefaults.standard.set(encoded, forKey: cacheKey)
-            }
-
+            let sorted = try await fetchModelsRemote(for: key)
             await MainActor.run {
                 self.models = sorted
                 self.isLoading = false
@@ -109,6 +98,32 @@ class CarService: ObservableObject {
                 self.isLoading = false
             }
         }
+    }
+
+    /// Fetches models for a make and returns them directly without touching shared state.
+    /// Safe to call from background preloads while the picker is visible.
+    func fetchModels(for make: String) async throws -> [String] {
+        if let cached = cache[make] {
+            return cached.sorted()
+        }
+        return try await fetchModelsRemote(for: make)
+    }
+
+    private func fetchModelsRemote(for nhtsa: String) async throws -> [String] {
+        let urlString = "https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/\(nhtsa.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? nhtsa)?format=json"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let response = try JSONDecoder().decode(NHTSAResponse.self, from: data)
+        let sorted = response.Results.map(\.Model_Name).sorted()
+
+        // Persist to cache
+        cache[nhtsa] = sorted
+        if let encoded = try? JSONEncoder().encode(cache) {
+            UserDefaults.standard.set(encoded, forKey: cacheKey)
+        }
+
+        return sorted
     }
 
     func clearCache() {

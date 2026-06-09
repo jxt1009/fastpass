@@ -149,7 +149,7 @@ struct YearTrimPickerView: View {
     @Binding var selection: CarSelection
     let dismissAll: () -> Void
 
-    private let years = Array(stride(from: 2025, through: 1990, by: -1))
+    private let years = Array(stride(from: Calendar.current.component(.year, from: Date()) + 1, through: 1990, by: -1))
     private var trims: [String]? { trimsFor(make: make.displayName, model: model) }
 
     @State private var selectedYear: Int = Calendar.current.component(.year, from: Date())
