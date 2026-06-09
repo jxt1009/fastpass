@@ -97,6 +97,45 @@ extension CarDetailData {
             return interval >= 0 && interval <= confettiWindowSeconds
         }
 
+        // New fields computation
+        let smoothnessScore = carStats?.smoothnessScore ?? 0
+
+        let speeds = carDrives.map(\.maxSpeed)
+        let mean = speeds.reduce(0, +) / Double(max(1, speeds.count))
+        let variance = speeds.map { pow($0 - mean, 2) }.reduce(0, +) / Double(max(1, speeds.count))
+        let cv = mean > 0 ? sqrt(variance) / mean : 0
+        let consistencyScore = max(0, min(100, 100 - cv * 150))
+
+        let peakLateralG = carStats?.bestLateralG ?? carDrives.map(\.peakGForce).max() ?? 0
+
+        let bestZeroToSixtyTime = bestZeroToSixty
+
+        let recentSorted = carDrives.sorted { $0.startTime > $1.startTime }
+        let recentForTrends = Array(recentSorted.prefix(5))
+        let recentDrives = recentForTrends
+
+        let distanceTrendPoints = recentForTrends.map { $0.distance }
+
+        let smoothnessTrendPoints = recentForTrends.map { drive in
+            guard drive.maxSpeed > 0, drive.duration > 0 else { return 50.0 }
+            let speedEfficiency = drive.avgSpeed / max(drive.maxSpeed, 1)
+            let accelPenalty = min(drive.maxAcceleration / 9.81, 1.0) * 15
+            let decelPenalty = min(drive.maxDeceleration / 9.81, 1.0) * 15
+            let gPenalty = min(drive.peakGForce / 2.0, 1.0) * 20
+            let brakePenalty = min(Double(drive.brakeEvents) * 2.0, 20)
+            return max(0, min(100, speedEfficiency * 100 - accelPenalty - decelPenalty - gPenalty - brakePenalty))
+        }
+
+        let prevPeriodAvgMaxSpeed: Double? = {
+            let now = Date()
+            let lastMonthStart = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+            let prevMonthStart = Calendar.current.date(byAdding: .month, value: -2, to: now) ?? now
+            let prevDrives = drives.filter { $0.carId == car.id && $0.startTime >= prevMonthStart && $0.startTime < lastMonthStart }
+            guard !prevDrives.isEmpty else { return nil }
+            let total = prevDrives.reduce(0.0) { $0 + $1.maxSpeed }
+            return total / Double(prevDrives.count)
+        }()
+
         return CarDetailData(
             car: car,
             stats: carStats,
@@ -108,7 +147,15 @@ extension CarDetailData {
             zeroSixtyPBDate: zeroSixtyPBDate,
             drivingStyle: style,
             achievementPBs: carAchievements,
-            confettiEligible: confetti
+            confettiEligible: confetti,
+            smoothnessScore: smoothnessScore,
+            consistencyScore: consistencyScore,
+            peakLateralG: peakLateralG,
+            bestZeroToSixtyTime: bestZeroToSixtyTime,
+            recentDrives: recentDrives,
+            distanceTrendPoints: distanceTrendPoints,
+            smoothnessTrendPoints: smoothnessTrendPoints,
+            prevPeriodAvgMaxSpeed: prevPeriodAvgMaxSpeed
         )
     }
 

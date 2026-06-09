@@ -14,8 +14,10 @@ import SwiftUI
 // the same wording they saw on the profile.
 
 struct GarageView: View {
+    @EnvironmentObject var driveManager: DriveManager
     @StateObject private var profileManager = ProfileManager.shared
     @StateObject private var carStatsManager = CarStatsManager.shared
+    @ObservedObject private var settings = AppSettings.shared
     @State private var showingAddCar = false
 
     private var cars: [UserCar] {
@@ -29,9 +31,80 @@ struct GarageView: View {
         [GridItem(.adaptive(minimum: 160), spacing: 12)]
     }
 
+    private var allCarsStats: (totalDrives: Int, totalDistance: Double, topSpeed: Double, best060: Double?) {
+        let allStats = carStatsManager.getAllStats()
+        let totalDrives = allStats.reduce(0) { $0 + $1.totalDrives }
+        let totalDistance = allStats.reduce(0.0) { $0 + $1.totalDistance }
+        let topSpeed = allStats.map(\.bestTopSpeed).max() ?? 0
+        let best060 = allStats.compactMap(\.bestZeroToSixty).min()
+        return (totalDrives, totalDistance, topSpeed, best060)
+    }
+
+    private var allCarsSummary: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            InstrumentStatCell(
+                icon: "flag.fill", iconColor: .ftGreen,
+                label: "Total Drives",
+                value: "\(allCarsStats.totalDrives)",
+                unit: ""
+            )
+            InstrumentStatCell(
+                icon: "map.fill", iconColor: .ftBlue,
+                label: "Total Distance",
+                value: String(format: "%.1f", settings.distanceValue(allCarsStats.totalDistance)),
+                unit: settings.distanceUnit
+            )
+            InstrumentStatCell(
+                icon: "bolt.fill", iconColor: .ftGold,
+                label: "Top Speed",
+                value: String(format: "%.0f", settings.speedValue(allCarsStats.topSpeed)),
+                unit: settings.speedUnit
+            )
+            InstrumentStatCell(
+                icon: "timer", iconColor: .ftAmber,
+                label: "Best 0-60",
+                value: allCarsStats.best060.map { String(format: "%.2f", $0) } ?? "—",
+                unit: allCarsStats.best060 != nil ? "sec" : ""
+            )
+        }
+    }
+
+    private var recentDrivesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            let recent = driveManager.drives
+                .sorted { $0.startTime > $1.startTime }
+                .prefix(5)
+
+            if !recent.isEmpty {
+                SectionHeader(title: "Recent Drives")
+                ForEach(Array(recent)) { drive in
+                    NavigationLink {
+                        DriveDetailView(drive: drive)
+                    } label: {
+                        GarageDriveRow(drive: drive)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if driveManager.drives.count > 5 {
+                NavigationLink {
+                    DriveHistoryView()
+                } label: {
+                    HStack {
+                        Text("See All Drives")
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.ftBlue)
+                }
+            }
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                allCarsSummary
                 if cars.isEmpty {
                     emptyState
                         .padding(.top, 60)
@@ -44,6 +117,7 @@ struct GarageView: View {
                             )
                         }
                     }
+                    recentDrivesSection
                 }
             }
             .padding()
@@ -282,6 +356,98 @@ struct GarageCarCard: View {
         guard var profile = profileManager.profile else { return }
         profile.selectCar(id: car.id)
         profileManager.saveProfile(profile)
+    }
+}
+
+// MARK: - Garage Drive Row
+
+struct GarageDriveRow: View {
+    let drive: Drive
+    @EnvironmentObject var settings: AppSettings
+
+    var body: some View {
+        InstrumentCard {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Text(drive.startTime, style: .date)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
+                            Text(drive.carDisplayString)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.ftBlue.opacity(0.8))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    HStack(spacing: 12) {
+                        Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
+                        Label(settings.distanceDisplay(drive.distance, decimals: 1), systemImage: "map")
+                        Label(drive.durationString, systemImage: "clock")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(Color.secondary.opacity(0.5))
+            }
+        }
+    }
+}
+
+// MARK: - Analytics Card (hoisted from AnalyticsView)
+
+struct AnalyticsCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let iconColor: Color
+    let trend: TrendDirection?
+    var info: StatInfoEntry? = nil
+
+    var body: some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(iconColor)
+                        .font(.title3)
+                    Spacer()
+                    if let trend = trend {
+                        TrendIndicator(trend: trend)
+                    }
+                    if let info { StatInfoButton(entry: info) }
+                }
+
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+struct TrendIndicator: View {
+    let trend: TrendDirection
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: trend.icon)
+                .font(.caption)
+            Text(trend.label)
+                .font(.caption2)
+        }
+        .foregroundColor(trend.color)
     }
 }
 

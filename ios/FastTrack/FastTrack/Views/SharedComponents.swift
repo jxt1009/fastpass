@@ -101,7 +101,7 @@ enum StatInfo {
         howCalculated: "Weighted average of three components: Smoothness (40%) — consistency of throttle and braking inputs; Consistency (30%) — how repeatable your smoothness is drive-to-drive; Performance (30%) — average top speed relative to the Sports Car threshold (100 mph). Higher scores reward smooth, consistent driving with decent speed.",
         unit: "0–100"
     )
-    static let cornering = StatInfoEntry(
+static let cornering = StatInfoEntry(
         "Cornering",
         summary: "The highest lateral G-force recorded during your drives.",
         howCalculated: "Peak lateral G-force is derived from GPS heading changes. The value shown is the maximum across all filtered drives. Values above 0.6g indicate spirited cornering; above 0.8g is race-driver territory.",
@@ -123,7 +123,7 @@ enum StatInfo {
         "Avg Max Speed",
         summary: "The average of your highest speeds across all filtered drives.",
         howCalculated: "Sum of each drive's max speed divided by the number of drives. Not the average speed of a single drive — this measures the typical ceiling of your driving sessions.",
-        unit: "speed"
+        unit: "0–100"
     )
     // Section-level info
     static let maneuversSection = StatInfoEntry(
@@ -138,6 +138,36 @@ enum StatInfo {
         howCalculated: "Calculated by comparing consecutive GPS speed readings. GPS speed accuracy varies by device and environment — values recorded at poor GPS accuracy are excluded. All metrics represent the peak value recorded during the drive.",
         unit: nil
     )
+}
+
+// MARK: - Trend Direction
+
+enum TrendDirection {
+    case up, down, neutral
+
+    var icon: String {
+        switch self {
+        case .up: return "arrow.up"
+        case .down: return "arrow.down"
+        case .neutral: return "minus"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .up: return .green
+        case .down: return .red
+        case .neutral: return .gray
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .up: return "Up"
+        case .down: return "Down"
+        case .neutral: return "Same"
+        }
+    }
 }
 
 // MARK: - Stat Info Button
@@ -565,3 +595,5 @@ struct SpeechBubble: Shape {
         return p
     }
 }
+
+
