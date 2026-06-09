@@ -122,6 +122,7 @@ struct GarageCarCard: View {
     @ObservedObject private var profileManager = ProfileManager.shared
     @ObservedObject private var settings = AppSettings.shared
     @State private var editingCar: EditingCarTarget?
+    @State private var showingRemoveAlert = false
 
     private var isSelected: Bool {
         profileManager.profile?.selectedCarId == car.id
@@ -129,7 +130,7 @@ struct GarageCarCard: View {
 
     var body: some View {
         NavigationLink {
-            CarDetailView(car: car)
+            CarDetailView(carId: car.id)
         } label: {
             card
         }
@@ -147,6 +148,19 @@ struct GarageCarCard: View {
                     Label("Select as Active", systemImage: "checkmark.circle")
                 }
             }
+            Button(role: .destructive) {
+                showingRemoveAlert = true
+            } label: {
+                Label("Remove Car", systemImage: "trash")
+            }
+        }
+        .alert("Remove Car", isPresented: $showingRemoveAlert) {
+            Button("Remove", role: .destructive) {
+                removeCar()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Remove this car from your garage? Its recorded drives and stats will remain in your history.")
         }
         .sheet(item: $editingCar) { target in
             EditCarView(carId: target.id)
@@ -246,6 +260,12 @@ struct GarageCarCard: View {
     private func selectCar() {
         guard var profile = profileManager.profile else { return }
         profile.selectCar(id: car.id)
+        profileManager.saveProfile(profile)
+    }
+
+    private func removeCar() {
+        guard var profile = profileManager.profile else { return }
+        profile.removeCarFromGarage(id: car.id)
         profileManager.saveProfile(profile)
     }
 }
