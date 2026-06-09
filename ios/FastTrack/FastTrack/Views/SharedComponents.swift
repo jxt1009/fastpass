@@ -317,6 +317,50 @@ struct DetailRow: View {
     }
 }
 
+struct GaugeProgressBar: View {
+    let progress: Double
+    var color: Color = .ftBlue
+    var height: CGFloat = 6
+
+    private var clampedProgress: Double {
+        min(max(progress, 0), 1)
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = max(proxy.size.width * clampedProgress, height)
+
+            Capsule()
+                .fill(Color.ftSectionBg)
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(color)
+                        .frame(width: clampedProgress == 0 ? 0 : width)
+                        .animation(Motion.standard, value: clampedProgress)
+                }
+        }
+        .frame(height: height)
+    }
+}
+
+private struct ActiveGlowModifier: ViewModifier {
+    let isActive: Bool
+    let color: Color
+
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: isActive ? color.opacity(0.28) : .clear, radius: 10)
+            .shadow(color: isActive ? color.opacity(0.18) : .clear, radius: 18)
+            .animation(Motion.quick, value: isActive)
+    }
+}
+
+extension View {
+    func activeGlow(_ isActive: Bool, color: Color = .ftBlue) -> some View {
+        modifier(ActiveGlowModifier(isActive: isActive, color: color))
+    }
+}
+
 // MARK: - Shimmer / Skeleton loading
 
 /// A view modifier that overlays a shimmering highlight to indicate loading.
@@ -595,5 +639,4 @@ struct SpeechBubble: Shape {
         return p
     }
 }
-
 
