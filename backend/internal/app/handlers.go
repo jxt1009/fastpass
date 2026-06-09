@@ -158,11 +158,11 @@ func updateDrive(c *gin.Context) {
 	})
 }
 
-// deleteDrive removes a drive owned by the authenticated user. Inside a single
-// transaction we NULL-out any UserAchievement.source_drive_id rows pointing at
-// the drive and delete the drive. We then re-evaluate the user's achievements
-// so PB events stay consistent; if evaluation fails the drive is still gone
-// and the unlocks will be recomputed on the next save.
+// deleteDrive removes a drive owned by the authenticated user. We NULL-out
+// any UserAchievement.source_drive_id rows pointing at the drive and delete
+// the drive in a single transaction. After commit we re-evaluate the user's
+// achievements so PB events stay consistent; if evaluation fails the drive is
+// still gone and the unlocks will be recomputed on the next save.
 func deleteDrive(c *gin.Context) {
 	userID, exists := getUserID(c)
 	if !exists {

@@ -68,14 +68,14 @@ final class DriveDeleteTests: XCTestCase {
 
     // MARK: - APIService
     //
-    // Direct URL-method/path assertions on `APIService.shared.deleteDrive` would
-    // require either URLProtocol interception on URLSession.shared (which
-    // Apple's API does NOT support — URLSession.shared is created before any
-    // `URLProtocol.registerClass` call takes effect) or refactoring APIService
-    // to allow session injection. The simpler, equally valuable coverage lives
-    // in the DriveManager tests below, which exercise the production code path
-    // end-to-end via the same URLSession.shared code path. Those tests fail if
-    // the URL, method, or status-code handling is wrong.
+    // `APIService` is a singleton (`APIService.shared`) with a private
+    // `URLSession.shared`. Direct assertions on `APIService.shared.deleteDrive`
+    // would need a session-injection seam on the production class to be done
+    // safely (URLProtocol.registerClass is process-global and would bleed into
+    // other tests in the suite). The DriveManager tests below exercise the
+    // production code path end-to-end through the same URLSession.shared
+    // request flow, and fail if the URL, method, or status-code handling is
+    // wrong — so the coverage is real, just at a slightly higher level.
 
     // MARK: - DriveManager
 

@@ -381,26 +381,6 @@ struct CarDetailView: View {
         }
     }
 
-    // MARK: - Stats grid
-
-    @ViewBuilder
-    private var statsGrid: some View {
-        if let stats = data?.stats {
-            CarStatsRow(stats: stats)
-        } else {
-            InstrumentCard {
-                HStack(spacing: 12) {
-                    Image(systemName: "chart.bar")
-                        .foregroundColor(.secondary)
-                    Text("No driving data yet")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-            }
-        }
-    }
-
     // MARK: - Per-car achievements
 
     @ViewBuilder
