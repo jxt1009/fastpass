@@ -23,9 +23,12 @@ struct NotificationsView: View {
                             NotificationRow(notification: n)
                         }
                         .buttonStyle(.plain)
+                        .listRowBackground(Color.ftCardBg)
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .background(Color.ftSurfaceBg.ignoresSafeArea())
             }
         }
         .navigationTitle("Notifications")
@@ -76,7 +79,7 @@ private struct NotificationRow: View {
             Spacer()
             if notification.readAt == nil {
                 Circle()
-                    .fill(Color.blue)
+                    .fill(Color.ftBlue)
                     .frame(width: 8, height: 8)
             }
         }
@@ -84,11 +87,11 @@ private struct NotificationRow: View {
 
     private var avatarPlaceholder: some View {
         ZStack {
-            Circle().fill(Color.blue.opacity(0.2))
+            Circle().fill(Color.ftBlue.opacity(0.2))
             Text(notification.actor?.username.first.map(String.init) ?? "?")
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundColor(.blue)
+                .foregroundColor(.ftBlue)
         }
     }
 }

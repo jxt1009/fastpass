@@ -58,6 +58,7 @@ struct PublicProfileView: View {
                 narrowHeader(profile)
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+            .listRowBackground(Color.ftCardBg)
 
             // Stats (Top Speed, Best 0-60, Total Distance)
             Section("Stats") {
@@ -70,6 +71,7 @@ struct PublicProfileView: View {
                     )
                 }
             }
+            .listRowBackground(Color.ftCardBg)
 
             // Garage (per the redesign, read-only with photos + short stats).
             // Each card is wrapped in a NavigationLink with .buttonStyle(.plain)
@@ -98,9 +100,12 @@ struct PublicProfileView: View {
                         .buttonStyle(.plain)
                     }
                 }
+                .listRowBackground(Color.ftCardBg)
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.ftSurfaceBg.ignoresSafeArea())
     }
 
     // MARK: - Narrow header
@@ -208,7 +213,7 @@ struct PublicProfileView: View {
                     .background(
                         isFollowing
                             ? Color(.systemFill)
-                            : Color.blue,
+                            : Color.ftBlue,
                         in: Capsule()
                     )
             }
@@ -262,7 +267,7 @@ struct PublicProfileView: View {
         ZStack {
             Circle()
                 .fill(LinearGradient(
-                    colors: [.blue, .purple],
+                    colors: [.ftBlue, .purple],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))

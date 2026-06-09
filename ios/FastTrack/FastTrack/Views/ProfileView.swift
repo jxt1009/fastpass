@@ -17,7 +17,7 @@ private struct TurnPreferenceBar: View {
                 GeometryReader { geo in
                     HStack(spacing: 2) {
                         Rectangle()
-                            .fill(Color.blue)
+                            .fill(Color.ftBlue)
                             .frame(width: max(geo.size.width * leftFraction, 4))
                         Rectangle()
                             .fill(Color.pink)
@@ -28,7 +28,7 @@ private struct TurnPreferenceBar: View {
                 HStack {
                     Text("\(leftPct)%")
                         .font(.subheadline).fontWeight(.semibold)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.ftBlue)
                     Text("Left")
                         .font(.caption).foregroundColor(.secondary)
                     Spacer()
@@ -210,11 +210,11 @@ struct ProfileView: View {
         } else {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.3))
+                    .fill(Color.ftBlue.opacity(0.3))
                     .frame(width: 56, height: 56)
                 Image(systemName: "person.fill")
                     .font(.title2)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.ftBlue)
             }
         }
     }
@@ -290,7 +290,7 @@ struct ProfileView: View {
                     showingAddCar = true
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.ftBlue)
                         .font(.title2)
                 }
                 .accessibilityLabel("Add Car")
@@ -319,7 +319,7 @@ struct ProfileView: View {
                         Button("Add Your First Car") {
                             showingAddCar = true
                         }
-                        .foregroundColor(.blue)
+                        .foregroundColor(.ftBlue)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -423,7 +423,7 @@ struct ProfileView: View {
     private var maneuvorsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             InstrumentStatCell(
-                icon: "arrow.turn.up.left", iconColor: .blue,
+                icon: "arrow.turn.up.left", iconColor: .ftBlue,
                 label: "Left Turns", value: "\(stats.totalLeftTurns)", unit: "",
                 info: StatInfo.leftTurns
             )
@@ -485,7 +485,7 @@ struct ProfileView: View {
     private var moreStatsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             InstrumentStatCell(
-                icon: "car.fill", iconColor: .blue,
+                icon: "car.fill", iconColor: .ftBlue,
                 label: "Total Trips", value: "\(stats.totalTrips)", unit: ""
             )
             InstrumentStatCell(
@@ -529,7 +529,7 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .tint(.blue)
+                .tint(.ftBlue)
             }
         }
     }
@@ -553,7 +553,7 @@ struct ProfileView: View {
                         }
                     }
                 }
-                .tint(.blue)
+                .tint(.ftBlue)
 
                 Divider().padding(.vertical, 12)
 
@@ -758,10 +758,10 @@ struct CarGarageCard: View {
                             Text("SELECTED")
                                 .font(.caption2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.blue)
+.foregroundColor(.ftBlue)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.2))
+                                .background(Color.ftBlue.opacity(0.2))
                                 .cornerRadius(8)
                         }
 
@@ -857,10 +857,10 @@ struct CarPhotoThumbnail: View {
     private var placeholder: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.blue.opacity(0.15))
+                .fill(Color.ftBlue.opacity(0.15))
             Image(systemName: "car.fill")
                 .font(.system(size: size * 0.45))
-                .foregroundColor(.blue)
+                .foregroundColor(.ftBlue)
         }
     }
 }

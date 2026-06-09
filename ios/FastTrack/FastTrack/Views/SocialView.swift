@@ -162,7 +162,7 @@ struct SocialView: View {
                             }
                             .listRowBackground(
                                 isCurrentUserRow
-                                    ? Color.blue.opacity(0.08)
+                                    ? Color.ftBlue.opacity(0.08)
                                     : Color.ftCardBg
                             )
                         }
@@ -253,7 +253,7 @@ private struct LeaderboardRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(Color.blue, in: Capsule())
+                            .background(Color.ftBlue, in: Capsule())
                     }
                 }
                 HStack(spacing: 6) {
@@ -325,9 +325,9 @@ private struct CarThumbnail: View {
     private var placeholder: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 6)
-                .fill(Color.blue.opacity(0.15))
+                .fill(Color.ftBlue.opacity(0.15))
             Image(systemName: "car.fill")
-                .foregroundStyle(.blue)
+                .foregroundStyle(Color.ftBlue)
                 .font(.system(size: size * 0.5))
         }
     }

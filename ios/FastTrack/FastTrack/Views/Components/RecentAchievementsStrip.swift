@@ -40,7 +40,7 @@ struct RecentAchievementsStrip: View {
                     NavigationLink(destination: AchievementsView()) {
                         Text("View All")
                             .font(.subheadline).fontWeight(.semibold)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.ftBlue)
                     }
                 }
 

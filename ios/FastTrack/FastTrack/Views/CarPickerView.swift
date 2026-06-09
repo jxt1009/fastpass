@@ -48,7 +48,7 @@ struct CarPickerView: View {
                         Spacer()
                         if selection.make?.displayName == make.displayName {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.blue)
+                                .foregroundColor(.ftBlue)
                         }
                     }
                 }
@@ -127,7 +127,7 @@ struct ModelPickerView: View {
                             Spacer()
                             if selection.make?.displayName == make.displayName && selection.model == model {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.ftBlue)
                             }
                         }
                     }
@@ -160,7 +160,7 @@ struct YearTrimPickerView: View {
         Form {
             Section {
                 HStack {
-                    Image(systemName: "car.fill").foregroundColor(.blue)
+                    Image(systemName: "car.fill").foregroundColor(.ftBlue)
                     Text(make.displayName)
                         .fontWeight(.semibold)
                     Text(model)
@@ -212,7 +212,7 @@ struct YearTrimPickerView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .fontWeight(.semibold)
-                .foregroundColor(.blue)
+                .foregroundColor(.ftBlue)
             }
         }
         .navigationTitle("Year & Trim")

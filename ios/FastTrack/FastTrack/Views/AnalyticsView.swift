@@ -109,7 +109,7 @@ struct AnalyticsView: View {
                 title: "Total Drives",
                 value: "\(filteredDrives.count)",
                 icon: "car.fill",
-                iconColor: .blue,
+                iconColor: .ftBlue,
                 trend: nil
             )
             
@@ -373,7 +373,7 @@ struct RecentBestCard: View {
                     if !drive.carDisplayString.isEmpty {
                         Text(drive.carDisplayString)
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.ftBlue)
                     }
                 }
                 

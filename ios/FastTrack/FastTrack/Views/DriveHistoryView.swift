@@ -107,10 +107,10 @@ struct DriveRowView: View {
                 if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
                     Text(drive.carDisplayString)
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.ftBlue)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.1))
+                        .background(Color.ftBlue.opacity(0.1))
                         .cornerRadius(4)
                 }
             }

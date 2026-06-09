@@ -30,7 +30,7 @@ struct CarSelectorView: View {
                                 Spacer()
                                 if profile.selectedCarId == car.id {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.ftBlue)
                                 }
                             }
                         }
@@ -91,7 +91,7 @@ struct AddCarView: View {
                                 showingCarPicker = true
                             }
                             .font(.subheadline)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.ftBlue)
                         }
                     } else {
                         Button("Select Car") {
@@ -114,9 +114,9 @@ struct AddCarView: View {
                             } else {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.blue.opacity(0.15))
+                                        .fill(Color.ftBlue.opacity(0.15))
                                     Image(systemName: "car.fill")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.ftBlue)
                                 }
                             }
                         }

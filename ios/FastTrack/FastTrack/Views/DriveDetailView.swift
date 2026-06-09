@@ -170,7 +170,7 @@ struct DriveDetailView: View {
                             Button { showingCarPicker = true } label: {
                                 HStack(spacing: 4) {
                                     Text(drive.carDisplayString).foregroundColor(.primary)
-                                    Image(systemName: "pencil").font(.caption).foregroundColor(.blue)
+                                    Image(systemName: "pencil").font(.caption).foregroundColor(.ftBlue)
                                 }
                             }
                         }
@@ -262,7 +262,7 @@ struct DriveDetailView: View {
                         .stroke(speedBandColor(seg.speedBand), lineWidth: 4)
                 }
             } else {
-                MapPolyline(coordinates: routeCoordinates).stroke(.blue, lineWidth: 3)
+                MapPolyline(coordinates: routeCoordinates).stroke(Color.ftBlue, lineWidth: 3)
             }
 
             // Start / End markers
@@ -310,7 +310,7 @@ struct DriveDetailView: View {
             if let playCoord = playbackCoordinate {
                 Annotation("", coordinate: playCoord) {
                     ZStack {
-                        Circle().fill(Color.blue).frame(width: 14, height: 14)
+                        Circle().fill(Color.ftBlue).frame(width: 14, height: 14)
                         Circle().stroke(Color.white, lineWidth: 2).frame(width: 14, height: 14)
                     }
                 }
@@ -338,7 +338,7 @@ struct DriveDetailView: View {
             Slider(value: $playbackProgress, in: 0...1, onEditingChanged: { editing in
                 if editing && isPlaying { stopPlayback() }
             })
-            .tint(.blue)
+            .tint(.ftBlue)
 
             // Transport controls
             HStack {
@@ -354,7 +354,7 @@ struct DriveDetailView: View {
                 Button { togglePlayback() } label: {
                     Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .font(.title)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.ftBlue)
                 }
                 Spacer()
                 // Seek forward 10 seconds
@@ -752,7 +752,7 @@ struct DriveCarSelectorView: View {
                                         Spacer()
                                         if drive.carId == car.id {
                                             Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.blue)
+                                                .foregroundColor(.ftBlue)
                                         }
                                     }
                                 }

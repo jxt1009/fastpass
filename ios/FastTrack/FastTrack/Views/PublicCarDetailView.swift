@@ -109,7 +109,7 @@ struct PublicCarDetailView: View {
     private var heroPlaceholder: some View {
         ZStack {
             LinearGradient(
-                colors: [.blue, .purple],
+                colors: [.ftBlue, .purple],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -166,7 +166,7 @@ struct PublicCarDetailView: View {
                             label: "Drives",
                             value: "\(stats.totalDrives)")
                     Divider().padding(.vertical, 8)
-                    statRow(icon: "map.fill", color: .blue,
+                    statRow(icon: "map.fill", color: .ftBlue,
                             label: "Total Distance",
                             value: settings.distanceDisplay(stats.totalDistance))
                     Divider().padding(.vertical, 8)
