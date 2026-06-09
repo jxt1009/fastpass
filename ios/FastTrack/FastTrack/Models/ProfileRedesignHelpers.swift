@@ -157,3 +157,62 @@ enum GarageBlob {
         return (try? JSONDecoder().decode([UserCar].self, from: data)) ?? []
     }
 }
+
+// MARK: - Public profile per-car stats lookup
+//
+// `PublicProfile.carStatsData` is an opaque text blob the server stores
+// as a JSON dictionary keyed by `CarStats.carId` (which equals the
+// `UserCar.id` UUID). The public profile view decodes it once per
+// render so the garage section can index by id without re-parsing for
+// every row.
+//
+// Promoting this to a static (instead of a `private` method on the
+// view) makes the decoder unit-testable and lets us add a `#if DEBUG`
+// trace that records the raw key shape — the diagnostic that proves
+// the key-mismatch hypothesis for users whose stats aren't rendering
+// even though their `car_stats_data` blob is non-empty.
+
+#if DEBUG
+import os.log
+private let publicProfileStatsLookupLog = Logger(
+    subsystem: "FastTrack",
+    category: "public-profile-stats"
+)
+#endif
+
+enum PublicProfileStatsLookup {
+
+    /// Decode the per-car stats blob once into a `[carId: CarStats]`
+    /// dictionary. Returns an empty dictionary when the blob is
+    /// missing, empty, or malformed. Pure: no side effects in release
+    /// builds; in debug builds, logs a one-line trace of the decode
+    /// shape so we can see why a particular user's car keys aren't
+    /// matching.
+    static func byCarId(blob: String?) -> [String: CarStats] {
+        #if DEBUG
+        let blobLength = blob?.count ?? 0
+        #endif
+
+        guard let blob, !blob.isEmpty,
+              let data = blob.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: CarStats].self, from: data)
+        else {
+            #if DEBUG
+            publicProfileStatsLookupLog.debug(
+                "statsByCarId decode miss: blob length=\(blobLength, privacy: .public) keyCount=0 sample=(none)"
+            )
+            #endif
+            return [:]
+        }
+
+        #if DEBUG
+        let keyCount = decoded.count
+        let sample = decoded.keys.sorted().first.map { String($0.prefix(8)) } ?? "(none)"
+        publicProfileStatsLookupLog.debug(
+            "statsByCarId decoded: blob length=\(blobLength, privacy: .public) keyCount=\(keyCount, privacy: .public) sample=\(sample, privacy: .public)"
+        )
+        #endif
+
+        return decoded
+    }
+}

@@ -8,12 +8,13 @@ import SwiftUI
 // from the matching `CarStats` if one is present.
 //
 // The card is a pure content view — it does NOT own a `Button` or any
-// tap gesture. The parent (`PublicProfileView`'s garage section) wraps
-// each card in a `NavigationLink` with `.buttonStyle(.plain)`, which
-// suppresses the system disclosure indicator and lets this view's
-// trailing chevron hint serve as the "tap to view" affordance without
-// doubling up. (We learned this lesson from the own-profile card — the
-// card and the system chevron on top of each other look noisy.)
+// tap gesture, and it does NOT render its own chevron hint. The parent
+// (`PublicProfileView`'s garage section) wraps each card in a
+// `NavigationLink` inside a `List`; the system disclosure indicator is
+// the consistent "tap to view" affordance across the row, matching
+// the Stats / Followers / Following rows. Adding a card-local chevron
+// on top of the system one produced a doubled-up affordance on iOS
+// 17+ that we removed.
 
 struct PublicGarageCard: View {
     let car: UserCar
@@ -39,15 +40,6 @@ struct PublicGarageCard: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer(minLength: 0)
-                    // Trailing chevron hint — "tap to view". The parent
-                    // wraps this card in a NavigationLink with
-                    // .buttonStyle(.plain), so the system disclosure
-                    // indicator is suppressed and this is the only
-                    // chevron the user sees.
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityLabel("View car details")
                 }
 
                 if let line = shortStatsLine(for: stats) {

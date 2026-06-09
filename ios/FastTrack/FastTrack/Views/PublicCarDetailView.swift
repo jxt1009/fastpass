@@ -30,6 +30,13 @@ struct PublicCarDetailView: View {
     let username: String
     let car: UserCar
     let stats: CarStats?
+    /// Raw `car_stats_data` blob from the parent profile. Used only by
+    /// the empty-state copy: when the blob is non-empty but the car id
+    /// doesn't appear in it, we know stats exist for the user but
+    /// haven't synced for this car yet (a different state from "no
+    /// driving data recorded"). Optional so pre-existing call sites
+    /// keep working; pass it through from the public profile.
+    var carStatsData: String? = nil
 
     @ObservedObject private var settings = AppSettings.shared
 
@@ -158,13 +165,34 @@ struct PublicCarDetailView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "chart.bar")
                         .foregroundColor(.secondary)
-                    Text("No driving data recorded for this car yet.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(statsNotSyncedCopy)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        if statsNotSyncedCopy != noDataCopy {
+                            Text("Stats will appear here once they sync from the device that recorded them.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                     Spacer()
                 }
             }
         }
+    }
+
+    /// Copy for the empty state when the user has stats for other cars
+    /// but none for this one. Distinguished from "no driving data at
+    /// all" so users don't think their car was never driven.
+    private var noDataCopy: String {
+        "No driving data recorded for this car yet."
+    }
+
+    private var statsNotSyncedCopy: String {
+        if let blob = carStatsData, !blob.isEmpty {
+            return "Stats haven't synced for this car yet."
+        }
+        return noDataCopy
     }
 
     private func statRow(icon: String, color: Color, label: String, value: String) -> some View {
