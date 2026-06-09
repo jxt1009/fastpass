@@ -309,7 +309,7 @@ struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color(.systemGray5))
+            .fill(Color.ftSectionBg.opacity(0.5))
             .frame(width: width, height: height)
             .shimmer()
     }
@@ -346,7 +346,7 @@ struct StatCardSkeleton: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(Color.ftCardBg)
         .cornerRadius(12)
     }
 }
