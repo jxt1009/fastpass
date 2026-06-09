@@ -102,43 +102,45 @@ struct GarageView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                allCarsSummary
-                if cars.isEmpty {
-                    emptyState
-                        .padding(.top, 60)
-                } else {
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(cars) { car in
-                            GarageCarCard(
-                                car: car,
-                                stats: carStatsManager.getStats(for: car.id)
-                            )
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    allCarsSummary
+                    if cars.isEmpty {
+                        emptyState
+                            .padding(.top, 60)
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(cars) { car in
+                                GarageCarCard(
+                                    car: car,
+                                    stats: carStatsManager.getStats(for: car.id)
+                                )
+                            }
                         }
+                        recentDrivesSection
                     }
-                    recentDrivesSection
+                }
+                .padding()
+            }
+            .background(Color.ftSurfaceBg.ignoresSafeArea())
+            .navigationTitle("Your Garage")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingAddCar = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.ftBlue)
+                            .font(.title3)
+                    }
+                    .accessibilityLabel("Add Car")
                 }
             }
-            .padding()
-        }
-        .background(Color.ftSurfaceBg.ignoresSafeArea())
-        .navigationTitle("Your Garage")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingAddCar = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.ftBlue)
-                        .font(.title3)
-                }
-                .accessibilityLabel("Add Car")
+            .sheet(isPresented: $showingAddCar) {
+                AddCarView()
             }
-        }
-        .sheet(isPresented: $showingAddCar) {
-            AddCarView()
         }
     }
 

@@ -17,6 +17,7 @@ struct ProfileView: View {
     @State private var deleteAccountError: String?
     @State private var zoomedAvatar: AvatarZoomTarget?
     @State private var croppingAvatar: CropImageSource?
+    var onSwitchToGarage: (() -> Void)? = nil
     private var stats: UserStats {
         UserStats.from(drives: driveManager.drives)
     }
@@ -195,8 +196,8 @@ struct ProfileView: View {
     // MARK: - Garage Link Row
 
     private var garageLinkRow: some View {
-        NavigationLink {
-            GarageView()
+        Button {
+            onSwitchToGarage?()
         } label: {
             HStack {
                 Image(systemName: "car.2.fill")

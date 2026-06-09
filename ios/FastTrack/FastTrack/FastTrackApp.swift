@@ -62,8 +62,6 @@ struct FastTrackApp: App {
     }
 }
 
-private let socialTabTag = 1
-
 struct RootView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
@@ -77,7 +75,7 @@ struct RootView: View {
     @State private var showingProfileSetup = false
     /// Per-tab UUIDs. Changing a UUID causes that tab's content to be recreated (nav reset).
     /// Index 0 (Track) is intentionally never reset so active recordings survive tab switches.
-    @State private var tabResetIDs = (0..<5).map { _ in UUID() }
+    @State private var tabResetIDs = (0..<4).map { _ in UUID() }
 
     var body: some View {
         ZStack {
@@ -133,16 +131,16 @@ struct RootView: View {
                 ContentView()
                     // Tab 0 (Track) is NOT reset — preserves active recordings across tab switches
                     .tabItem { Label("Track", systemImage: "location.fill") }.tag(0)
+                GarageView()
+                    .id(tabResetIDs[1])
+                    .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(1)
                 SocialView()
                     // NOT reset on tab switch — leaderboard data is expensive to reload and
                     // the view manages its own nav stack; internal filter changes re-fetch via .task(id:)
-                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(socialTabTag)
-                GarageView()
+                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(2)
+                ProfileView(onSwitchToGarage: { selectedTab = 1 })
                     .id(tabResetIDs[3])
-                    .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(3)
-                ProfileView()
-                    .id(tabResetIDs[4])
-                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(4)
+                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(3)
             }
             .sheet(isPresented: $showingProfileSetup) {
                 ProfileSetupView()
@@ -160,8 +158,8 @@ struct RootView: View {
                 }
             }
             .onChange(of: selectedTab) { oldTab, _ in
-                // Reset the tab being left (but never Track or Social)
-                if oldTab > 0 && oldTab != socialTabTag {
+                // Reset the tab being left (but never Track (0) or Social (2))
+                if oldTab != 0 && oldTab != 2 {
                     tabResetIDs[oldTab] = UUID()
                 }
             }
