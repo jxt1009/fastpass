@@ -24,6 +24,11 @@ struct SocialView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: NotificationsView()) {
+                        NotificationsBell(manager: NotificationsManager.shared)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: FindPeopleView()) {
                         Label("Find People", systemImage: "person.badge.plus")
                     }
