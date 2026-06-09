@@ -79,7 +79,7 @@ struct DrivePerformanceDetailView: View {
                         }
 
                         // Smoothness score
-                        let smoothness = AnalyticsData.smoothnessScore(for: drive)
+                        let smoothness = smoothnessScore(for: drive)
                         if smoothness > 0 {
                             InstrumentCard {
                                 HStack {

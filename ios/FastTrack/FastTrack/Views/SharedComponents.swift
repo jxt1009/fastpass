@@ -122,6 +122,36 @@ enum StatInfo {
     )
 }
 
+// MARK: - Trend Direction
+
+enum TrendDirection {
+    case up, down, neutral
+
+    var icon: String {
+        switch self {
+        case .up: return "arrow.up"
+        case .down: return "arrow.down"
+        case .neutral: return "minus"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .up: return .green
+        case .down: return .red
+        case .neutral: return .gray
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .up: return "Up"
+        case .down: return "Down"
+        case .neutral: return "Same"
+        }
+    }
+}
+
 // MARK: - Stat Info Button
 
 struct StatInfoButton: View {
@@ -506,5 +536,44 @@ struct SpeechBubble: Shape {
         )
         p.closeSubpath()
         return p
+    }
+}
+
+// MARK: - Performance Breakdown Card
+
+struct PerformanceBreakdownCard: View {
+    let title: String
+    let value: String
+    let category: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(color)
+                        .font(.title3)
+                    Spacer()
+                }
+
+                Text(value)
+                    .font(.headline)
+                    .fontWeight(.bold)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(category)
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.2))
+                    .foregroundColor(color)
+                    .cornerRadius(4)
+            }
+        }
     }
 }

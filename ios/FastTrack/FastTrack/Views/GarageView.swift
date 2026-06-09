@@ -401,6 +401,56 @@ struct GarageDriveRow: View {
     }
 }
 
+// MARK: - Analytics Card (hoisted from AnalyticsView)
+
+struct AnalyticsCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let iconColor: Color
+    let trend: TrendDirection?
+    var info: StatInfoEntry? = nil
+
+    var body: some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(iconColor)
+                        .font(.title3)
+                    Spacer()
+                    if let trend = trend {
+                        TrendIndicator(trend: trend)
+                    }
+                    if let info { StatInfoButton(entry: info) }
+                }
+
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+struct TrendIndicator: View {
+    let trend: TrendDirection
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: trend.icon)
+                .font(.caption)
+            Text(trend.label)
+                .font(.caption2)
+        }
+        .foregroundColor(trend.color)
+    }
+}
+
 /// Wrapper so `.sheet(item:)` can drive a `carId` (String is not Identifiable).
 /// Defined privately here because `ProfileView.swift` already has its own
 /// `EditingCarTarget`; Swift's access control keeps them in their own

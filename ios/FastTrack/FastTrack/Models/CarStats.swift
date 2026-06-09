@@ -248,6 +248,20 @@ struct CarComparison {
     }
 }
 
+// MARK: - Drive Smoothness Score
+
+/// Smoothness score 0–100 for a single drive.
+/// Penalises harsh acceleration, hard braking, and high G-force events.
+func smoothnessScore(for drive: Drive) -> Double {
+    guard drive.maxSpeed > 0, drive.duration > 0 else { return 50 }
+    let speedEfficiency = drive.avgSpeed / max(drive.maxSpeed, 1)
+    let accelPenalty    = min(drive.maxAcceleration / 9.81, 1.0) * 15
+    let decelPenalty    = min(drive.maxDeceleration / 9.81, 1.0) * 15
+    let gPenalty        = min(drive.peakGForce / 2.0, 1.0) * 20
+    let brakePenalty    = min(Double(drive.brakeEvents) * 2.0, 20)
+    return max(0, min(100, speedEfficiency * 100 - accelPenalty - decelPenalty - gPenalty - brakePenalty))
+}
+
 // MARK: - Drive Extension
 
 extension Drive {
