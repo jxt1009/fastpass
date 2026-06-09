@@ -154,6 +154,34 @@ final class ProfileRedesignTests: XCTestCase {
         )
     }
 
+    // MARK: - Username path encoding in APIService
+
+    /// `fetchPublicProfile`, `followUser`, `unfollowUser`, and
+    /// `fetchUserAchievements` must percent-encode the username before
+    /// interpolating it into the URL path so a slash or space character
+    /// in a username doesn't silently mis-route the request.
+    ///
+    /// We verify the encoding logic directly via the private helper that
+    /// all four methods now share.  The helper is exposed to tests via
+    /// the `@testable import FastTrack` import.
+    func testPercentEncodePathSegment_EncodesSpace() {
+        let encoded = APIService.percentEncodePathSegmentForTest("fast driver")
+        XCTAssertEqual(encoded, "fast%20driver")
+    }
+
+    func testPercentEncodePathSegment_EncodesForwardSlash() {
+        // A slash in a username must become %2F so it cannot be interpreted
+        // as a path separator by the server, e.g. "a/b" → "/users/a%2Fb"
+        // rather than "/users/a/b".
+        let encoded = APIService.percentEncodePathSegmentForTest("fast/driver")
+        XCTAssertEqual(encoded, "fast%2Fdriver")
+    }
+
+    func testPercentEncodePathSegment_PlainUsernameUnchanged() {
+        let encoded = APIService.percentEncodePathSegmentForTest("fastdriver99")
+        XCTAssertEqual(encoded, "fastdriver99")
+    }
+
     // MARK: - Garage blob decoding
 
     /// A valid JSON array string decodes into [UserCar].

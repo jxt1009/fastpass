@@ -196,6 +196,7 @@ struct GarageCarCard: View {
     @ObservedObject private var profileManager = ProfileManager.shared
     @ObservedObject private var settings = AppSettings.shared
     @State private var editingCar: EditingCarTarget?
+    @State private var showingRemoveAlert = false
 
     private var isSelected: Bool {
         profileManager.profile?.selectedCarId == car.id
@@ -203,7 +204,7 @@ struct GarageCarCard: View {
 
     var body: some View {
         NavigationLink {
-            CarDetailView(car: car)
+            CarDetailView(carId: car.id)
         } label: {
             card
         }
@@ -221,6 +222,19 @@ struct GarageCarCard: View {
                     Label("Select as Active", systemImage: "checkmark.circle")
                 }
             }
+            Button(role: .destructive) {
+                showingRemoveAlert = true
+            } label: {
+                Label("Remove Car", systemImage: "trash")
+            }
+        }
+        .alert("Remove Car", isPresented: $showingRemoveAlert) {
+            Button("Remove", role: .destructive) {
+                removeCar()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Remove this car from your garage? Its recorded drives and stats will remain in your history.")
         }
         .sheet(item: $editingCar) { target in
             EditCarView(carId: target.id)
@@ -281,40 +295,12 @@ struct GarageCarCard: View {
         )
     }
 
-    @ViewBuilder
     private var photo: some View {
-        if let urlString = car.photoUrl, !urlString.isEmpty,
-           let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    photoPlaceholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure:
-                    photoPlaceholder
-                @unknown default:
-                    photoPlaceholder
-                }
-            }
-        } else {
-            photoPlaceholder
-        }
-    }
-
-    private var photoPlaceholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [.ftBlue.opacity(0.5), .purple.opacity(0.4)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Text(initials(for: car))
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.9))
-        }
+        CarPhotoView(
+            car: car,
+            url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+            cornerRadius: 0
+        )
     }
 
     private var statsGrid: some View {
@@ -345,16 +331,15 @@ struct GarageCarCard: View {
         }
     }
 
-    private func initials(for car: UserCar) -> String {
-        let first = car.make.first.map(String.init) ?? ""
-        let second = car.model.first.map(String.init) ?? ""
-        let combined = (first + second).uppercased()
-        return combined.isEmpty ? "?" : combined
-    }
-
     private func selectCar() {
         guard var profile = profileManager.profile else { return }
         profile.selectCar(id: car.id)
+        profileManager.saveProfile(profile)
+    }
+
+    private func removeCar() {
+        guard var profile = profileManager.profile else { return }
+        profile.removeCarFromGarage(id: car.id)
         profileManager.saveProfile(profile)
     }
 }

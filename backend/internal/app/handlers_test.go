@@ -1347,6 +1347,55 @@ func TestDeleteCarPhoto_RemovesFileAndField(t *testing.T) {
 	}
 }
 
+// ─── Public profile tests ──────────────────────────────────────────────────
+
+// makeProfileRouter returns a router exposing GET /api/v1/users/:username with
+// the optional-auth middleware that mirrors the production setup.
+func makeProfileRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	api := r.Group("/api/v1")
+	api.Use(optionalAuthMiddleware())
+	api.GET("/users/:username", getPublicProfile)
+	return r
+}
+
+func TestPublicProfile_IncludesCarStatsData(t *testing.T) {
+	jwtSecret = []byte("profile-stats-test-secret-32-bytes!")
+	setupTestDB(t)
+
+	user := User{
+		Email:        "statsuser@test.com",
+		Username:     "statsuser",
+		AuthProvider: "google",
+		IsPublic:     true,
+		Garage:       `[{"id":"c1","make":"Toyota","model":"Supra","year":2020}]`,
+		CarStatsData: `{"c1":{"carId":"c1","totalDrives":5,"bestTopSpeed":60.0}}`,
+	}
+	db.Create(&user)
+
+	router := makeProfileRouter()
+	req, _ := http.NewRequest("GET", "/api/v1/users/statsuser", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	carStatsData, ok := resp["car_stats_data"]
+	if !ok {
+		t.Fatalf("expected car_stats_data field in public profile response, got keys: %v", resp)
+	}
+	if carStatsData != user.CarStatsData {
+		t.Errorf("expected car_stats_data=%q, got %q", user.CarStatsData, carStatsData)
+	}
+}
+
 func TestResolveBaseURL_TrimsTrailingSlash(t *testing.T) {
 	cases := []struct {
 		in, want string

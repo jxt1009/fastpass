@@ -8,6 +8,7 @@ struct ContentView: View {
     @EnvironmentObject var settings: AppSettings
     @State private var showingCarPicker = false
     @State private var showingSafetyDisclaimer = false
+    @State private var showingAddCar = false
     @EnvironmentObject var profileManager: ProfileManager
 
     private let hasAcceptedSafetyKey = "hasAcceptedSafetyDisclaimer"
@@ -52,6 +53,9 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingCarPicker) {
                 CarSelectorView()
+            }
+            .sheet(isPresented: $showingAddCar) {
+                AddCarView()
             }
             .alert("Safety First", isPresented: $showingSafetyDisclaimer) {
                 Button("I Understand — Start Drive") {
@@ -177,39 +181,52 @@ struct ContentView: View {
                 .cornerRadius(12)
             }
 
-            Button {
-                if driveManager.isRecording {
-                    print("🛑 Stop recording button pressed")
-                    driveManager.stopRecording()
-                } else {
-                    print("▶️ Start recording button pressed")
-                    let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
-                    if hasAccepted {
-                        driveManager.startRecording()
-                    } else {
-                        showingSafetyDisclaimer = true
+            if profileManager.profile?.garage.isEmpty ?? true {
+                Button {
+                    showingAddCar = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add a Car to Start Driving")
                     }
+                    .font(.title2)
                 }
-            } label: {
-                HStack {
-                    Image(systemName: driveManager.isRecording ? "stop.fill" : "play.fill")
-                    Text(driveManager.isRecording ? "Stop Drive" : "Start Drive")
+                .buttonStyle(InstrumentButtonStyle(color: .ftBlue))
+            } else {
+                Button {
+                    if driveManager.isRecording {
+                        print("🛑 Stop recording button pressed")
+                        driveManager.stopRecording()
+                    } else {
+                        print("▶️ Start recording button pressed")
+                        let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
+                        if hasAccepted {
+                            driveManager.startRecording()
+                        } else {
+                            showingSafetyDisclaimer = true
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: driveManager.isRecording ? "stop.fill" : "play.fill")
+                        Text(driveManager.isRecording ? "Stop Drive" : "Start Drive")
+                    }
+                    .font(.title2)
                 }
-                .font(.title2)
+                .buttonStyle(InstrumentButtonStyle(color: driveManager.isRecording ? .ftRed : .ftBlue))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.red.opacity(0.6), lineWidth: 2)
+                        .scaleEffect(driveManager.isRecording ? 1.05 : 1)
+                        .opacity(driveManager.isRecording ? 0.6 : 0)
+                        .animation(
+                            driveManager.isRecording
+                                ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
+                                : .default,
+                            value: driveManager.isRecording
+                        )
+                )
             }
-            .buttonStyle(InstrumentButtonStyle(color: driveManager.isRecording ? .ftRed : .ftBlue))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.red.opacity(0.6), lineWidth: 2)
-                    .scaleEffect(driveManager.isRecording ? 1.05 : 1)
-                    .opacity(driveManager.isRecording ? 0.6 : 0)
-                    .animation(
-                        driveManager.isRecording
-                            ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
-                            : .default,
-                        value: driveManager.isRecording
-                    )
-            )
         }
     }
 

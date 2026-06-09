@@ -263,14 +263,16 @@ class ProfileManager: ObservableObject {
             serverGarage = decoded
         }
 
-        // Restore only if local is empty or server has a more complete garage
-        if localIsEmpty || serverGarage.count > (profile?.garage.count ?? 0) {
+        // Restore if local is empty, or whenever the server returns a non-empty
+        // garage (server-wins: picks up renames, photo changes, same-count edits).
+        if localIsEmpty || !serverGarage.isEmpty {
             let restored = UserProfile(
                 id: serverUser.id,
                 username: serverUsername,
                 country: serverUser.country ?? profile?.country ?? "",
                 garage: serverGarage.isEmpty ? (profile?.garage ?? []) : serverGarage,
-                selectedCarId: serverUser.selectedCarID ?? profile?.selectedCarId
+                selectedCarId: serverUser.selectedCarID ?? profile?.selectedCarId,
+                isPublic: serverUser.isPublic
             )
             profile = restored
             if let data = try? JSONEncoder().encode(restored) {
