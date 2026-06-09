@@ -319,7 +319,7 @@ struct GarageCarCard: View {
                 )
             )
             StatMini(
-                title: "Top",
+                title: "Top Speed",
                 value: stats.map {
                     String(format: "%.0f", settings.speedValue($0.bestTopSpeed))
                 } ?? "—"
@@ -350,6 +350,7 @@ struct GarageCarCard: View {
 
 struct GarageDriveRow: View {
     let drive: Drive
+    var badge: GarageDriveBadge? = nil
     @EnvironmentObject var settings: AppSettings
 
     var body: some View {
@@ -380,12 +381,34 @@ struct GarageDriveRow: View {
                     .foregroundColor(.secondary)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(Color.secondary.opacity(0.5))
+                VStack(alignment: .trailing, spacing: 8) {
+                    if let badge {
+                        HStack(spacing: 3) {
+                            Image(systemName: badge.icon)
+                                .font(.system(size: 9, weight: .bold))
+                            Text(badge.text)
+                                .font(.caption2.weight(.bold))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(badge.background)
+                        .foregroundColor(badge.foreground)
+                        .clipShape(Capsule())
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(Color.secondary.opacity(0.5))
+                }
             }
         }
     }
+}
+
+struct GarageDriveBadge {
+    let text: String
+    let icon: String
+    let background: Color
+    let foreground: Color
 }
 
 // MARK: - Analytics Card (hoisted from AnalyticsView)

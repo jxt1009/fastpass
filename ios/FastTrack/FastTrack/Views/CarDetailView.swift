@@ -649,18 +649,14 @@ struct CarDetailView: View {
                     NavigationLink {
                         DriveDetailView(drive: drive)
                     } label: {
-                        GarageDriveRow(drive: drive)
-                            .overlay(alignment: .bottomTrailing) {
-                                if drive.id == zeroSixtyPBDriveId {
-                                    pbPill(text: "PB 0-60", icon: "trophy.fill", bg: .yellow, fg: .black)
-                                        .padding(.trailing, 18)
-                                        .padding(.bottom, 8)
-                                } else if drive.id == topSpeedPBDriveId {
-                                    pbPill(text: "PB Speed", icon: "flame.fill", bg: .red, fg: .white)
-                                        .padding(.trailing, 18)
-                                        .padding(.bottom, 8)
-                                }
-                            }
+                        GarageDriveRow(
+                            drive: drive,
+                            badge: driveBadge(
+                                for: drive,
+                                topSpeedPBDriveId: topSpeedPBDriveId,
+                                zeroSixtyPBDriveId: zeroSixtyPBDriveId
+                            )
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -668,18 +664,14 @@ struct CarDetailView: View {
         }
     }
 
-    private func pbPill(text: String, icon: String, bg: Color, fg: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-            Text(text)
-                .font(.caption2.weight(.bold))
+    private func driveBadge(for drive: Drive, topSpeedPBDriveId: Int?, zeroSixtyPBDriveId: Int?) -> GarageDriveBadge? {
+        if drive.id == zeroSixtyPBDriveId {
+            return GarageDriveBadge(text: "PB 0-60", icon: "trophy.fill", background: .yellow, foreground: .black)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(bg)
-        .foregroundColor(fg)
-        .clipShape(Capsule())
+        if drive.id == topSpeedPBDriveId {
+            return GarageDriveBadge(text: "PB Speed", icon: "flame.fill", background: .red, foreground: .white)
+        }
+        return nil
     }
 
     // MARK: - Display helpers
