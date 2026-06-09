@@ -126,7 +126,6 @@ struct CarDetailView: View {
                 periodComparison
                 trendSparklines
                 sparklineSection
-                statsGrid
                 perCarAchievementsSection
                 recentDrivesSection
                 Spacer(minLength: 16)
