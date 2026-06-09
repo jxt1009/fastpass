@@ -181,6 +181,10 @@ class APIService {
         return try await put(endpoint: "/drives/\(driveId)", body: req)
     }
 
+    func deleteDrive(id: Int) async throws {
+        try await delete(endpoint: "/drives/\(id)")
+    }
+
     // MARK: - Profile Methods
 
     func updateProfile(_ profile: UserProfile) async throws {
