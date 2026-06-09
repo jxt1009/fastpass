@@ -99,7 +99,7 @@ class CarStatsManager: ObservableObject {
         // Smoothness is recomputed in rebuildStats where all drives for
         // the car are available. A single-drive update does a best-effort
         // score using only that drive; rebuildStats replaces it.
-        stats.smoothnessScore = AnalyticsData.smoothnessScore(for: drive)
+        stats.smoothnessScore = smoothnessScore(for: drive)
         
         carStats[carId] = stats
         if !suppressUpload {
@@ -164,13 +164,12 @@ class CarStatsManager: ObservableObject {
     }
     
     /// Computes the smoothness score for a car as the average of
-    /// `AnalyticsData.smoothnessScore(for:)` across all of the car's
-    /// drives. This uses the same formula as the Analytics tab so the
-    /// score is consistent everywhere it appears. Returns 0 when there
+    /// `smoothnessScore(for:)` across all of the car's
+    /// drives. This uses the same formula everywhere it appears. Returns 0 when there
     /// are no drives.
     func calculateSmoothnessScore(for drives: [Drive]) -> Double {
         guard !drives.isEmpty else { return 0 }
-        let total = drives.reduce(0.0) { $0 + AnalyticsData.smoothnessScore(for: $1) }
+        let total = drives.reduce(0.0) { $0 + smoothnessScore(for: $1) }
         return total / Double(drives.count)
     }
     

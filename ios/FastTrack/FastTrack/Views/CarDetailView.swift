@@ -429,7 +429,7 @@ struct CarDetailView: View {
     // MARK: - Performance Breakdown
 
     private var zeroToSixtyCategory: String {
-        guard let time = data.bestZeroToSixty else { return "N/A" }
+        guard let time = data?.bestZeroToSixty else { return "N/A" }
         switch time {
         case 0..<3.0: return "Hypercar"
         case 3.0..<4.0: return "Supercar"
@@ -439,7 +439,7 @@ struct CarDetailView: View {
     }
 
     private var corneringCategory: String {
-        switch data.peakLateralG {
+        switch data?.peakLateralG ?? 0 {
         case 0.8...: return "Race Driver"
         case 0.6..<0.8: return "Enthusiast"
         default: return "Spirited"
@@ -447,7 +447,7 @@ struct CarDetailView: View {
     }
 
     private var consistencyCategory: String {
-        switch data.consistencyScore {
+        switch data?.consistencyScore ?? 0 {
         case 90...: return "Exceptional"
         case 80..<90: return "Excellent"
         case 70..<80: return "Good"
@@ -463,28 +463,28 @@ struct CarDetailView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 PerformanceBreakdownCard(
                     title: "Best 0-60",
-                    value: data.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
+                    value: data?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
                     category: zeroToSixtyCategory,
                     icon: "bolt.fill",
                     color: .red
                 )
                 PerformanceBreakdownCard(
                     title: "Cornering",
-                    value: String(format: "%.2fG", data.peakLateralG),
+                    value: String(format: "%.2fG", data?.peakLateralG ?? 0),
                     category: corneringCategory,
                     icon: "arrow.triangle.turn.up.right.circle.fill",
                     color: .purple
                 )
                 PerformanceBreakdownCard(
                     title: "Driving Style",
-                    value: String(format: "%.0f%%", data.smoothnessScore),
-                    category: data.drivingStyle.title,
+                    value: String(format: "%.0f%%", data?.smoothnessScore ?? 0),
+                    category: data?.drivingStyle.title ?? DrivingStyle.unknown.title,
                     icon: "waveform.path",
                     color: .cyan
                 )
                 PerformanceBreakdownCard(
                     title: "Consistency",
-                    value: String(format: "%.0f%%", data.consistencyScore),
+                    value: String(format: "%.0f%%", data?.consistencyScore ?? 0),
                     category: consistencyCategory,
                     icon: "target",
                     color: .mint
@@ -516,11 +516,12 @@ struct CarDetailView: View {
 
     private var periodComparison: some View {
         let currentAvg: Double? = {
-            let drives = self.drives(of: car.id, in: .lastMonth)
+            guard let carId = car?.id else { return nil }
+            let drives = self.drives(of: carId, in: .lastMonth)
             guard !drives.isEmpty else { return nil }
             return drives.reduce(0.0) { $0 + $1.maxSpeed } / Double(drives.count)
         }()
-        let prevAvg = data.prevPeriodAvgMaxSpeed
+        let prevAvg = data?.prevPeriodAvgMaxSpeed
 
         let (valueText, trend): (String, TrendDirection?) = {
             guard let cur = currentAvg, let prev = prevAvg, prev > 0 else {
@@ -553,19 +554,19 @@ struct CarDetailView: View {
                 LazyVGrid(columns: [GridItem(.flexible())], spacing: 10) {
                     sparklineCard(
                         title: "Max Speed",
-                        values: data.sparklinePoints,
+                        values: data?.sparklinePoints ?? [],
                         unit: settings.speedUnit,
                         formatValue: { String(format: "%.0f", settings.speedValue($0)) }
                     )
                     sparklineCard(
                         title: "Distance",
-                        values: data.distanceTrendPoints,
+                        values: data?.distanceTrendPoints ?? [],
                         unit: settings.distanceUnit,
                         formatValue: { String(format: "%.1f", settings.distanceValue($0)) }
                     )
                     sparklineCard(
                         title: "Smoothness",
-                        values: data.smoothnessTrendPoints,
+                        values: data?.smoothnessTrendPoints ?? [],
                         unit: "%",
                         formatValue: { String(format: "%.0f", $0) }
                     )
@@ -620,17 +621,19 @@ struct CarDetailView: View {
 
     @ViewBuilder
     private var recentDrivesSection: some View {
-        let carRecentDrives = data.recentDrives
+        let carRecentDrives = data?.recentDrives ?? []
 
         let topSpeedPBDriveId: Int? = {
-            guard let drive = driveManager.drives.filter({ $0.carId == car.id }).max(by: { $0.maxSpeed < $1.maxSpeed }),
-                  drive.maxSpeed == data.bestTopSpeed else { return nil }
+            guard let carId = car?.id,
+                  let drive = driveManager.drives.filter({ $0.carId == carId }).max(by: { $0.maxSpeed < $1.maxSpeed }),
+                  drive.maxSpeed == data?.bestTopSpeed else { return nil }
             return drive.id
         }()
 
         let zeroSixtyPBDriveId: Int? = {
-            guard let time = data.bestZeroToSixty,
-                  let drive = driveManager.drives.first(where: { $0.carId == car.id && $0.best060Time == time }) else { return nil }
+            guard let carId = car?.id,
+                  let time = data?.bestZeroToSixty,
+                  let drive = driveManager.drives.first(where: { $0.carId == carId && $0.best060Time == time }) else { return nil }
             return drive.id
         }()
 
