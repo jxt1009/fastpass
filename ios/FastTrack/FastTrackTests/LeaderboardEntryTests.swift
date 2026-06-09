@@ -270,6 +270,55 @@ final class LeaderboardEntryTests: XCTestCase {
         )
     }
 
+    // MARK: - Quick filter controls
+
+    /// Scope chip is a one-tap toggle between Global and Following.
+    func testLeaderboardScope_QuickToggleAlternatesBetweenTwoModes() {
+        XCTAssertEqual(LeaderboardScope.global.quickToggle, .following)
+        XCTAssertEqual(LeaderboardScope.following.quickToggle, .global)
+    }
+
+    /// Period chip cycles in the product-approved order.
+    func testLeaderboardPeriod_QuickCycleFollows24h7dAllTimeOrder() {
+        XCTAssertEqual(LeaderboardPeriod.last24Hours.nextQuickCycle, .last7Days)
+        XCTAssertEqual(LeaderboardPeriod.last7Days.nextQuickCycle, .allTime)
+        XCTAssertEqual(LeaderboardPeriod.allTime.nextQuickCycle, .last24Hours)
+    }
+
+    // MARK: - Current user position card helper
+
+    func testLeaderboardEntry_FirstCurrentUserEntryFindsPosition() {
+        let rows = [
+            LeaderboardEntry(
+                rank: 1, userId: 99, username: "one", country: "US", avatarURL: "",
+                value: 10, carId: nil, carKey: "a", carMake: "BMW", carModel: "M3",
+                carYear: 2024, carTrim: nil, carNickname: nil, carPhotoUrl: nil
+            ),
+            LeaderboardEntry(
+                rank: 4, userId: 7, username: "me", country: "US", avatarURL: "",
+                value: 9, carId: nil, carKey: "b", carMake: "Tesla", carModel: "Model 3",
+                carYear: 2023, carTrim: nil, carNickname: "Daily", carPhotoUrl: nil
+            )
+        ]
+
+        let myRow = LeaderboardEntry.firstCurrentUserEntry(in: rows, currentUserId: 7)
+        XCTAssertEqual(myRow?.rank, 4)
+        XCTAssertEqual(myRow?.username, "me")
+    }
+
+    func testLeaderboardEntry_FirstCurrentUserEntryReturnsNilWhenMissingOrUnknownUser() {
+        let rows = [
+            LeaderboardEntry(
+                rank: 1, userId: 11, username: "other", country: "US", avatarURL: "",
+                value: 10, carId: nil, carKey: "a", carMake: "BMW", carModel: "M3",
+                carYear: 2024, carTrim: nil, carNickname: nil, carPhotoUrl: nil
+            )
+        ]
+
+        XCTAssertNil(LeaderboardEntry.firstCurrentUserEntry(in: rows, currentUserId: 7))
+        XCTAssertNil(LeaderboardEntry.firstCurrentUserEntry(in: rows, currentUserId: nil))
+    }
+
     // MARK: - Display strings
 
     /// "2024 BMW M3" when year is set, "BMW M3" when nil.

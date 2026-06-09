@@ -65,6 +65,11 @@ struct LeaderboardEntry: Identifiable, Codable {
         case carNickname   = "car_nickname"
         case carPhotoUrl   = "car_photo_url"
     }
+
+    static func firstCurrentUserEntry(in entries: [LeaderboardEntry], currentUserId: Int?) -> LeaderboardEntry? {
+        guard let currentUserId else { return nil }
+        return entries.first { $0.userId == currentUserId }
+    }
 }
 
 enum LeaderboardCategory: String, CaseIterable, Codable {
@@ -114,6 +119,13 @@ enum LeaderboardScope: String, CaseIterable, Codable {
         case .following: return "Following"
         }
     }
+
+    var quickToggle: LeaderboardScope {
+        switch self {
+        case .global: return .following
+        case .following: return .global
+        }
+    }
 }
 
 enum LeaderboardPeriod: String, CaseIterable, Codable {
@@ -126,6 +138,14 @@ enum LeaderboardPeriod: String, CaseIterable, Codable {
         case .last24Hours: return "Last 24h"
         case .last7Days:   return "Last 7 Days"
         case .allTime:     return "All Time"
+        }
+    }
+
+    var nextQuickCycle: LeaderboardPeriod {
+        switch self {
+        case .last24Hours: return .last7Days
+        case .last7Days: return .allTime
+        case .allTime: return .last24Hours
         }
     }
 }

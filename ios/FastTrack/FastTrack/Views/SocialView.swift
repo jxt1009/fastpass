@@ -10,8 +10,9 @@ struct SocialView: View {
     @State private var selectedCategory: LeaderboardCategory = .topSpeed
     @State private var selectedScope: LeaderboardScope = .global
     @State private var selectedPeriod: LeaderboardPeriod = .allTime
-    @State private var carFilter: String = ""
-    @FocusState private var carFilterFocused: Bool
+    @State private var committedCarFilter: String = ""
+    @State private var draftCarFilter: String = ""
+    @State private var showingCarFilterSheet = false
 
     var body: some View {
         NavigationStack {
@@ -33,20 +34,12 @@ struct SocialView: View {
                         Label("Find People", systemImage: "person.badge.plus")
                     }
                 }
-                // Dismiss keyboard button shown whenever the car filter field is focused
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { carFilterFocused = false }
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
             }
             .task(id: queryKey) { await loadLeaderboard() }
             .refreshable { await loadLeaderboard() }
-            // Tap anywhere outside the filter to dismiss keyboard,
-            // using simultaneousGesture so NavigationLinks still work
-            .simultaneousGesture(
-                TapGesture().onEnded { carFilterFocused = false },
-                including: carFilterFocused ? .all : .subviews
-            )
+            .sheet(isPresented: $showingCarFilterSheet) {
+                carFilterSheet
+            }
         }
     }
 
@@ -54,7 +47,6 @@ struct SocialView: View {
 
     private var filterBar: some View {
         VStack(spacing: 8) {
-            // Category picker
             Picker("Category", selection: $selectedCategory) {
                 ForEach(LeaderboardCategory.allCases, id: \.self) { cat in
                     Label(cat.displayName, systemImage: cat.icon).tag(cat)
@@ -62,48 +54,41 @@ struct SocialView: View {
             }
             .pickerStyle(.segmented)
 
-            // Scope + Period row
-            HStack {
-                Picker("Scope", selection: $selectedScope) {
-                    ForEach(LeaderboardScope.allCases, id: \.self) { scope in
-                        Text(scope.displayName).tag(scope)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                Picker("Period", selection: $selectedPeriod) {
-                    ForEach(LeaderboardPeriod.allCases, id: \.self) { period in
-                        Text(period.displayName).tag(period)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-
-            // Car filter row
             HStack(spacing: 8) {
-                Image(systemName: "car.fill")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-                TextField("Filter by car (e.g. Tesla Model 3)", text: $carFilter)
-                    .font(.subheadline)
-                    .autocorrectionDisabled()
-                    .submitLabel(.search)
-                    .focused($carFilterFocused)
-                    .onSubmit { carFilterFocused = false; committedCarFilter = carFilter; Task { await loadLeaderboard() } }
-                if !carFilter.isEmpty {
-                    Button {
-                        carFilter = ""
-                        committedCarFilter = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
+                Button {
+                    selectedScope = selectedScope.quickToggle
+                } label: {
+                    LeaderboardQuickFilterChip(
+                        icon: "person.2",
+                        title: selectedScope.displayName,
+                        accent: selectedScope == .following
+                    )
                 }
+                .buttonStyle(.plain)
+
+                Button {
+                    selectedPeriod = selectedPeriod.nextQuickCycle
+                } label: {
+                    LeaderboardQuickFilterChip(
+                        icon: "clock",
+                        title: selectedPeriod.displayName,
+                        accent: selectedPeriod != .allTime
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    draftCarFilter = committedCarFilter
+                    showingCarFilterSheet = true
+                } label: {
+                    LeaderboardQuickFilterChip(
+                        icon: "magnifyingglass",
+                        title: committedCarFilter.isEmpty ? "Any Car" : committedCarFilter,
+                        accent: !committedCarFilter.isEmpty
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(Color.ftCardBg, in: RoundedRectangle(cornerRadius: 8))
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
@@ -140,11 +125,13 @@ struct SocialView: View {
         } else {
             ZStack(alignment: .top) {
                 List {
-                    if selectedScope == .following {
+                    if let userEntry = LeaderboardEntry.firstCurrentUserEntry(
+                        in: entries,
+                        currentUserId: profileManager.profile?.id
+                    ) {
                         Section {
-                            Text("Showing you + everyone you follow")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            LeaderboardYourPositionCard(entry: userEntry, category: selectedCategory)
+                                .listRowBackground(Color.ftCardBg)
                         }
                     }
                     Section {
@@ -186,13 +173,40 @@ struct SocialView: View {
 
     // MARK: - Data Loading
 
-    /// Tracks the committed car filter (updated on submit/clear, not on every keystroke).
-    @State private var committedCarFilter: String = ""
-
-    /// A stable key for the `.task(id:)` modifier — changes when any filter changes.
-    /// Uses committedCarFilter so mid-typing doesn't trigger fetches.
     private var queryKey: String {
         "\(selectedCategory.rawValue)-\(selectedScope.rawValue)-\(selectedPeriod.rawValue)-\(committedCarFilter)"
+    }
+
+    private var carFilterSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Car Make + Model") {
+                    TextField("Example: Tesla Model 3", text: $draftCarFilter)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                    Text("Leave empty to include all cars.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Filter Cars")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Clear") {
+                        draftCarFilter = ""
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        committedCarFilter = draftCarFilter.trimmingCharacters(in: .whitespacesAndNewlines)
+                        showingCarFilterSheet = false
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.height(220), .medium])
     }
 
     private func loadLeaderboard() async {
@@ -217,6 +231,60 @@ struct SocialView: View {
             errorMessage = error.localizedDescription
         }
         withAnimation { isLoading = false }
+    }
+}
+
+private struct LeaderboardQuickFilterChip: View {
+    let icon: String
+    let title: String
+    let accent: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption)
+            Text(title)
+                .font(.caption)
+                .lineLimit(1)
+        }
+        .foregroundStyle(accent ? Color.ftBlue : .secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(accent ? Color.ftBlue.opacity(0.12) : Color.ftCardBg)
+        )
+    }
+}
+
+private struct LeaderboardYourPositionCard: View {
+    let entry: LeaderboardEntry
+    let category: LeaderboardCategory
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Your Position")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("#\(entry.rank)")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .monospacedDigit()
+                Text(entry.carDisplayStringWithNickname)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Text(category.formattedValue(entry.value))
+                .font(.headline)
+                .monospacedDigit()
+        }
+        .padding(.vertical, 4)
     }
 }
 
