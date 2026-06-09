@@ -12,6 +12,8 @@ struct ContentView: View {
     @EnvironmentObject var profileManager: ProfileManager
 
     private let hasAcceptedSafetyKey = "hasAcceptedSafetyDisclaimer"
+    private let recordingAccent = Color.ftAmber
+    private let idleAccent = Color.ftBlue
 
     var body: some View {
         NavigationStack {
@@ -22,12 +24,12 @@ struct ContentView: View {
                         ?? CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
                     routeCoordinates: driveManager.routeCoordinates
                 )
-                .opacity(driveManager.isRecording ? 0.65 : 0.3)
+                .opacity(driveManager.isRecording ? 0.7 : 0.34)
                 .ignoresSafeArea(edges: .horizontal)
 
                 // Dim overlay on top of map
                 Color.ftSurfaceBg
-                    .opacity(driveManager.isRecording ? 0.15 : 0.55)
+                    .opacity(driveManager.isRecording ? 0.18 : 0.5)
 
                 // Instrument cluster overlay
                 VStack(spacing: 0) {
@@ -72,48 +74,55 @@ struct ContentView: View {
     // MARK: - Speed Section
 
     private var speedSection: some View {
-        VStack(spacing: Spacing.sm) {
-            VStack(spacing: 2) {
-                Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
-                    .font(.system(size: 100, weight: .bold, design: .monospaced))
-                    .foregroundColor(SpeedColor.color(for: locationManager.currentSpeed))
-                    .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.2),
-                               value: Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))
+        VStack(spacing: 10) {
+            ZStack {
+                SpeedHeroRing(
+                    progress: speedRingProgress,
+                    tint: driveManager.isRecording ? recordingAccent : idleAccent,
+                    isRecording: driveManager.isRecording
+                )
+                .frame(width: 256, height: 256)
 
-                Text(settings.speedUnit.uppercased())
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, Spacing.sm)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.ftCardBg.opacity(0.9))
-                    )
+                VStack(spacing: 4) {
+                    Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
+                        .font(.system(size: 96, weight: .heavy, design: .monospaced))
+                        .foregroundColor(driveManager.isRecording ? .primary : .secondary)
+                        .contentTransition(.numericText())
+                        .animation(.easeInOut(duration: 0.18),
+                                   value: Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))
+
+                    Text(settings.speedUnit.uppercased())
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.ftCardBg.opacity(0.92))
+                        )
+                }
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.sm)
+
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(gpsStatusColor)
+                    .frame(width: 7, height: 7)
+                Text(driveManager.isRecording ? "Recording" : "Idle")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(driveManager.isRecording ? recordingAccent : .secondary)
+                Text("•")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(gpsStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                Capsule(style: .continuous)
                     .fill(Color.ftCardBg.opacity(0.9))
             )
-
-            if driveManager.isRecording {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(gpsStatusColor)
-                        .frame(width: 8, height: 8)
-                    Text(gpsStatusText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 2)
-            } else {
-                Text("Start a drive to see map")
-                    .foregroundColor(.gray)
-                    .font(.headline)
-                    .padding(.top, Spacing.sm)
-            }
         }
     }
 
@@ -121,37 +130,41 @@ struct ContentView: View {
 
     private func gaugeStrip(drive: Drive) -> some View {
         HStack(spacing: Spacing.sm) {
-            MetricGauge(
+            TrackMetricCard(
                 title: "MAX",
                 value: String(format: "%.0f", settings.speedValue(drive.maxSpeed)),
                 unit: settings.speedUnit,
-                color: SpeedColor.color(for: drive.maxSpeed)
+                color: recordingAccent,
+                progress: normalizedSpeedProgress(drive.maxSpeed)
             )
 
-            MetricGauge(
+            TrackMetricCard(
                 title: "AVG",
                 value: String(format: "%.0f", settings.speedValue(drive.avgSpeed)),
                 unit: settings.speedUnit,
-                color: SpeedColor.color(for: drive.avgSpeed)
+                color: .ftBlue,
+                progress: normalizedSpeedProgress(drive.avgSpeed)
             )
 
             TimelineView(.periodic(from: driveManager.recordingStartTime ?? .now, by: 1)) { ctx in
                 let elapsed: TimeInterval = driveManager.recordingStartTime.map {
                     ctx.date.timeIntervalSince($0)
                 } ?? 0
-                MetricGauge(
+                TrackMetricCard(
                     title: "TIME",
                     value: formatElapsed(max(0, elapsed)),
                     unit: "",
-                    color: .ftBlue
+                    color: .ftGreen,
+                    progress: min(1, max(0, elapsed / 3600))
                 )
             }
 
-            MetricGauge(
+            TrackMetricCard(
                 title: "DIST",
                 value: String(format: "%.1f", settings.distanceValue(drive.distance)),
                 unit: settings.distanceUnit,
-                color: .ftGreen
+                color: .ftAmber,
+                progress: min(1, max(0, drive.distance / 20_000))
             )
         }
         .padding(.horizontal, Spacing.md)
@@ -250,13 +263,101 @@ struct ContentView: View {
     }
 
     private var gpsStatusText: String {
-        guard let location = locationManager.currentLocation else { return "Acquiring GPS..." }
+        guard let location = locationManager.currentLocation else {
+            return driveManager.isRecording ? "Acquiring GPS..." : "GPS standby"
+        }
         let accuracy = location.horizontalAccuracy
 
         if accuracy < 0 { return "GPS Error" }
         if accuracy < 5 { return "GPS Excellent" }
         if accuracy < 10 { return "GPS Good" }
         return "GPS Poor"
+    }
+
+    private var speedRingProgress: Double {
+        normalizedSpeedProgress(locationManager.currentSpeed)
+    }
+
+    private func normalizedSpeedProgress(_ speed: Double) -> Double {
+        min(1, max(0, speed / 55))
+    }
+}
+
+private struct SpeedHeroRing: View {
+    let progress: Double
+    let tint: Color
+    let isRecording: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.1), lineWidth: 16)
+
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    LinearGradient(
+                        colors: [tint.opacity(0.35), tint],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    style: StrokeStyle(lineWidth: 16, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(.easeInOut(duration: 0.2), value: progress)
+
+            Circle()
+                .fill(Color.ftCardBg.opacity(isRecording ? 0.5 : 0.7))
+                .padding(24)
+        }
+    }
+}
+
+private struct TrackMetricCard: View {
+    let title: String
+    let value: String
+    let unit: String
+    let color: Color
+    let progress: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .lastTextBaseline, spacing: 3) {
+                Text(value)
+                    .font(.system(.headline, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                if !unit.isEmpty {
+                    Text(unit.uppercased())
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Text(title)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.secondary)
+
+            GeometryReader { proxy in
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(color.opacity(0.22))
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(color)
+                            .frame(width: proxy.size.width * min(1, max(0, progress)))
+                            .animation(.easeInOut(duration: 0.2), value: progress)
+                    }
+            }
+            .frame(height: 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
     }
 }
 

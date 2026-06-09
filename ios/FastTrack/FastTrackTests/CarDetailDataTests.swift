@@ -272,6 +272,78 @@ final class CarDetailDataTests: XCTestCase {
         XCTAssertFalse(data.confettiEligible)
     }
 
+    /// The trigger token is nil when no recent PB unlocks are eligible.
+    func testDerive_ConfettiTriggerToken_NilWithoutRecentPBs() {
+        let car = sampleCar()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let drive = sampleDrive(carId: car.id, startTime: now, maxSpeed: 30)
+        let stale = unlockedAchievement(
+            id: "stale",
+            sourceDriveId: drive.id,
+            unlockedDate: now.addingTimeInterval(-30 * 24 * 3600)
+        )
+
+        let data = CarDetailData.derive(
+            car: car,
+            drives: [drive],
+            carStats: nil,
+            achievements: [stale],
+            now: now
+        )
+        XCTAssertNil(data.confettiTriggerToken)
+        XCTAssertEqual(data.recentPBCount, 0)
+    }
+
+    /// Token is deterministic for the same eligible set and changes when
+    /// a newly eligible unlock is added.
+    func testDerive_ConfettiTriggerToken_StableThenChangesForNewUnlock() {
+        let car = sampleCar()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let drive = sampleDrive(carId: car.id, startTime: now, maxSpeed: 30)
+        let freshA = unlockedAchievement(
+            id: "fresh-a",
+            sourceDriveId: drive.id,
+            unlockedDate: now.addingTimeInterval(-2 * 24 * 3600)
+        )
+        let freshB = unlockedAchievement(
+            id: "fresh-b",
+            sourceDriveId: drive.id,
+            unlockedDate: now.addingTimeInterval(-1 * 24 * 3600)
+        )
+
+        let first = CarDetailData.derive(
+            car: car,
+            drives: [drive],
+            carStats: nil,
+            achievements: [freshA, freshB],
+            now: now
+        )
+        let reordered = CarDetailData.derive(
+            car: car,
+            drives: [drive],
+            carStats: nil,
+            achievements: [freshB, freshA],
+            now: now
+        )
+        XCTAssertEqual(first.confettiTriggerToken, reordered.confettiTriggerToken)
+        XCTAssertEqual(first.recentPBCount, 2)
+
+        let freshC = unlockedAchievement(
+            id: "fresh-c",
+            sourceDriveId: drive.id,
+            unlockedDate: now.addingTimeInterval(-3600)
+        )
+        let withNewUnlock = CarDetailData.derive(
+            car: car,
+            drives: [drive],
+            carStats: nil,
+            achievements: [freshA, freshB, freshC],
+            now: now
+        )
+        XCTAssertNotEqual(first.confettiTriggerToken, withNewUnlock.confettiTriggerToken)
+        XCTAssertEqual(withNewUnlock.recentPBCount, 3)
+    }
+
     /// 0-60 fallback must filter out non-positive `best060Time` values
     /// from the local drives — a sentinel `0` in a legacy or aborted
     /// drive should not become the all-time minimum.
