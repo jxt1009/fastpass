@@ -361,7 +361,7 @@ struct GarageCarCard: View {
 
 // MARK: - Garage Drive Row
 
-private struct GarageDriveRow: View {
+struct GarageDriveRow: View {
     let drive: Drive
     @EnvironmentObject var settings: AppSettings
 

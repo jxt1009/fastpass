@@ -100,4 +100,20 @@ struct CarDetailData {
     /// days relative to the injected `now`. The view uses this to gate
     /// the one-shot confetti animation.
     let confettiEligible: Bool
+    /// Smoothness score for this car (0-100).
+    let smoothnessScore: Double
+    /// Consistency score for this car (0-100).
+    let consistencyScore: Double
+    /// Cornering (peak lateral G) for this car.
+    let peakLateralG: Double
+    /// Best 0-60 time in seconds for this car (nil if never reached 60).
+    let bestZeroToSixtyTime: Double?
+    /// Drives for this car, sorted by startTime descending, capped at 5.
+    let recentDrives: [Drive]
+    /// Distance per drive trend points (last N drives, oldest first).
+    let distanceTrendPoints: [Double]
+    /// Smoothness per drive trend points (last N drives, oldest first).
+    let smoothnessTrendPoints: [Double]
+    /// Avg max speed for the previous period, nil if no prior data.
+    let prevPeriodAvgMaxSpeed: Double?
 }

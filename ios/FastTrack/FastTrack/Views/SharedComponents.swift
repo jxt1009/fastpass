@@ -101,6 +101,12 @@ enum StatInfo {
         howCalculated: "Weighted average of three components: Smoothness (40%) — consistency of throttle and braking inputs; Consistency (30%) — how repeatable your smoothness is drive-to-drive; Performance (30%) — average top speed relative to the Sports Car threshold (100 mph). Higher scores reward smooth, consistent driving with decent speed.",
         unit: "0–100"
     )
+    static let periodComparison = StatInfoEntry(
+        "Period Comparison",
+        summary: "Compares your average max speed this month vs the previous month.",
+        howCalculated: "Calculated as the difference between this month's average max speed and last month's average max speed. Positive values indicate improvement.",
+        unit: "speed"
+    )
     // Section-level info
     static let maneuversSection = StatInfoEntry(
         "Maneuvers",

@@ -45,7 +45,15 @@ struct CarDetailView: View {
         zeroSixtyPBDate: nil,
         drivingStyle: .unknown,
         achievementPBs: [],
-        confettiEligible: false
+        confettiEligible: false,
+        smoothnessScore: 0,
+        consistencyScore: 0,
+        peakLateralG: 0,
+        bestZeroToSixtyTime: nil,
+        recentDrives: [],
+        distanceTrendPoints: [],
+        smoothnessTrendPoints: [],
+        prevPeriodAvgMaxSpeed: nil
     )
 
     private var currentData: CarDetailData {
@@ -80,10 +88,14 @@ struct CarDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 hero
                 pbGauges
+                performanceBreakdown
+                periodComparison
+                trendSparklines
                 sparklineSection
                 drivingStyleRow
                 statsGrid
                 perCarAchievementsSection
+                recentDrivesSection
                 Spacer(minLength: 16)
             }
             .padding(.horizontal)
@@ -401,6 +413,251 @@ struct CarDetailView: View {
                     .foregroundColor(.secondary)
             }
         }
+    }
+
+    // MARK: - Performance Breakdown
+
+    private var zeroToSixtyCategory: String {
+        guard let time = data.bestZeroToSixty else { return "N/A" }
+        switch time {
+        case 0..<3.0: return "Hypercar"
+        case 3.0..<4.0: return "Supercar"
+        case 4.0..<6.0: return "Sports Car"
+        default: return "Quick"
+        }
+    }
+
+    private var corneringCategory: String {
+        switch data.peakLateralG {
+        case 0.8...: return "Race Driver"
+        case 0.6..<0.8: return "Enthusiast"
+        default: return "Spirited"
+        }
+    }
+
+    private var consistencyCategory: String {
+        switch data.consistencyScore {
+        case 90...: return "Exceptional"
+        case 80..<90: return "Excellent"
+        case 70..<80: return "Good"
+        default: return "Average"
+        }
+    }
+
+    private var performanceBreakdown: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text("Performance")
+                .font(.headline)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                PerformanceBreakdownCard(
+                    title: "Best 0-60",
+                    value: data.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
+                    category: zeroToSixtyCategory,
+                    icon: "bolt.fill",
+                    color: .red
+                )
+                PerformanceBreakdownCard(
+                    title: "Cornering",
+                    value: String(format: "%.2fG", data.peakLateralG),
+                    category: corneringCategory,
+                    icon: "arrow.triangle.turn.up.right.circle.fill",
+                    color: .purple
+                )
+                PerformanceBreakdownCard(
+                    title: "Driving Style",
+                    value: String(format: "%.0f%%", data.smoothnessScore),
+                    category: data.drivingStyle.title,
+                    icon: "waveform.path",
+                    color: .cyan
+                )
+                PerformanceBreakdownCard(
+                    title: "Consistency",
+                    value: String(format: "%.0f%%", data.consistencyScore),
+                    category: consistencyCategory,
+                    icon: "target",
+                    color: .mint
+                )
+            }
+        }
+    }
+
+    // MARK: - Period Comparison
+
+    private enum TimePeriod {
+        case lastMonth
+        case previousMonth
+    }
+
+    private func drives(of carId: String, in period: TimePeriod) -> [Drive] {
+        let now = Date()
+        let start: Date
+        switch period {
+        case .lastMonth:
+            start = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+        case .previousMonth:
+            let lastMonthStart = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+            start = Calendar.current.date(byAdding: .month, value: -1, to: lastMonthStart) ?? lastMonthStart
+            return driveManager.drives.filter { $0.carId == carId && $0.startTime >= start && $0.startTime < lastMonthStart }
+        }
+        return driveManager.drives.filter { $0.carId == carId && $0.startTime >= start }
+    }
+
+    private var periodComparison: some View {
+        let currentAvg: Double? = {
+            let drives = self.drives(of: car.id, in: .lastMonth)
+            guard !drives.isEmpty else { return nil }
+            return drives.reduce(0.0) { $0 + $1.maxSpeed } / Double(drives.count)
+        }()
+        let prevAvg = data.prevPeriodAvgMaxSpeed
+
+        let (valueText, trend): (String, TrendDirection?) = {
+            guard let cur = currentAvg, let prev = prevAvg, prev > 0 else {
+                return ("—", nil)
+            }
+            let delta = (cur - prev) * settings.speedFactor
+            let sign = delta >= 0 ? "+" : ""
+            let t: TrendDirection = delta > 0.5 ? .up : (delta < -0.5 ? .down : .neutral)
+            return (String(format: "%@%.1f %@", sign, delta, settings.speedUnit), t)
+        }()
+
+        return AnalyticsCard(
+            title: "vs Last Month",
+            value: valueText,
+            icon: "arrow.up.arrow.down",
+            iconColor: .purple,
+            trend: trend,
+            info: StatInfo.periodComparison
+        )
+    }
+
+    // MARK: - Trend Sparklines
+
+    private var trendSparklines: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Trends")
+                .font(.headline)
+
+            if #available(iOS 16.0, *) {
+                LazyVGrid(columns: [GridItem(.flexible())], spacing: 10) {
+                    sparklineCard(
+                        title: "Max Speed",
+                        values: data.sparklinePoints,
+                        unit: settings.speedUnit,
+                        formatValue: { String(format: "%.0f", settings.speedValue($0)) }
+                    )
+                    sparklineCard(
+                        title: "Distance",
+                        values: data.distanceTrendPoints,
+                        unit: settings.distanceUnit,
+                        formatValue: { String(format: "%.1f", settings.distanceValue($0)) }
+                    )
+                    sparklineCard(
+                        title: "Smoothness",
+                        values: data.smoothnessTrendPoints,
+                        unit: "%",
+                        formatValue: { String(format: "%.0f", $0) }
+                    )
+                }
+            } else {
+                Text("iOS 16+ required for trend charts")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    @available(iOS 16.0, *)
+    private func sparklineCard(title: String, values: [Double], unit: String, formatValue: @escaping (Double) -> String) -> some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    if let last = values.last, last > 0 {
+                        Text(formatValue(last))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                if values.count > 1 {
+                    Chart {
+                        ForEach(Array(values.enumerated()), id: \.offset) { index, value in
+                            LineMark(
+                                x: .value("Drive", index),
+                                y: .value(title, value)
+                            )
+                            .foregroundStyle(Color.ftBlue)
+                            .interpolationMethod(.monotone)
+                        }
+                    }
+                    .chartYAxis(.hidden)
+                    .chartXAxis(.hidden)
+                    .frame(height: 60)
+                } else {
+                    Text("Need more drives")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Recent Drives
+
+    @ViewBuilder
+    private var recentDrivesSection: some View {
+        let carRecentDrives = data.recentDrives
+
+        let topSpeedPBDriveId: Int? = {
+            guard let drive = driveManager.drives.filter({ $0.carId == car.id }).max(by: { $0.maxSpeed < $1.maxSpeed }),
+                  drive.maxSpeed == data.bestTopSpeed else { return nil }
+            return drive.id
+        }()
+
+        let zeroSixtyPBDriveId: Int? = {
+            guard let time = data.bestZeroToSixty,
+                  let drive = driveManager.drives.first(where: { $0.carId == car.id && $0.best060Time == time }) else { return nil }
+            return drive.id
+        }()
+
+        if !carRecentDrives.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Recent Drives")
+
+                ForEach(carRecentDrives) { drive in
+                    NavigationLink {
+                        DriveDetailView(drive: drive)
+                    } label: {
+                        GarageDriveRow(drive: drive)
+                            .overlay(alignment: .topTrailing) {
+                                if drive.id == zeroSixtyPBDriveId {
+                                    pbPill(text: "PB 0-60", icon: "trophy.fill", bg: .yellow, fg: .black)
+                                } else if drive.id == topSpeedPBDriveId {
+                                    pbPill(text: "PB Speed", icon: "flame.fill", bg: .red, fg: .white)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func pbPill(text: String, icon: String, bg: Color, fg: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(text)
+                .font(.caption2.weight(.bold))
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(bg)
+        .foregroundColor(fg)
+        .clipShape(Capsule())
     }
 
     // MARK: - Display helpers
