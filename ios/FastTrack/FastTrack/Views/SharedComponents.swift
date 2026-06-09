@@ -239,9 +239,9 @@ struct StatCard: View {
                     .fontWeight(.semibold)
                     .monospacedDigit()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+.frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.ftCardBg)
             .cornerRadius(12)
         }
     }
