@@ -36,6 +36,8 @@ struct CarDetailView: View {
     @State private var showingEditCar = false
     @State private var showingDrivingStyleGuide = false
     @State private var lastPresentedConfettiToken: String?
+    @State private var drivePendingDelete: Drive?
+    @State private var deleteError: String?
 
     /// Snapshot of the data the view is rendering. Rebuilt whenever
     /// the source data changes. Nil until the first `refresh()` call
@@ -131,6 +133,25 @@ struct CarDetailView: View {
             }
             .padding(.horizontal)
             .padding(.bottom, 32)
+        }
+        .alert("Delete Drive?", isPresented: Binding(
+            get: { drivePendingDelete != nil },
+            set: { if !$0 { drivePendingDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { drivePendingDelete = nil }
+            Button("Delete", role: .destructive) {
+                Task { await performDelete() }
+            }
+        } message: {
+            Text("This permanently removes the drive from your history. This can't be undone.")
+        }
+        .alert("Unable to Delete Drive", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "Unknown error")
         }
     }
 
@@ -659,6 +680,15 @@ struct CarDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing) {
+                        if drive.userID == AuthManager.shared.getUser()?.id {
+                            Button(role: .destructive) {
+                                drivePendingDelete = drive
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -779,6 +809,18 @@ struct CarDetailView: View {
 
     private var confettiTokenDefaultsKey: String {
         "CarDetailView.lastConfettiToken.\(carId)"
+    }
+
+    @MainActor
+    private func performDelete() async {
+        guard let drive = drivePendingDelete, let id = drive.id else { return }
+        do {
+            try await driveManager.deleteDrive(id: id)
+            drivePendingDelete = nil
+        } catch {
+            deleteError = error.localizedDescription
+            drivePendingDelete = nil
+        }
     }
 }
 

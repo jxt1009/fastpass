@@ -19,6 +19,8 @@ struct GarageView: View {
     @StateObject private var carStatsManager = CarStatsManager.shared
     @ObservedObject private var settings = AppSettings.shared
     @State private var showingAddCar = false
+    @State private var drivePendingDelete: Drive?
+    @State private var deleteError: String?
 
     private var cars: [UserCar] {
         profileManager.profile?.garage ?? []
@@ -84,6 +86,15 @@ struct GarageView: View {
                         GarageDriveRow(drive: drive)
                     }
                     .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing) {
+                        if drive.userID == AuthManager.shared.getUser()?.id {
+                            Button(role: .destructive) {
+                                drivePendingDelete = drive
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
                 }
             }
             if driveManager.drives.count > 5 {
@@ -141,6 +152,25 @@ struct GarageView: View {
             .sheet(isPresented: $showingAddCar) {
                 AddCarView()
             }
+            .alert("Delete Drive?", isPresented: Binding(
+                get: { drivePendingDelete != nil },
+                set: { if !$0 { drivePendingDelete = nil } }
+            )) {
+                Button("Cancel", role: .cancel) { drivePendingDelete = nil }
+                Button("Delete", role: .destructive) {
+                    Task { await performDelete() }
+                }
+            } message: {
+                Text("This permanently removes the drive from your history. This can't be undone.")
+            }
+            .alert("Unable to Delete Drive", isPresented: Binding(
+                get: { deleteError != nil },
+                set: { if !$0 { deleteError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deleteError ?? "Unknown error")
+            }
         }
     }
 
@@ -171,6 +201,18 @@ struct GarageView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
+        }
+    }
+
+    @MainActor
+    private func performDelete() async {
+        guard let drive = drivePendingDelete, let id = drive.id else { return }
+        do {
+            try await driveManager.deleteDrive(id: id)
+            drivePendingDelete = nil
+        } catch {
+            deleteError = error.localizedDescription
+            drivePendingDelete = nil
         }
     }
 }
