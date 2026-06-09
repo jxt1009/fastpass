@@ -38,11 +38,21 @@ func createDrive(c *gin.Context) {
 
 	// Evaluate achievements; embed the user's currently-unlocked set so the
 	// client can celebrate and sync exactly without a follow-up fetch.
-	unlocked, evalErr := evaluateForUser(userID)
+	unlocked, newUnlocks, evalErr := evaluateForUser(userID)
 	if evalErr != nil {
 		// Don't fail the create — log and continue with an empty unlocked set.
 		logWithRequestID(c).Warn("achievement evaluation failed", "user_id", userID, "error", evalErr.Error())
 		unlocked = []UnlockedAchievement{}
+	}
+	if len(newUnlocks) > 0 {
+		// Best-effort: notifications are a side effect, the drive is the
+		// primary action. A fan-out failure must not fail the create.
+		var actor User
+		if err := db.First(&actor, userID).Error; err == nil {
+			if fanErr := FanOutPBNotificationForUnlocks(&actor, newUnlocks); fanErr != nil {
+				logWithRequestID(c).Warn("notification fan-out failed", "user_id", userID, "error", fanErr.Error())
+			}
+		}
 	}
 	c.JSON(http.StatusCreated, gin.H{
 		"drive":                drive,
@@ -126,9 +136,19 @@ func updateDrive(c *gin.Context) {
 	// affect which drive the user "set" a 0-60 PB on). Always return the
 	// same envelope shape so clients have a single decode path; an empty
 	// slice signals "nothing new unlocked".
-	var unlocked []UnlockedAchievement
-	if u, evalErr := evaluateForUser(userID); evalErr == nil {
-		unlocked = u
+	unlocked := []UnlockedAchievement{}
+	if u, newUnlocks, evalErr := evaluateForUser(userID); evalErr == nil {
+		if u != nil {
+			unlocked = u
+		}
+		if len(newUnlocks) > 0 {
+			var actor User
+			if err := db.First(&actor, userID).Error; err == nil {
+				if fanErr := FanOutPBNotificationForUnlocks(&actor, newUnlocks); fanErr != nil {
+					logWithRequestID(c).Warn("notification fan-out failed", "user_id", userID, "error", fanErr.Error())
+				}
+			}
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"drive":                 drive,

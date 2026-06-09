@@ -144,6 +144,34 @@ var schemaMigrations = []schemaMigration{
 			return nil
 		},
 	},
+	{
+		version:     "2026060601",
+		description: "add notifications table for follower PB events",
+		up: func(tx *gorm.DB) error {
+			if !tx.Migrator().HasTable(&Notification{}) {
+				if err := tx.Migrator().CreateTable(&Notification{}); err != nil {
+					return err
+				}
+			}
+			if err := addIndexByNameIfMissing(tx, &Notification{}, "idx_notification_user_created"); err != nil {
+				return err
+			}
+			if err := addIndexByNameIfMissing(tx, &Notification{}, "idx_notification_user_unread"); err != nil {
+				return err
+			}
+			return nil
+		},
+	},
+	{
+		version:     "2026060602",
+		description: "add unique index for notification dedupe",
+		up: func(tx *gorm.DB) error {
+			return tx.Exec(`
+				CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_dedupe
+				ON notifications (user_id, kind, actor_id, drive_id, achievement_id)
+			`).Error
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB) error {

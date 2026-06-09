@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -228,6 +229,71 @@ func TestListDrives_OnlyReturnsOwnDrives(t *testing.T) {
 	for _, d := range drives {
 		if d.UserID != userA.ID {
 			t.Errorf("drive %d has wrong user ID: got %d, want %d", d.ID, d.UserID, userA.ID)
+		}
+	}
+}
+
+func TestUpdateDrive_UnlockedAchievementsIsArrayNotNull(t *testing.T) {
+	jwtSecret = []byte("update-envelope-secret-32-bytes!!!")
+	setupTestDB(t)
+
+	user := User{Email: "upd_envelope@test.com", Username: "updenvelope", AuthProvider: "google"}
+	db.Create(&user)
+
+	drive := Drive{UserID: user.ID, StartTime: time.Now(), EndTime: time.Now(), MaxSpeed: 25}
+	db.Create(&drive)
+
+	// Pre-insert UserAchievement rows so the update doesn't trigger
+	// any new unlocks. The point of this test is wire-shape — the
+	// `unlocked_achievements` field must serialize as `[]`, not `null`,
+	// even when there are no new unlocks to report. (The field's
+	// semantic is "the current unlocked set", used by iOS to sync;
+	// an empty set is the valid "nothing new" signal.)
+	preInserted := []string{"first_drive", "speed_50"}
+	for _, aid := range preInserted {
+		db.Create(&UserAchievement{
+			UserID:        user.ID,
+			AchievementID: aid,
+			UnlockedAt:    time.Now().Add(-time.Hour),
+		})
+	}
+
+	router := makeAuthRouter()
+	body, _ := json.Marshal(map[string]interface{}{"max_speed": 30})
+	req, _ := http.NewRequest("PUT", "/api/v1/drives/"+strconv.Itoa(int(drive.ID)), bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+tokenForUser(t, user))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// The envelope must contain "unlocked_achievements" as a JSON array,
+	// never null — clients expect a single decode path that mirrors
+	// createDrive.
+	bodyStr := w.Body.String()
+	if strings.Contains(bodyStr, `"unlocked_achievements":null`) {
+		t.Errorf("unlocked_achievements must never serialize as null, got body: %s", bodyStr)
+	}
+
+	// And confirm the typed decode works the same way createDrive does.
+	var resp createDriveResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.UnlockedAchievements == nil {
+		t.Fatalf("expected non-nil slice for unlocked_achievements, got nil")
+	}
+
+	// Both pre-inserted achievements should be reflected back.
+	gotIDs := map[string]bool{}
+	for _, a := range resp.UnlockedAchievements {
+		gotIDs[a.AchievementID] = true
+	}
+	for _, want := range preInserted {
+		if !gotIDs[want] {
+			t.Errorf("expected %q in unlocked_achievements, got %v", want, gotIDs)
 		}
 	}
 }

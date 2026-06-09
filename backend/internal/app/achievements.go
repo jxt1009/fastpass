@@ -363,30 +363,34 @@ func evaluate(userID uint, inputs evaluationInputs) []evaluationResult {
 }
 
 // evaluateForUser runs the full evaluation and persists any new unlocks. It
-// returns the set of currently-unlocked achievements so the client can sync.
-func evaluateForUser(userID uint) ([]UnlockedAchievement, error) {
+// returns the set of currently-unlocked achievements (for client sync) plus
+// the subset that was just added on this call (used to drive notification
+// fan-out and other side effects).
+func evaluateForUser(userID uint) ([]UnlockedAchievement, []evaluationResult, error) {
 	inputs, err := loadEvaluationInputs(userID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	candidate := evaluate(userID, inputs)
 
 	if len(candidate) == 0 {
 		// Nothing to add; still return currently-unlocked for client sync.
-		return loadUnlockedAchievements(userID)
+		unlocked, err := loadUnlockedAchievements(userID)
+		return unlocked, nil, err
 	}
 
 	// Load existing unlocks to dedupe
 	existing := map[string]bool{}
 	var existingRows []UserAchievement
 	if err := db.Where("user_id = ?", userID).Find(&existingRows).Error; err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, row := range existingRows {
 		existing[row.AchievementID] = true
 	}
 
 	now := time.Now().UTC()
+	var newUnlocks []evaluationResult
 	for _, c := range candidate {
 		if existing[c.AchievementID] {
 			continue
@@ -400,12 +404,14 @@ func evaluateForUser(userID uint) ([]UnlockedAchievement, error) {
 			SourceValue:   c.SourceValue,
 		}
 		if err := db.Create(&row).Error; err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		newUnlocks = append(newUnlocks, c)
 	}
 
 	// Return full unlocked set so clients can sync exactly
-	return loadUnlockedAchievements(userID)
+	unlocked, err := loadUnlockedAchievements(userID)
+	return unlocked, newUnlocks, err
 }
 
 // UnlockedAchievement is the public-facing shape of a single unlocked
