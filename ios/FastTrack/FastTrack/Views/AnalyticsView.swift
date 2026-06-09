@@ -126,7 +126,8 @@ struct AnalyticsView: View {
                 value: settings.speedDisplay(analyticsData.avgMaxSpeed),
                 icon: "speedometer",
                 iconColor: .orange,
-                trend: analyticsData.speedTrend
+                trend: analyticsData.speedTrend,
+                info: StatInfo.avgMaxSpeed
             )
             
             AnalyticsCard(
@@ -202,31 +203,35 @@ struct AnalyticsView: View {
                     value: analyticsData.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
                     category: analyticsData.zeroToSixtyCategory,
                     icon: "bolt.fill",
-                    color: .red
+                    color: .red,
+                    info: StatInfo.zeroToSixty
                 )
-                
+
                 PerformanceBreakdownCard(
                     title: "Cornering",
                     value: String(format: "%.2fG", analyticsData.maxLateralG),
                     category: analyticsData.corneringGrade,
                     icon: "arrow.triangle.turn.up.right.circle.fill",
-                    color: .purple
+                    color: .purple,
+                    info: StatInfo.cornering
                 )
-                
+
                 PerformanceBreakdownCard(
                     title: "Driving Style",
                     value: String(format: "%.0f%%", analyticsData.avgSmoothness),
                     category: analyticsData.drivingStyle,
                     icon: "waveform.path",
-                    color: .cyan
+                    color: .cyan,
+                    info: StatInfo.smoothness
                 )
-                
+
                 PerformanceBreakdownCard(
                     title: "Consistency",
                     value: String(format: "%.0f%%", analyticsData.consistency),
                     category: analyticsData.consistencyGrade,
                     icon: "target",
-                    color: .mint
+                    color: .mint,
+                    info: StatInfo.consistency
                 )
             }
         }
@@ -307,43 +312,6 @@ struct TrendIndicator: View {
                 .font(.caption2)
         }
         .foregroundColor(trend.color)
-    }
-}
-
-struct PerformanceBreakdownCard: View {
-    let title: String
-    let value: String
-    let category: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        InstrumentCard {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: icon)
-                        .foregroundColor(color)
-                        .font(.title3)
-                    Spacer()
-                }
-                
-                Text(value)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text(category)
-                    .font(.caption2)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(color.opacity(0.2))
-                    .foregroundColor(color)
-                    .cornerRadius(4)
-            }
-        }
     }
 }
 

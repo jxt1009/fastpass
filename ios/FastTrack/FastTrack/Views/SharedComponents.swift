@@ -101,6 +101,30 @@ enum StatInfo {
         howCalculated: "Weighted average of three components: Smoothness (40%) — consistency of throttle and braking inputs; Consistency (30%) — how repeatable your smoothness is drive-to-drive; Performance (30%) — average top speed relative to the Sports Car threshold (100 mph). Higher scores reward smooth, consistent driving with decent speed.",
         unit: "0–100"
     )
+    static let cornering = StatInfoEntry(
+        "Cornering",
+        summary: "The highest lateral G-force recorded during your drives.",
+        howCalculated: "Peak lateral G-force is derived from GPS heading changes. The value shown is the maximum across all filtered drives. Values above 0.6g indicate spirited cornering; above 0.8g is race-driver territory.",
+        unit: "G"
+    )
+    static let consistency = StatInfoEntry(
+        "Consistency",
+        summary: "How repeatable your performance is drive-to-drive.",
+        howCalculated: "Coefficient of variation of top speeds across drives. The standard deviation of max speeds is divided by the mean, then inverted to a 0–100 score. Higher means your top speeds are more predictable from drive to drive.",
+        unit: "0–100"
+    )
+    static let periodComparison = StatInfoEntry(
+        "Period Comparison",
+        summary: "How your average max speed this period compares to the previous equivalent period.",
+        howCalculated: "The average max speed across all drives in the current time window minus the same metric from the prior window. A delta above +0.5 speed-units shows as 'Up'; below −0.5 as 'Down'; within ±0.5 as 'Same'.",
+        unit: nil
+    )
+    static let avgMaxSpeed = StatInfoEntry(
+        "Avg Max Speed",
+        summary: "The average of your highest speeds across all filtered drives.",
+        howCalculated: "Sum of each drive's max speed divided by the number of drives. Not the average speed of a single drive — this measures the typical ceiling of your driving sessions.",
+        unit: "speed"
+    )
     // Section-level info
     static let maneuversSection = StatInfoEntry(
         "Maneuvers",
@@ -432,6 +456,45 @@ struct SectionHeader: View {
             if let info { StatInfoButton(entry: info) }
         }
         .padding(.top, 8)
+    }
+}
+
+struct PerformanceBreakdownCard: View {
+    let title: String
+    let value: String
+    let category: String
+    let icon: String
+    let color: Color
+    var info: StatInfoEntry? = nil
+
+    var body: some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(color)
+                        .font(.title3)
+                    Spacer()
+                    if let info { StatInfoButton(entry: info) }
+                }
+
+                Text(value)
+                    .font(.headline)
+                    .fontWeight(.bold)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(category)
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.2))
+                    .foregroundColor(color)
+                    .cornerRadius(4)
+            }
+        }
     }
 }
 

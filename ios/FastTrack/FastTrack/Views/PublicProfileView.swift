@@ -112,8 +112,12 @@ struct PublicProfileView: View {
 
     private func narrowHeader(_ profile: PublicProfile) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            avatarView(profile)
-                .onTapGesture { presentAvatarZoom(profile) }
+            Button {
+                presentAvatarZoom(profile)
+            } label: {
+                avatarView(profile)
+            }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName(profile))

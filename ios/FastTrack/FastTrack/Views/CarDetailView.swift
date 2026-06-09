@@ -24,6 +24,7 @@ struct CarDetailView: View {
     @State private var zoomedPhoto: AvatarZoomTarget?
     @State private var showConfetti = false
     @State private var confettiTask: Task<Void, Never>?
+    @State private var showingEditCar = false
     /// Guards the one-shot confetti so it doesn't replay on every
     /// `onChange` refresh while the user remains on the view. Reset in
     /// `handleAppear` so navigating away and back re-arms the trigger.
@@ -63,7 +64,24 @@ struct CarDetailView: View {
             .background(Color.ftSurfaceBg.ignoresSafeArea())
             .navigationTitle(car.nickname.isEmpty ? car.shortDisplay : car.nickname)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 12) {
+                        if car != nil {
+                            Button {
+                                showingEditCar = true
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .foregroundColor(.ftBlue)
+                            }
+                        }
+                    }
+                }
+            }
             .fullScreenCover(item: $zoomedPhoto, content: photoZoomCover)
+            .sheet(isPresented: $showingEditCar) {
+                EditCarView(carId: car.id)
+            }
             .overlay(alignment: .top, content: confettiOverlay)
             .modifier(LifecycleModifier(
                 onAppear: handleAppear,

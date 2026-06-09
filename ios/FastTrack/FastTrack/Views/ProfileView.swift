@@ -53,7 +53,6 @@ struct ProfileView: View {
     @EnvironmentObject var locationManager: LocationManager
     @ObservedObject private var settings = AppSettings.shared
     @State private var showingSetup = false
-    @State private var showingAddCar = false
     @State private var showingSettings = false
     @State private var showingDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
@@ -71,8 +70,8 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
+                        garageLinkRow
                         RecentAchievementsStrip(driveManager: driveManager)
-                        garageSection
                         if driveManager.isLoadingDrives {
                             profileStatsSkeleton
                         } else {
@@ -110,9 +109,6 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingSetup) {
                 ProfileSetupView()
-            }
-            .sheet(isPresented: $showingAddCar) {
-                AddCarView()
             }
             .fullScreenCover(item: $zoomedAvatar) { target in
                 AvatarZoomView(
@@ -239,6 +235,32 @@ struct ProfileView: View {
         zoomedAvatar = AvatarZoomTarget(image: image)
     }
 
+    // MARK: - Garage Link Row
+
+    private var garageLinkRow: some View {
+        NavigationLink {
+            GarageView()
+        } label: {
+            HStack {
+                Image(systemName: "car.2.fill")
+                    .foregroundColor(.ftBlue)
+                Text("Your Garage")
+                    .fontWeight(.semibold)
+                Spacer()
+                if let profile = profileManager.profile, !profile.garage.isEmpty {
+                    Text("\(profile.garage.count) car\(profile.garage.count == 1 ? "" : "s")")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+    }
+
     // MARK: - Loading skeleton (dark theme)
 
     private var profileStatsSkeleton: some View {
@@ -262,71 +284,6 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Garage Section
-    
-    private var garageSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Garage")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                Spacer()
-                NavigationLink {
-                    GarageView()
-                } label: {
-                    HStack(spacing: 2) {
-                        Text("View Garage")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.ftBlue)
-                }
-                .accessibilityLabel("View Garage")
-                Button {
-                    showingAddCar = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.ftBlue)
-                        .font(.title2)
-                }
-                .accessibilityLabel("Add Car")
-            }
-            
-            if let profile = profileManager.profile, !profile.garage.isEmpty {
-                LazyVGrid(columns: [GridItem(.flexible())], spacing: 8) {
-                    ForEach(profile.garage) { car in
-                        CarGarageCard(
-                            car: car,
-                            isSelected: profile.selectedCarId == car.id
-                        ) {
-                            selectCar(car.id)
-                        }
-                    }
-                }
-            } else {
-                InstrumentCard {
-                    VStack(spacing: 12) {
-                        Image(systemName: "car")
-                            .font(.title2)
-                            .foregroundColor(.secondary)
-                        Text("No cars in garage")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Button("Add Your First Car") {
-                            showingAddCar = true
-                        }
-                        .foregroundColor(.ftBlue)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                }
-            }
-        }
-    }
 
     // MARK: Main Stats Grid
 
@@ -640,12 +597,6 @@ struct ProfileView: View {
         let m = (Int(seconds) % 3600) / 60
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
-    }
-    
-    private func selectCar(_ carId: String) {
-        guard var profile = profileManager.profile else { return }
-        profile.selectCar(id: carId)
-        profileManager.saveProfile(profile)
     }
 
     @MainActor
