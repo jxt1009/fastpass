@@ -10,6 +10,10 @@ import Charts
 // achievements whose source drive belongs to this car, and a
 // one-shot confetti animation when a PB is newer than 7 days.
 //
+// The hero photo carries a pencil overlay that opens a focused
+// `CarHeroPhotoEditorSheet` for photo-only edits. The toolbar pencil
+// still opens the full `EditCarView` (nickname + photo).
+//
 // Data is assembled once via `CarDetailData.derive(...)` so the view
 // body stays a thin renderer.
 
@@ -34,6 +38,7 @@ struct CarDetailView: View {
     @State private var showConfetti = false
     @State private var confettiTask: Task<Void, Never>?
     @State private var showingEditCar = false
+    @State private var showingHeroPhotoEditor = false
     @State private var showingDrivingStyleGuide = false
     @State private var lastPresentedConfettiToken: String?
     @State private var drivePendingDelete: Drive?
@@ -62,6 +67,13 @@ struct CarDetailView: View {
                     .fullScreenCover(item: $zoomedPhoto, content: photoZoomCover)
                     .sheet(isPresented: $showingEditCar) {
                         EditCarView(carId: carId)
+                    }
+                    .sheet(isPresented: $showingHeroPhotoEditor) {
+                        CarHeroPhotoEditorSheet(
+                            carId: carId,
+                            existingPhotoURL: car?.photoUrl,
+                            onUploadComplete: handleHeroPhotoUpload
+                        )
                     }
                     .sheet(isPresented: $showingDrivingStyleGuide) {
                         drivingStyleGuideSheet
@@ -205,9 +217,40 @@ struct CarDetailView: View {
                     .lineLimit(1)
             }
             .padding(16)
+
+            heroPhotoEditButton
         }
         .contentShape(Rectangle())
         .onTapGesture { presentPhotoZoom() }
+    }
+
+    private var heroPhotoEditButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button {
+                    showingHeroPhotoEditor = true
+                } label: {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(Circle().fill(Color.black.opacity(0.45)))
+                }
+                .frame(width: 44, height: 44)
+                .accessibilityLabel("Edit car photo")
+            }
+        }
+        .padding(8)
+    }
+
+    @MainActor
+    private func handleHeroPhotoUpload(newURL: URL) {
+        guard var profile = profileManager.profile else { return }
+        profile.updateCarPhotoUrl(id: carId, url: newURL.absoluteString)
+        profileManager.saveProfile(profile)
+        refresh()
     }
 
     @ViewBuilder
