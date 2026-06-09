@@ -134,8 +134,11 @@ This is the structural change: the Analytics tab becomes the Garage tab, per-car
    ```
    Note: `InstrumentStatCell` is defined in `SharedComponents.swift` and is already used in ProfileView and other views.
 
-6. Add a "Recent Drives" section below the car grid (before the end of the `VStack`). Show last 5 drives sorted by `startTime` descending. Each drive row shows: date, car name badge (if car is in garage), max speed, distance, duration. Reuse the existing `DriveRowView` from `DriveHistoryView.swift`.
+6. Add a "Recent Drives" section below the car grid (before the end of the `VStack`). Show last 5 drives sorted by `startTime` descending.
 
+   **Use the garage design language** — wrap each drive in an `InstrumentCard` with the drive date as headline, car name badge (if the drive has a car in the garage), and a compact stats row (speed, distance, duration). PB pills use the same yellow/red capsule style from `DriveRowView`. Do NOT drop in a bare `List`-style `DriveRowView` — it doesn't match the `InstrumentCard` + `ftCardBg` + `ftBlue` accent aesthetic.
+
+   Example:
    ```swift
    private var recentDrivesSection: some View {
        VStack(alignment: .leading, spacing: 12) {
@@ -149,7 +152,7 @@ This is the structural change: the Analytics tab becomes the Garage tab, per-car
                    NavigationLink {
                        DriveDetailView(drive: drive)
                    } label: {
-                       DriveRowView(drive: drive)
+                       GarageDriveRow(drive: drive)
                    }
                    .buttonStyle(.plain)
                }
@@ -158,7 +161,50 @@ This is the structural change: the Analytics tab becomes the Garage tab, per-car
    }
    ```
 
-   `SectionHeader` is already used in `CarDetailView`. If it's `private`, check — it may need to be made `internal` or a similar simple header can be inlined.
+   Create `GarageDriveRow` as a new view in `GarageView.swift` (it can be `private` or `internal`). It wraps the drive info in an `InstrumentCard` matching the garage aesthetic:
+   ```swift
+   struct GarageDriveRow: View {
+       let drive: Drive
+       @EnvironmentObject var settings: AppSettings
+
+       var body: some View {
+           InstrumentCard {
+               HStack(alignment: .top, spacing: 12) {
+                   VStack(alignment: .leading, spacing: 4) {
+                       HStack(spacing: 4) {
+                           Text(drive.startTime, style: .date)
+                               .font(.subheadline)
+                               .fontWeight(.semibold)
+                           if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
+                               Text(drive.carDisplayString)
+                                   .font(.caption2)
+                                   .fontWeight(.medium)
+                                   .foregroundColor(.white)
+                                   .padding(.horizontal, 6)
+                                   .padding(.vertical, 2)
+                                   .background(Color.ftBlue.opacity(0.8))
+                                   .clipShape(Capsule())
+                           }
+                       }
+                       HStack(spacing: 12) {
+                           Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
+                           Label(settings.distanceDisplay(drive.distance, decimals: 1), systemImage: "map")
+                           Label(drive.durationString, systemImage: "clock")
+                       }
+                       .font(.caption)
+                       .foregroundColor(.secondary)
+                   }
+                   Spacer()
+                   Image(systemName: "chevron.right")
+                       .font(.caption)
+                       .foregroundColor(.tertiary)
+               }
+           }
+       }
+   }
+   ```
+
+   This mirrors the `GarageCarCard` pattern: `InstrumentCard` wrapper, `ftBlue` car badge, secondary stat row, trailing chevron hint.
 
 7. Wire `driveManager` through the environment. Check that `GarageView` is presented in contexts where `DriveManager` is available as an EnvironmentObject. In `FastTrackApp.swift`, `driveManager` is already injected as an EnvironmentObject on `RootView`, so any view in the tab hierarchy can use `@EnvironmentObject var driveManager: DriveManager`.
 
@@ -508,9 +554,9 @@ private func sparklineCard(title: String, values: [Double], unit: String, format
 }
 ```
 
-**4. recentDrivesSection** — list of last 5 drives for this car, with PB drive callouts:
+**4. recentDrivesSection** — list of last 5 drives for this car, with PB drive callouts, using garage design language:
 
-The existing `DriveRowView` in `DriveHistoryView` already supports `isPersonalBest060` and `isPersonalBestTopSpeed` parameters that show yellow/red PB pills. Use `PersonalBests.trueTopSpeed` and `PersonalBests.trueZeroToSixty` (from Track C, already in CarDetailData+Derive.swift) to identify which drives set the car's PBs, and pass those flags to `DriveRowView`.
+The car-specific drive rows should use the same `InstrumentCard` style as `GarageCarCard` and `GarageDriveRow`. Reuse the `GarageDriveRow` view created for GarageView but add PB pills. Since this car's PB drives should be highlighted, identify them using `PersonalBests.trueTopSpeed` and `PersonalBests.trueZeroToSixty` (already in CarDetailData+Derive.swift).
 
 ```swift
 private var recentDrivesSection: some View {
@@ -536,20 +582,38 @@ private var recentDrivesSection: some View {
                 NavigationLink {
                     DriveDetailView(drive: drive)
                 } label: {
-                    DriveRowView(
-                        drive: drive,
-                        isPersonalBest060: drive.id == zeroSixtyPBDriveId,
-                        isPersonalBestTopSpeed: drive.id == topSpeedPBDriveId
-                    )
+                    GarageDriveRow(drive: drive)
+                        // Add PB pill overlays for this car's PB drives
+                        .overlay(alignment: .topTrailing) {
+                            if drive.id == zeroSixtyPBDriveId {
+                                pbPill(text: "PB 0-60", icon: "trophy.fill", bg: .yellow, fg: .black)
+                            } else if drive.id == topSpeedPBDriveId {
+                                pbPill(text: "PB Speed", icon: "flame.fill", bg: .red, fg: .white)
+                            }
+                        }
                 }
                 .buttonStyle(.plain)
             }
         }
     }
 }
+
+private func pbPill(text: String, icon: String, bg: Color, fg: Color) -> some View {
+    HStack(spacing: 3) {
+        Image(systemName: icon)
+            .font(.system(size: 9, weight: .bold))
+        Text(text)
+            .font(.caption2.weight(.bold))
+    }
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .background(bg)
+    .foregroundColor(fg)
+    .clipShape(Capsule())
+}
 ```
 
-Note: `DriveRowView` and `DriveDetailView` are in `DriveHistoryView.swift`. `SectionHeader` might be private to `CarDetailView` already or might need to be made accessible — check and copy if needed.
+This uses the same `GarageDriveRow` + PB pill pattern from GarageView, ensuring visual consistency across both surfaces. `SectionHeader` might be private to `CarDetailView` already or might need to be made accessible — check and copy if needed.
 
 ### Verification
 
