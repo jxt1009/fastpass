@@ -43,12 +43,7 @@ struct CarHeroPhotoEditorSheet: View {
                     .frame(height: 240)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                    Text(pickerTitle)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(isLoading || isUploading)
+                actionArea
 
                 if let errorMessage {
                     Text(errorMessage)
@@ -83,6 +78,48 @@ struct CarHeroPhotoEditorSheet: View {
     }
 
     @ViewBuilder
+    private var actionArea: some View {
+        if let sourceImage {
+            Button {
+                croppingImage = CropImageSource(image: sourceImage, context: .car)
+            } label: {
+                Text("Use Existing Photo")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isUploading)
+
+            PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                Text("Choose Different Photo")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .disabled(isUploading)
+        } else if hasExistingPhoto {
+            PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                Text("Choose Photo")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isLoading || isUploading)
+
+            if !isLoading {
+                Text("Couldn't load existing photo")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                Text("Choose Photo")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isUploading)
+        }
+    }
+
+    @ViewBuilder
     private var heroPreview: some View {
         if let sourceImage {
             Image(uiImage: sourceImage)
@@ -105,13 +142,6 @@ struct CarHeroPhotoEditorSheet: View {
         }
     }
 
-    private var pickerTitle: String {
-        if isUploading { return "Uploading…" }
-        if sourceImage != nil { return "Choose Different Photo" }
-        if hasExistingPhoto { return "Use Existing Photo" }
-        return "Choose Photo"
-    }
-
     private var hasExistingPhoto: Bool {
         guard let url = existingPhotoURL, !url.isEmpty else { return false }
         return URL(string: url) != nil
@@ -128,6 +158,7 @@ struct CarHeroPhotoEditorSheet: View {
                 let image = try await Self.loadImage(from: url)
                 if Task.isCancelled { return }
                 sourceImage = image
+                croppingImage = CropImageSource(image: image, context: .car)
             } catch {
                 Self.log.error("Failed to download existing car photo: \(error.localizedDescription)")
             }
@@ -138,7 +169,21 @@ struct CarHeroPhotoEditorSheet: View {
     /// Fetches a `UIImage` from `url`. Exposed as a static seam so
     /// tests can target the same call site as production code.
     static func loadImage(from url: URL, session: URLSession = .shared) async throws -> UIImage {
-        let (data, _) = try await session.data(from: url)
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse else {
+            throw NSError(
+                domain: "CarHeroPhotoEditorSheet",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Response was not an HTTP response"]
+            )
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw NSError(
+                domain: "CarHeroPhotoEditorSheet",
+                code: http.statusCode,
+                userInfo: [NSLocalizedDescriptionKey: "Server returned HTTP \(http.statusCode)"]
+            )
+        }
         guard let image = UIImage(data: data) else {
             throw NSError(
                 domain: "CarHeroPhotoEditorSheet",

@@ -16,8 +16,11 @@ final class CarHeroPhotoEditorSheetTests: XCTestCase {
 
     private final class StubURLProtocol: URLProtocol {
         static var requestHandler: ((URLRequest) -> (HTTPURLResponse, Data?))?
+        static var expectedHost: String?
 
-        override class func canInit(with request: URLRequest) -> Bool { true }
+        override class func canInit(with request: URLRequest) -> Bool {
+            requestHandler != nil && expectedHost == request.url?.host
+        }
         override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
         override func startLoading() {
             guard let handler = StubURLProtocol.requestHandler else {
@@ -48,6 +51,7 @@ final class CarHeroPhotoEditorSheetTests: XCTestCase {
 
     override func tearDown() {
         StubURLProtocol.requestHandler = nil
+        StubURLProtocol.expectedHost = nil
         URLProtocol.unregisterClass(StubURLProtocol.self)
         super.tearDown()
     }
@@ -70,6 +74,7 @@ final class CarHeroPhotoEditorSheetTests: XCTestCase {
 
     func testLoadImage_decodesServerResponse() async throws {
         let url = URL(string: "https://example.com/cars/abc/photo.png")!
+        StubURLProtocol.expectedHost = url.host
         StubURLProtocol.requestHandler = { req in
             XCTAssertEqual(req.url, url)
             return (
@@ -85,6 +90,7 @@ final class CarHeroPhotoEditorSheetTests: XCTestCase {
 
     func testLoadImage_throwsOnNonImageResponse() async {
         let url = URL(string: "https://example.com/cars/abc/photo.html")!
+        StubURLProtocol.expectedHost = url.host
         StubURLProtocol.requestHandler = { req in
             (
                 HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
@@ -102,6 +108,7 @@ final class CarHeroPhotoEditorSheetTests: XCTestCase {
 
     func testLoadImage_propagatesHTTPError() async {
         let url = URL(string: "https://example.com/cars/missing/photo.png")!
+        StubURLProtocol.expectedHost = url.host
         StubURLProtocol.requestHandler = { req in
             (
                 HTTPURLResponse(url: req.url!, statusCode: 404, httpVersion: nil, headerFields: nil)!,
