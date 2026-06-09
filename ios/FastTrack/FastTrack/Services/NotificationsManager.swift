@@ -79,6 +79,22 @@ final class NotificationsManager: ObservableObject {
     func markRead(_ notification: InAppNotification) async {
         do {
             try await APIService.shared.markNotificationRead(id: notification.id)
+            await MainActor.run {
+                if let idx = self.notifications.firstIndex(where: { $0.id == notification.id }) {
+                    var updated = self.notifications[idx]
+                    updated = InAppNotification(
+                        id: updated.id,
+                        kind: updated.kind,
+                        actor: updated.actor,
+                        driveId: updated.driveId,
+                        achievementId: updated.achievementId,
+                        message: updated.message,
+                        readAt: Date(),
+                        createdAt: updated.createdAt
+                    )
+                    self.notifications[idx] = updated
+                }
+            }
             await refreshUnreadCount()
         } catch {
             // Silent: read state is best-effort.

@@ -368,7 +368,9 @@ class APIService {
 
     func fetchNotifications(cursor: String? = nil, limit: Int = 50) async throws -> InAppNotificationsListResponse {
         var query = "limit=\(limit)"
-        if let cursor { query += "&cursor=\(cursor)" }
+        if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            query += "&cursor=\(encoded)"
+        }
         return try await get(endpoint: "/me/notifications?\(query)")
     }
 

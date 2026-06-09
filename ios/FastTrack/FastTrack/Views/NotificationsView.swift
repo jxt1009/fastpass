@@ -4,38 +4,38 @@ struct NotificationsView: View {
     @StateObject private var manager = NotificationsManager.shared
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if manager.isLoading && manager.notifications.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if manager.notifications.isEmpty {
-                    ContentUnavailableView(
-                        "No notifications yet",
-                        systemImage: "bell.slash",
-                        description: Text("Follow other drivers to get notified when they hit a personal best.")
-                    )
-                } else {
-                    List {
-                        ForEach(manager.notifications) { n in
+        Group {
+            if manager.isLoading && manager.notifications.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if manager.notifications.isEmpty {
+                ContentUnavailableView(
+                    "No notifications yet",
+                    systemImage: "bell.slash",
+                    description: Text("Follow other drivers to get notified when they hit a personal best.")
+                )
+            } else {
+                List {
+                    ForEach(manager.notifications) { n in
+                        Button {
+                            Task { await manager.markRead(n) }
+                        } label: {
                             NotificationRow(notification: n)
-                                .onTapGesture {
-                                    Task { await manager.markRead(n) }
-                                }
                         }
+                        .buttonStyle(.plain)
                     }
-                    .listStyle(.insetGrouped)
                 }
+                .listStyle(.insetGrouped)
             }
-            .navigationTitle("Notifications")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Mark all read") {
-                        Task { await manager.markAllRead() }
-                    }
-                    .disabled(manager.unreadCount == 0)
+        }
+        .navigationTitle("Notifications")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Mark all read") {
+                    Task { await manager.markAllRead() }
                 }
+                .disabled(manager.unreadCount == 0)
             }
         }
         .task {
