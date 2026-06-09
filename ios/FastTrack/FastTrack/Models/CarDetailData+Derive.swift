@@ -167,23 +167,19 @@ extension CarDetailData {
         let bestZeroToSixtyTime = bestZeroToSixty
 
         let recentSorted = carDrives.sorted { $0.startTime > $1.startTime }
-        let recentForTrends = Array(recentSorted.prefix(5))
-        let recentDrives = recentForTrends
+        let recentForTrendsNewestFirst = Array(recentSorted.prefix(5))
+        // Trend arrays are documented as oldest-first so sparklines
+        // render chronologically left-to-right.
+        let recentForTrends = recentForTrendsNewestFirst.reversed()
+        let recentDrives = recentForTrendsNewestFirst
 
         let distanceTrendPoints = recentForTrends.map { $0.distance }
 
         let smoothnessTrendPoints = recentForTrends.map { drive in
-            guard drive.maxSpeed > 0, drive.duration > 0 else { return 50.0 }
-            let speedEfficiency = drive.avgSpeed / max(drive.maxSpeed, 1)
-            let accelPenalty = min(drive.maxAcceleration / 9.81, 1.0) * 15
-            let decelPenalty = min(drive.maxDeceleration / 9.81, 1.0) * 15
-            let gPenalty = min(drive.peakGForce / 2.0, 1.0) * 20
-            let brakePenalty = min(Double(drive.brakeEvents) * 2.0, 20)
-            return max(0, min(100, speedEfficiency * 100 - accelPenalty - decelPenalty - gPenalty - brakePenalty))
+            CarStatsManager.shared.calculateSmoothnessScore(for: [drive])
         }
 
         let prevPeriodAvgMaxSpeed: Double? = {
-            let now = Date()
             let lastMonthStart = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
             let prevMonthStart = Calendar.current.date(byAdding: .month, value: -2, to: now) ?? now
             let prevDrives = drives.filter { $0.carId == car.id && $0.startTime >= prevMonthStart && $0.startTime < lastMonthStart }

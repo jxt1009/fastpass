@@ -123,7 +123,7 @@ static let cornering = StatInfoEntry(
         "Avg Max Speed",
         summary: "The average of your highest speeds across all filtered drives.",
         howCalculated: "Sum of each drive's max speed divided by the number of drives. Not the average speed of a single drive — this measures the typical ceiling of your driving sessions.",
-        unit: "0–100"
+        unit: "speed"
     )
     // Section-level info
     static let maneuversSection = StatInfoEntry(
