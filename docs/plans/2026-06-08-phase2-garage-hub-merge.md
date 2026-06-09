@@ -4,8 +4,10 @@
 **Status:** Ready for implementation
 **Branch:** `feat/garage-hub-analytics-merge`
 **Worktree:** `.worktrees/garage-hub`
-**Base:** Latest `main` (after Phase 1 has landed)
+**Base:** Latest `main` **after Phase 0 and Phase 1 have both landed**
 **Conventional commits:** Required (feat, fix, refactor)
+
+> **Branch order:** Phase 0 must merge first, then Phase 1, then Phase 2 from the post-Phase-1 main.
 
 This is the structural change: the Analytics tab becomes the Garage tab, per-car analytics move into CarDetailView, cross-car aggregates move to GarageView, and the full Analytics chart is deprecated.
 
@@ -106,25 +108,25 @@ This is the structural change: the Analytics tab becomes the Garage tab, per-car
    private var allCarsSummary: some View {
        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
            InstrumentStatCell(
-               icon: "flag.fill", iconColor: .green,
+               icon: "flag.fill", iconColor: .ftGreen,
                label: "Total Drives",
                value: "\(allCarsStats.totalDrives)",
                unit: ""
            )
            InstrumentStatCell(
-               icon: "map.fill", iconColor: .blue,
+               icon: "map.fill", iconColor: .ftBlue,
                label: "Total Distance",
                value: String(format: "%.1f", settings.distanceValue(allCarsStats.totalDistance)),
                unit: settings.distanceUnit
            )
            InstrumentStatCell(
-               icon: "bolt.fill", iconColor: .yellow,
+               icon: "bolt.fill", iconColor: .ftGold,
                label: "Top Speed",
                value: String(format: "%.0f", settings.speedValue(allCarsStats.topSpeed)),
                unit: settings.speedUnit
            )
            InstrumentStatCell(
-               icon: "timer", iconColor: .orange,
+               icon: "timer", iconColor: .ftAmber,
                label: "Best 0-60",
                value: allCarsStats.best060.map { String(format: "%.2f", $0) } ?? "—",
                unit: allCarsStats.best060 != nil ? "sec" : ""
@@ -311,6 +313,32 @@ Extend `derive()` to compute the new fields:
 
 The view layer will do unit conversion.
 
+**Update the `return CarDetailData(...)` call** in `derive()` to include all 8 new fields:
+```swift
+return CarDetailData(
+    car: car,
+    stats: carStats,
+    sparklinePoints: points,
+    pbSparklineIndex: pbIndex,
+    bestTopSpeed: bestTopSpeed,
+    bestZeroToSixty: bestZeroToSixty,
+    topSpeedPBDate: topSpeedPBDate,
+    zeroSixtyPBDate: zeroSixtyPBDate,
+    drivingStyle: style,
+    achievementPBs: carAchievements,
+    confettiEligible: confetti,
+    // --- new fields below ---
+    smoothnessScore: smoothnessScore,
+    consistencyScore: consistencyScore,
+    peakLateralG: peakLateralG,
+    bestZeroToSixtyTime: bestZeroToSixtyTime,
+    recentDrives: recentDrives,
+    distanceTrendPoints: distanceTrendPoints,
+    smoothnessTrendPoints: smoothnessTrendPoints,
+    prevPeriodAvgMaxSpeed: prevPeriodAvgMaxSpeed
+)
+```
+
 **PB drive callouts in PB gauges:** The existing `pbGauges` section shows top speed and best 0-60 values. The `CarDetailData` already provides `topSpeedPBDate` and `zeroSixtyPBDate`. Add a subtitle under each gauge showing "Set on [date]" when the date is available, and add a small "PB" indicator using a `StatInfoButton` if desired. This makes it clear *which drive* earned each PB without navigating away.
 
 For example, under the top speed gauge:
@@ -346,7 +374,7 @@ ScrollView {
 }
 ```
 
-**1. performanceBreakdown** — Reuse `PerformanceBreakdownCard` from AnalyticsView (it now has the `info:` parameter from Phase 1). Render 4 cards:
+**1. performanceBreakdown** — Import `PerformanceBreakdownCard` from `SharedComponents.swift` (moved in Phase 1.3). Render 4 cards:
 
 ```swift
 private var performanceBreakdown: some View {
@@ -638,16 +666,16 @@ This uses the same `GarageDriveRow` + PB pill pattern from GarageView, ensuring 
 
 | Type | Current file | New home | Notes |
 |---|---|---|---|
-| `AnalyticsData.smoothnessScore(for:)` | `AnalyticsModels.swift` | `CarStats.swift` | Already used by `CarStatsManager.calculateSmoothnessScore`; move the static method |
+| `AnalyticsData.smoothnessScore(for:)` | `AnalyticsModels.swift` | `CarStats.swift` | Move the static method; update `CarDetailData+Derive.swift` to use the new location |
 | `TrendDirection` | `AnalyticsModels.swift` | `SharedComponents.swift` | Used by `AnalyticsCard` and the new GarageView summary |
 | `TimeFrame` | `AnalyticsModels.swift` | Delete | No longer needed (fixed "last month") |
 | `AnalyticsMetric` | `AnalyticsModels.swift` | Delete | Chart picker gone |
-| `AnalyticsCard` | `AnalyticsView.swift` | `SharedComponents.swift` or keep in `GarageView.swift` | Used by GarageView summary |
-| `TrendIndicator` | `AnalyticsView.swift` | `SharedComponents.swift` | Used by `AnalyticsCard` |
-| `PerformanceBreakdownCard` | `AnalyticsView.swift` | `CarDetailView.swift` or a shared components file | Used by CarDetailView breakdown section |
+| `AnalyticsCard` | `AnalyticsView.swift` | Keep in `AnalyticsView.swift` until delete; move to `SharedComponents.swift` or `GarageView.swift` before deleting AnalyticsView | Used by GarageView summary in Phase 2.2; GarageView can own it |
+| `TrendIndicator` | `AnalyticsView.swift` | Keep in `AnalyticsView.swift` until delete | Used by `AnalyticsCard`; hoist with `AnalyticsCard` |
+| `PerformanceBreakdownCard` | `AnalyticsView.swift` | Already moved to `SharedComponents.swift` in Phase 1.3 | No action needed |
 | `AnalyticsCarChip` | `AnalyticsView.swift` | Delete | Car filter no longer needed |
 | `RecentBestCard` | `AnalyticsView.swift` | Delete | Replaced by per-car recent drives |
-| `SkeletonBlock`, `StatCardSkeleton` | Check where defined | Keep if used elsewhere | Might be in SharedComponents |
+| `SkeletonBlock`, `StatCardSkeleton` | `SharedComponents.swift` | Keep | Already in correct location |
 | `SectionHeader` | Check where defined | Make internal or copy to CarDetailView | Used by CarDetailView |
 
 ### What to delete
@@ -658,28 +686,22 @@ This uses the same `GarageDriveRow` + PB pill pattern from GarageView, ensuring 
 ### Steps
 
 1. **Move `AnalyticsData.smoothnessScore(for:)` to `CarStats.swift`**:
-   - The method is already called by `CarStatsManager.calculateSmoothnessScore` and by the new CarDetailView trend section
-   - Add it as a static method on `AnalyticsData` in `AnalyticsModels.swift` first, then move the whole `AnalyticsData` struct... actually, since we're deleting `AnalyticsModels.swift`, just move the `smoothnessScore` method directly into `CarStats.swift` as a free function or on `CarStatsManager`:
-     ```swift
-     // In CarStats.swift, near CarStatsManager
-     static func smoothnessScore(for drive: Drive) -> Double {
-         // copy the exact implementation from AnalyticsData.smoothnessScore
-     }
-     ```
-   - Then update `CarStatsManager.calculateSmoothnessScore` and `CarDetailView` trend section to use the new location.
+   - The method is used in `CarDetailData+Derive.swift` for the smoothness trend sparkline
+   - Copy the exact implementation from `AnalyticsModels.swift` into `CarStats.swift` as a free function or static method on `CarStatsManager`
+   - Update `CarStatsManager.calculateSmoothnessScore` to call the new location
+   - Update `CarDetailData+Derive.swift` to import/use the new location (change `AnalyticsModels.swift` reference)
+   - The `AnalyticsData` struct itself can be deleted after moving `smoothnessScore`
 
 2. **Move `TrendDirection` to `SharedComponents.swift`**:
    - Copy the `TrendDirection` enum (with its `icon`, `color`, `label` properties) to `SharedComponents.swift`
    - Remove from `AnalyticsModels.swift`
 
-3. **Move `AnalyticsCard` and `TrendIndicator` to `SharedComponents.swift`**:
-   - Copy both structs exactly as-is
+3. **Move `AnalyticsCard` and `TrendIndicator` to `GarageView.swift`**:
+   - Copy both structs from `AnalyticsView.swift` to `GarageView.swift` (they are used by the GarageView summary section added in Phase 2.2)
    - Remove from `AnalyticsView.swift`
+   - `AnalyticsCard` is used in `allCarsSummary` and `periodComparison` in GarageView; after this move, GarageView is self-contained
 
-4. **Move `PerformanceBreakdownCard` to a shared location**:
-   - It's now used by both (the old) `AnalyticsView` and (the new) `CarDetailView`
-   - Since AnalyticsView is being deleted, just move it to `CarDetailView.swift` or create `Views/Components/PerformanceBreakdownCard.swift`
-   - Recommendation: keep it inline in `CarDetailView.swift` since it's the only consumer after the delete
+4. **Skip `PerformanceBreakdownCard`** — it was already moved to `SharedComponents.swift` in Phase 1.3. No action needed.
 
 5. **Search for all references to deleted types** and update:
    - `AnalyticsView` (the view itself) — removed from tab bar in 2.1, delete any remaining references
@@ -689,18 +711,21 @@ This uses the same `GarageDriveRow` + PB pill pattern from GarageView, ensuring 
    - `RecentBestCard` — delete
    - `AnalyticsData` (struct) — delete after moving `smoothnessScore`
    - Any `#Preview` blocks referencing `AnalyticsView`
+   - `import AnalyticsModels` in any file → remove after moving `smoothnessScore`
 
 6. **Keep `DriveHistoryView.swift`** — it's no longer a tab but is now pushed from GarageView's "See All Drives" link and from CarDetailView's recent drives. Do NOT delete it. Only remove it from the tab bar in `FastTrackApp.swift` (done in 2.1).
 
-7. **Delete the Analytics files**:
-   - `rm ios/FastTrack/FastTrack/Views/AnalyticsView.swift`
-   - `rm ios/FastTrack/FastTrack/Views/AnalyticsModels.swift`
+7. **Delete the Analytics files** (use the worktree path):
+   - `rm FastTrack/Views/AnalyticsView.swift`
+   - `rm FastTrack/Views/AnalyticsModels.swift`
 
-8. **Remove AnalyticsView and DriveHistoryView from AppStoreScreenshotMode.swift** — update the `.analytics` and `.history` cases. `DriveHistoryView` stays as a push destination, just not a tab. The `.history` screenshot case can map to `GarageView()` or to a `NavigationStack { DriveHistoryView() }` depending on what screenshots need.
+8. **Update AppStoreScreenshotMode.swift** — replace `.history` and `.analytics` cases as described in 2.1. `DriveHistoryView` stays as a push destination, just not a tab. The `.history` screenshot case can map to `GarageView()`.
 
 ### Verification
 
-- Build succeeds with NO remaining references to `AnalyticsView`, `AnalyticsModels`, `AnalyticsCarChip`, `RecentBestCard`, `AnalyticsMetric`, `TimeFrame`, or `AnalyticsData`
+- Build succeeds with NO remaining references to `AnalyticsView`, `AnalyticsModels`, `AnalyticsCarChip`, `RecentBestCard`, `AnalyticsMetric`, `TimeFrame`, or `AnalyticsData` (the struct)
+- `AnalyticsData.smoothnessScore(for:)` still works from its new home in `CarStats.swift`
+- `PerformanceBreakdownCard` is accessible from `SharedComponents.swift` (Phase 1.3 move)
 - GarageView tab still works and shows all-cars summary + car grid + recent drives
 - CarDetailView shows all new sections (breakdown, comparison, trends, recent drives)
 - ProfileView shows "Your Garage" link

@@ -7,7 +7,7 @@
 **Base:** Latest `main`
 **Conventional commits:** Required (style, refactor)
 
-Must land before Phase 1 and Phase 2 so we build on a consistent foundation.
+Must land before Phase 1 and Phase 2. Branch from main, implement, merge, then cut Phase 1 from the post-Phase-0 main.
 
 ---
 
@@ -30,37 +30,40 @@ The design system (`DesignSystem.swift`) defines a clean "garage" language: `Ins
 
 ---
 
-## 0.1 — Replace `Color.blue` with `Color.ftBlue` everywhere
+## 0.1 — Replace `Color.blue` with `Color.ftBlue` selectively
 
-**Commit:** `style(ios): replace system blue with ftBlue across all views`
+**Commit:** `style(ios): replace system blue with ftBlue in target views`
 
-Global sweep. Replace every instance of `Color.blue` and `.blue` (when used as an accent/interactive color, not `.blue` in a gradient or unrelated context) with `Color.ftBlue` or `.ftBlue`.
+Selective per-file replacement. **Do NOT** globally sweep — some `.blue` uses are intentional (ConfettiView rainbow palette, DrivingStyle.color semantic values). Explicitly excluded: `ConfettiView.swift`, `SignInView.swift`, `ProfileSetupView.swift`, `SettingsView.swift`, `EditCarView.swift`, `CarStats.swift`, `CarDetailData.swift`, any gradient uses in confetti/celebration contexts.
 
-**Files to change:**
+**Files to change — replace only the accent/interactive color uses:**
 
-| File | Pattern | Replacement |
+| File | Lines | What to change |
 |---|---|---|
-| `DriveDetailView.swift` | `.blue` (pencil icon, play button, slider tint, map marker) | `.ftBlue` |
-| `ProfileView.swift` | `Color.blue` (avatar placeholder bg, add-car button, toggle tint, "SELECTED" label) | `Color.ftBlue` |
-| `AnalyticsView.swift` | `Color.blue` (car chips) | `Color.ftBlue` |
-| `SocialView.swift` | `Color.blue.opacity(0.08)` (current user highlight), `Color.blue` (car thumbnail, "You" badge) | `Color.ftBlue` opacity variants |
-| `DriveHistoryView.swift` | `Color.blue.opacity(0.1)` (car pill bg), `Color.blue` (car pill text) | `Color.ftBlue` opacity variants |
-| `PublicProfileView.swift` | `Color.blue` (follow button, avatar gradient) | `Color.ftBlue` |
-| `FindPeopleView.swift` | `Color.blue` (follow button, "You" badge), `LinearGradient(.blue, .purple)` | `Color.ftBlue`, `LinearGradient(.ftBlue, .purple)` |
-| `FollowersListView.swift` | `LinearGradient(.blue, .purple)` (avatar) | `LinearGradient(.ftBlue, .purple)` |
-| `NotificationsView.swift` | `Color.blue` (unread dot, avatar placeholder) | `Color.ftBlue` |
-| `AchievementsView.swift` | `Color.blue` (nav tint) — check if system default | `.ftBlue` for custom tint |
-| `CarPickerView.swift` | `Color.blue` (checkmark, car icon, confirm button) | `Color.ftBlue` |
-| `CarSelectorView.swift` | `Color.blue` (checkmark, select car button, "Change Car" link) | `Color.ftBlue` |
-| `RecentAchievementsStrip.swift` | `.blue` ("View All" nav link) | `.ftBlue` |
-| `CarPhotoEditorSection.swift` | `Color.blue.opacity(0.15)`, `.blue` icon | `Color.ftBlue.opacity(0.15)`, `.ftBlue` |
+| `DriveDetailView.swift` | ~30 | `.blue` for pencil icon, play button, slider tint, map marker → `.ftBlue` |
+| `ProfileView.swift` | ~20, 213, 217, 293, 322, 426, 488, 532, 556, 761, 764, 860, 863 | `Color.blue` (avatar placeholder bg, add-car button, toggle tint, "SELECTED" label, CarGarageCard photo bg/icon) → `Color.ftBlue`; `.tint(.blue)` → `.tint(.ftBlue)`; do NOT change `Color.blue.opacity(0.3)` inside `deleteButton` — that's a destructive styling, keep as system blue |
+| `AnalyticsView.swift` | ~112 | `iconColor: .blue` in AnalyticsCarChip → `.ftBlue`; also `RecentBestCard` `.foregroundColor(.blue)` → `.ftBlue` |
+| `SocialView.swift` | ~15 | `Color.blue.opacity(0.08)` (current user row highlight) → `Color.ftBlue.opacity(0.08)`; `Color.blue` (car thumbnail placeholder, "You" badge) → `Color.ftBlue` |
+| `DriveHistoryView.swift` | ~110, 113 | `Color.blue.opacity(0.1)` (car pill bg), `.foregroundColor(.blue)` (car pill text) → `Color.ftBlue` variants |
+| `PublicProfileView.swift` | ~211, 265 | `Color.blue` (follow button gradient) → `Color.ftBlue`; `LinearGradient(.blue, .purple)` → `LinearGradient(.ftBlue, .purple)` |
+| `FindPeopleView.swift` | ~12 | `Color.blue` (follow button, "You" badge) → `Color.ftBlue`; `LinearGradient(.blue, .purple)` → `LinearGradient(.ftBlue, .purple)` |
+| `FollowersListView.swift` | ~2 | `LinearGradient(.blue, .purple)` → `LinearGradient(.ftBlue, .purple)` |
+| `NotificationsView.swift` | ~2 | `Color.blue` (unread dot, avatar placeholder) → `Color.ftBlue` |
+| `CarPickerView.swift` | ~51, 130, 163, 215 | `.foregroundColor(.blue)` (checkmark, car icon, confirm button) → `.ftBlue` |
+| `CarSelectorView.swift` | ~33, 94, 117, 119 | `.foregroundColor(.blue)` and `.fill(Color.blue.opacity(0.15))` → `.ftBlue` variants |
+| `RecentAchievementsStrip.swift` | ~43 | `.foregroundColor(.blue)` ("View All" nav link) → `.ftBlue` |
+| `CarPhotoEditorSection.swift` | ~3 | `Color.blue.opacity(0.15)`, `.blue` icon → `Color.ftBlue.opacity(0.15)`, `.ftBlue` |
+| `PublicCarDetailView.swift` | ~112, 169 | `LinearGradient(.blue, .purple)` → `LinearGradient(.ftBlue, .purple)`; `.blue` in stat row icon color → `.ftBlue` |
 
 **Verification:**
 ```bash
 cd ios/FastTrack
-grep -rn "\.blue" FastTrack/Views/ FastTrack/Views/Components/ FastTrack/DesignSystem.swift | grep -v "ftBlue" | grep -v "// " | grep -v "lightBlue"
+# Check only the files we changed — should show no ftBlue-missing accent uses
+for f in DriveDetailView ProfileView AnalyticsView SocialView DriveHistoryView PublicProfileView FindPeopleView FollowersListView NotificationsView CarPickerView CarSelectorView RecentAchievementsStrip CarPhotoEditorSection PublicCarDetailView; do
+  grep -n "foregroundColor(\.blue)\|Color\.blue\|\.tint(.blue)" "FastTrack/Views/$f.swift" FastTrack/Views/Components/"$f.swift" 2>/dev/null | grep -v "ftBlue" | grep -v "// " || true
+done
 ```
-Should return no accent color uses (only `.blue` in unrelated contexts like sky colors, if any).
+Should return no matches for the target files after changes.
 
 ---
 
@@ -150,13 +153,13 @@ To:
 
 ---
 
-## 0.4 — Unify `CarPhotoThumbnail` placeholder with `CarPhotoView`
+## 0.4 — Unify `CarPhotoThumbnail` placeholder with ftBlue tint
 
-**Commit:** `style(ios): unify car photo placeholder with ftBlue gradient`
+**Commit:** `style(ios): align car photo thumbnail placeholder with ftBlue`
 
 **File:** `ios/FastTrack/FastTrack/Views/ProfileView.swift`
 
-The `CarPhotoThumbnail` placeholder currently uses `Color.blue.opacity(0.15)` with a blue car icon. Change to match `CarPhotoView`'s gradient style:
+The `CarPhotoThumbnail` placeholder currently uses `Color.blue.opacity(0.15)` with a blue car icon. This is a small 56pt thumbnail in list rows — a full gradient would look muddy at that size. Instead, keep the simple tinted rectangle but switch to `ftBlue`:
 
 ```swift
 // Before:
@@ -168,21 +171,15 @@ Image(systemName: "car.fill")
 
 // After:
 RoundedRectangle(cornerRadius: 8)
-    .fill(
-        LinearGradient(
-            colors: [Color.ftBlue.opacity(0.6), Color.purple.opacity(0.5)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    )
+    .fill(Color.ftBlue.opacity(0.15))
 
 Image(systemName: "car.fill")
-    .foregroundColor(.white)
+    .foregroundColor(.ftBlue)
 ```
 
-This makes both car photo placeholders consistent.
+This keeps the lightweight placeholder aesthetic appropriate for a small thumbnail while using the design system color.
 
-**Verification:** `PublicGarageCard` (which uses `CarPhotoThumbnail`) shows the same ftBlue/purple gradient placeholder as `CarPhotoView` in `GarageCarCard`.
+**Verification:** `PublicGarageCard` (which uses `CarPhotoThumbnail`) shows the same light-blue tinted placeholder as `CarPhotoView` but at a scale appropriate for the thumbnail size.
 
 ---
 
@@ -202,16 +199,30 @@ Replace the `AchievementCard`'s manual card styling:
         : Color(.systemGray6)
 )
 .cornerRadius(12)
-```
 
-With:
-```swift
 // After:
 .background(Color.ftCardBg)
 .cornerRadius(12)
 ```
 
-And for the locked variant, replace the grayscale overlay. The `AchievementCard` still keeps its colored icon and category tint, but the card background is now consistently `ftCardBg`.
+For the **locked variant**: wrap the entire card content in an opacity layer to convey the locked state without a separate background color:
+```swift
+struct AchievementCard: View {
+    let achievement: Achievement
+    let unlocked: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // ... existing card content ...
+        }
+        .opacity(unlocked ? 1.0 : 0.65)  // Replace the grayscale overlay
+        .background(Color.ftCardBg)
+        .cornerRadius(12)
+    }
+}
+```
+
+The `AchievementCard` still keeps its colored icon and category tint. Only the background treatment changes.
 
 Also add `.ftSurfaceBg` page background:
 ```swift
@@ -223,7 +234,7 @@ ScrollView {
 
 Add `.accentColor(.ftBlue)` to the outer NavigationView if not already set.
 
-**Verification:** AchievementsView shows dark-adaptive cards matching GarageView and CarDetailView in dark mode, and correct system background in light mode.
+**Verification:** AchievementsView shows dark-adaptive cards matching GarageView and CarDetailView in dark mode (ftCardBg), and locked cards appear at 65% opacity with the same card treatment.
 
 ---
 
@@ -231,66 +242,78 @@ Add `.accentColor(.ftBlue)` to the outer NavigationView if not already set.
 
 **Commit:** `style(ios): apply design system to social and notification views`
 
-These are List-based views. The changes are additive — we add `.listRowBackground(Color.ftCardBg)`, `.scrollContentBackground(.hidden)`, and change the page background, without restructuring the view.
+Apply color system changes without restructuring the List-based views. Use `.listRowBackground(Color.ftCardBg)`, `.scrollContentBackground(.hidden)`, and page backgrounds.
 
-### `PublicProfileView.swift`
+### `PublicProfileView.swift` — keep List, apply colors
 
-1. Replace `List` outer container with `ScrollView + VStack`.
-2. Set background `Color.ftSurfaceBg.ignoresSafeArea()`.
-3. Wrap sections in `InstrumentCard` where appropriate (profile header, stats, garage).
-4. Change `Color.blue` and `LinearGradient(.blue, .purple)` to `Color.ftBlue` and `LinearGradient(.ftBlue, .purple)`.
-
-The structural change from `List` to `ScrollView` is needed because List's insetGrouped style doesn't support custom backgrounds well. The content sections should each become `InstrumentCard` blocks.
+Do NOT convert from `List` to `ScrollView` — the native iOS list aesthetic with section headers ("Stats", "Garage") and insetGrouped style is appropriate here. Apply design system via:
+1. Add `.scrollContentBackground(.hidden)` and `.background(Color.ftSurfaceBg.ignoresSafeArea())` to the `List`
+2. Add `.listRowBackground(Color.ftCardBg)` to all rows
+3. Change `Color.blue` (follow button, avatar gradient) → `Color.ftBlue` and `LinearGradient(.blue, .purple)` → `LinearGradient(.ftBlue, .purple)` — already planned in Phase 0.1
 
 ### `FindPeopleView.swift`
 
-1. Change `Color.blue` to `Color.ftBlue` for follow button and "You" badge.
-2. Change avatar gradient from `LinearGradient(.blue, .purple)` to `LinearGradient(.ftBlue, .purple)`.
+1. Change `Color.blue` to `Color.ftBlue` for follow button and "You" badge (Phase 0.1).
+2. Change avatar gradient from `LinearGradient(.blue, .purple)` to `LinearGradient(.ftBlue, .purple)` (Phase 0.1).
 3. Add `.scrollContentBackground(.hidden)` and `.background(Color.ftSurfaceBg.ignoresSafeArea())`.
 
 ### `FollowersListView.swift`
 
-1. Change avatar gradient from `LinearGradient(.blue, .purple)` to `LinearGradient(.ftBlue, .purple)`.
+1. Change avatar gradient from `LinearGradient(.blue, .purple)` to `LinearGradient(.ftBlue, .purple)` (Phase 0.1).
 2. Add `.scrollContentBackground(.hidden)` and `.background(Color.ftSurfaceBg.ignoresSafeArea())`.
 
 ### `NotificationsView.swift`
 
-1. Change `Color.blue` to `Color.ftBlue` for unread dot and avatar placeholder.
+1. Change `Color.blue` to `Color.ftBlue` for unread dot and avatar placeholder (Phase 0.1).
 2. Add `.scrollContentBackground(.hidden)` and `.background(Color.ftSurfaceBg.ignoresSafeArea())`.
-3. Add `.listRowBackground(Color.ftCardBg)` to each row.
+3. Add `.listRowBackground(Color.ftCardBg)` to all rows.
 
 ### `SocialView.swift`
 
 Already partially aligned (uses `ftCardBg` for row backgrounds). Changes:
-1. `Color.blue.opacity(0.08)` → `Color.ftBlue.opacity(0.08)` for current user highlight.
-2. `Color.blue` → `Color.ftBlue` for car thumbnail placeholder and "You" badge.
+1. `Color.blue.opacity(0.08)` → `Color.ftBlue.opacity(0.08)` for current user highlight (Phase 0.1).
+2. `Color.blue` → `Color.ftBlue` for car thumbnail placeholder and "You" badge (Phase 0.1).
 
 ### `DriveHistoryView.swift`
 
 Already uses `ftSurfaceBg` for row backgrounds. Changes:
-1. `Color.blue.opacity(0.1)` → `Color.ftBlue.opacity(0.1)` for car pill bg.
-2. `Color.blue` → `Color.ftBlue` for car pill text color.
+1. `Color.blue.opacity(0.1)` → `Color.ftBlue.opacity(0.1)` for car pill bg (Phase 0.1).
+2. `Color.blue` → `Color.ftBlue` for car pill text color (Phase 0.1).
 
 **Verification:**
 - All social/notification views show dark-adaptive card backgrounds in dark mode
 - All accent colors use `ftBlue` (no system `.blue`)
-- `PublicProfileView` renders correctly with `InstrumentCard` sections and `ftSurfaceBg` background
+- `PublicProfileView` retains its native iOS list aesthetic with section headers, now using `ftCardBg` row backgrounds
 
 ---
 
-## 0.7 — Fix `StatValue` and `StatCard` colored variant backgrounds
+## 0.7 — Align skeleton blocks and ensure StatCard corner radius consistency
 
-**Commit:** `style(ios): align StatCard colored variant with design system`
+**Commit:** `style(ios): align skeleton loading blocks with design system`
 
 **File:** `ios/FastTrack/FastTrack/Views/SharedComponents.swift`
 
-The colored `StatCard` variant uses `color.opacity(0.1)` background, which is fine visually. Audit to ensure the non-colored variant (already fixed in 0.2) and the colored variant both use consistent cornerRadius 12.
+1. **Fix `SkeletonBlock`** (line ~340): Change the fill color from `Color(.systemGray5)` to `Color.ftSectionBg.opacity(0.5)`:
+   ```swift
+   // Before:
+   .fill(Color(.systemGray5))
 
-Also fix `SkeletonBlock`: change `Color(.systemGray5)` → `Color.ftSectionBg.opacity(0.5)` and `StatCardSkeleton`: change `Color(.secondarySystemBackground)` → `Color.ftCardBg`.
+   // After:
+   .fill(Color.ftSectionBg.opacity(0.5))
+   ```
 
-This makes skeleton states consistent with the dark-adaptive cards.
+2. **Fix `StatCardSkeleton`** (line ~340): Change background from `Color(.secondarySystemBackground)` to `Color.ftCardBg`:
+   ```swift
+   // Before:
+   .background(Color(.secondarySystemBackground))
 
-**Verification:** Skeleton placeholders in DriveDetailView show correct dark-mode backgrounds.
+   // After:
+   .background(Color.ftCardBg)
+   ```
+
+3. **Verify colored `StatCard` cornerRadius** (line ~226): Ensure the colored variant uses `cornerRadius(12)` (same as default). Already correct.
+
+**Verification:** Skeleton placeholders in DriveDetailView show the correct dark-adaptive `#1C1C1E` background instead of `systemGray5`.
 
 ---
 
