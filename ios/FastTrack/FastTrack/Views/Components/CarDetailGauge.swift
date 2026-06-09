@@ -8,13 +8,16 @@ import SwiftUI
 // on the live recording screen). This one:
 //
 // - Renders the numeric value in a monospaced large font
-// - Draws a thin colored arc as a decorative background
+// - Draws a thin colored arc; when `progress` is provided, the
+//   foreground arc is trimmed to that fraction and animates via
+//   `.easeInOut(duration: 0.35)` on every change
 // - Surfaces an optional "Set on MMM d, yyyy" caption underneath
 //
-// The arc is a *decorative* element — we don't try to compute a
-// progress fraction from the value. The visual goal is "showy", not
-// "accurate". For accuracy, the underlying numeric value is always
-// the source of truth.
+// When `progress` is `nil` the arc is purely decorative — two stacked
+// `GaugeArc()` strokes with no `trim`. When `progress` is non-nil, a
+// faded full track is drawn first and a colored arc is trimmed to
+// `progress`, with the value-driven animation re-triggering on every
+// change to `progress` (e.g. a fresh PB).
 
 struct CarDetailGauge: View {
     let title: String
@@ -26,6 +29,13 @@ struct CarDetailGauge: View {
     /// Optional formatter for the date. Defaults to a tasteful
     /// "MMM d, yyyy" via `Date.FormatStyle`.
     var dateFormat: Date.FormatStyle = .dateTime.month(.abbreviated).day().year()
+    /// Optional `[0, 1]` progress fraction. When `nil`, the arc is
+    /// decorative (current behavior). When non-nil, a colored arc is
+    /// drawn trimmed to `progress` over a faded full track, animating
+    /// with `.easeInOut(duration: 0.35)` on every value change.
+    /// Derive the value via `CarDetailGaugeProgress` so the math
+    /// stays testable.
+    var progress: Double? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -54,15 +64,9 @@ struct CarDetailGauge: View {
                 }
             }
 
-            ZStack(alignment: .leading) {
-                GaugeArc()
-                    .stroke(color.opacity(0.18), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                GaugeArc()
-                    .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .opacity(0.85)
-            }
-            .frame(height: 16)
-            .padding(.top, 2)
+            arc
+                .frame(height: 16)
+                .padding(.top, 2)
 
             if let setOn {
                 Text("Set on \(setOn.formatted(dateFormat))")
@@ -84,6 +88,28 @@ struct CarDetailGauge: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(color.opacity(0.25), lineWidth: 1)
         )
+    }
+
+    @ViewBuilder
+    private var arc: some View {
+        if let progress {
+            ZStack(alignment: .leading) {
+                GaugeArc()
+                    .stroke(color.opacity(0.18), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                GaugeArc()
+                    .trim(from: 0, to: progress)
+                    .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .animation(.easeInOut(duration: 0.35), value: progress)
+            }
+        } else {
+            ZStack(alignment: .leading) {
+                GaugeArc()
+                    .stroke(color.opacity(0.18), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                GaugeArc()
+                    .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .opacity(0.85)
+            }
+        }
     }
 
     private func icon(for title: String) -> String {

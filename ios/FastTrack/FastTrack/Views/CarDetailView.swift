@@ -231,14 +231,22 @@ struct CarDetailView: View {
                 value: topSpeedDisplay,
                 unit: settings.speedUnit,
                 color: SpeedColor.color(for: data?.bestTopSpeed ?? 0),
-                setOn: data?.topSpeedPBDate
+                setOn: data?.topSpeedPBDate,
+                progress: data?.bestTopSpeed.map {
+                    CarDetailGaugeProgress.visualProgress(
+                        CarDetailGaugeProgress.topSpeedProgress(speedMps: $0)
+                    )
+                }
             )
             CarDetailGauge(
                 title: "Best 0-60",
                 value: zeroSixtyDisplay,
                 unit: "sec",
                 color: .ftAmber,
-                setOn: data?.zeroSixtyPBDate
+                setOn: data?.zeroSixtyPBDate,
+                progress: CarDetailGaugeProgress.visualProgress(
+                    CarDetailGaugeProgress.zeroSixtyProgress(seconds: data?.bestZeroToSixty)
+                )
             )
         }
     }
