@@ -1,48 +1,5 @@
 import SwiftUI
 
-// MARK: - Turn Preference Bar
-
-private struct TurnPreferenceBar: View {
-    let leftFraction: Double  // 0–1
-
-    var leftPct: Int { Int(leftFraction * 100) }
-    var rightPct: Int { 100 - leftPct }
-
-    var body: some View {
-        InstrumentCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Turn Preference")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                GeometryReader { geo in
-                    HStack(spacing: 2) {
-                        Rectangle()
-                            .fill(Color.blue)
-                            .frame(width: max(geo.size.width * leftFraction, 4))
-                        Rectangle()
-                            .fill(Color.pink)
-                    }
-                    .cornerRadius(4)
-                }
-                .frame(height: 28)
-                HStack {
-                    Text("\(leftPct)%")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .foregroundColor(.blue)
-                    Text("Left")
-                        .font(.caption).foregroundColor(.secondary)
-                    Spacer()
-                    Text("Right")
-                        .font(.caption).foregroundColor(.secondary)
-                    Text("\(rightPct)%")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .foregroundColor(.pink)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Main Profile View
 
 struct ProfileView: View {
@@ -54,7 +11,6 @@ struct ProfileView: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var showingSetup = false
     @State private var showingAddCar = false
-    @State private var showingSettings = false
     @State private var showingDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @State private var deleteAccountError: String?
@@ -77,19 +33,9 @@ struct ProfileView: View {
                             profileStatsSkeleton
                         } else {
                             mainStatsGrid
-                            topSpeedCard
-                            best060Card
-                            SectionHeader(title: "Maneuvers", info: StatInfo.maneuversSection)
-                            maneuvorsGrid
-                            TurnPreferenceBar(leftFraction: stats.turnPreferencePct)
-                            SectionHeader(title: "Performance", info: StatInfo.performanceSection)
-                            performanceGrid
-                            SectionHeader(title: "More Stats")
-                            moreStatsGrid
+                            headlineSpeedGrid
                         }
                         privacyToggleCard
-                        SectionHeader(title: "Settings")
-                        settingsSection
                         deleteAccountButton
                         signOutButton
                     }
@@ -100,11 +46,20 @@ struct ProfileView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingSetup = true
-                    } label: {
-                        Image(systemName: "pencil.circle")
-                            .foregroundColor(.ftBlue)
+                    HStack(spacing: 16) {
+                        NavigationLink {
+                            SettingsView()
+                                .environmentObject(AppSettings.shared)
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .foregroundColor(.ftBlue)
+                        }
+                        Button {
+                            showingSetup = true
+                        } label: {
+                            Image(systemName: "pencil.circle")
+                                .foregroundColor(.ftBlue)
+                        }
                     }
                 }
             }
@@ -359,150 +314,22 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: Top Speed (full-width card)
+    // MARK: Headline Speed Grid (Top Speed + Best 0-60)
 
-    private var topSpeedCard: some View {
-        InstrumentCard {
-            HStack {
-                Image(systemName: "bolt.fill")
-                    .foregroundColor(.yellow)
-                    .font(.title2)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Top Speed")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
-                        Text(String(format: "%.0f", settings.speedValue(stats.topSpeed)))
-                            .font(.largeTitle).fontWeight(.bold)
-                            .foregroundColor(.primary)
-                        Text(settings.speedUnit)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Spacer()
-            }
-        }
-    }
-
-    // MARK: Best 0-60
-
-    private var best060Card: some View {
-        InstrumentCard {
-            HStack {
-                Image(systemName: "timer")
-                    .foregroundColor(Color.orange)
-                    .font(.title2)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Best 0-60 mph time")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if let t = stats.best060Time {
-                        HStack(alignment: .lastTextBaseline, spacing: 4) {
-                            Text(String(format: "%.2f", t))
-                                .font(.largeTitle).fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            Text("sec")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                    } else {
-                        Text("—")
-                            .font(.largeTitle).fontWeight(.bold)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Spacer()
-                StatInfoButton(entry: StatInfo.zeroToSixty)
-            }
-        }
-    }
-
-    // MARK: Maneuvers Grid
-
-    private var maneuvorsGrid: some View {
+    private var headlineSpeedGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             InstrumentStatCell(
-                icon: "arrow.turn.up.left", iconColor: .blue,
-                label: "Left Turns", value: "\(stats.totalLeftTurns)", unit: "",
-                info: StatInfo.leftTurns
+                icon: "bolt.fill", iconColor: .yellow,
+                label: "Top Speed",
+                value: String(format: "%.0f", settings.speedValue(stats.topSpeed)),
+                unit: settings.speedUnit
             )
             InstrumentStatCell(
-                icon: "arrow.turn.up.right", iconColor: .orange,
-                label: "Right Turns", value: "\(stats.totalRightTurns)", unit: "",
-                info: StatInfo.rightTurns
-            )
-            InstrumentStatCell(
-                icon: "hand.raised.fill", iconColor: .red,
-                label: "Brake Events", value: "\(stats.totalBrakeEvents)", unit: "",
-                info: StatInfo.brakeEvents
-            )
-            InstrumentStatCell(
-                icon: "arrow.left.arrow.right", iconColor: .green,
-                label: "Lane Changes", value: "\(stats.totalLaneChanges)", unit: "",
-                info: StatInfo.laneChanges
-            )
-        }
-    }
-
-    // MARK: Performance Grid
-
-    private var performanceGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            InstrumentStatCell(
-                icon: "arrow.down.circle.fill", iconColor: .red,
-                label: "Max Deceleration",
-                value: String(format: "%.1f", stats.overallMaxDeceleration),
-                unit: "m/s²",
-                info: StatInfo.maxDeceleration
-            )
-            InstrumentStatCell(
-                icon: "arrow.up.circle.fill", iconColor: .green,
-                label: "Max Acceleration",
-                value: String(format: "%.1f", stats.overallMaxAcceleration),
-                unit: "m/s²",
-                info: StatInfo.maxAcceleration
-            )
-            InstrumentStatCell(
-                icon: "circle.circle.fill", iconColor: .orange,
-                label: "Peak G-Force",
-                value: String(format: "%.2f", stats.overallPeakGForce),
-                unit: "G",
-                info: StatInfo.peakGForce
-            )
-            InstrumentStatCell(
-                icon: "arrow.triangle.2.circlepath", iconColor: .cyan,
-                label: "Top Corner Speed",
-                value: String(format: "%.0f", settings.speedValue(stats.overallTopCornerSpeed)),
-                unit: settings.speedUnit,
-                info: StatInfo.cornerSpeed
-            )
-        }
-    }
-
-    // MARK: More Stats Grid
-
-    private var moreStatsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            InstrumentStatCell(
-                icon: "car.fill", iconColor: .blue,
-                label: "Total Trips", value: "\(stats.totalTrips)", unit: ""
-            )
-            InstrumentStatCell(
-                icon: "stop.circle.fill", iconColor: .secondary,
-                label: "Total Stops", value: "\(stats.totalStops)", unit: ""
-            )
-            InstrumentStatCell(
-                icon: "road.lanes", iconColor: .green,
-                label: "Avg Trip Length",
-                value: String(format: "%.1f", settings.distanceValue(stats.avgTripLengthMeters)),
-                unit: settings.distanceUnit
-            )
-            InstrumentStatCell(
-                icon: "clock.arrow.circlepath", iconColor: .orange,
-                label: "Total Duration",
-                value: formatDuration(stats.totalDuration),
-                unit: ""
+                icon: "timer", iconColor: .orange,
+                label: "Best 0-60",
+                value: stats.best060Time.map { String(format: "%.2f", $0) } ?? "—",
+                unit: stats.best060Time != nil ? "sec" : "",
+                info: StatInfo.zeroToSixty
             )
         }
     }
@@ -530,66 +357,6 @@ struct ProfileView: View {
                     }
                 }
                 .tint(.blue)
-            }
-        }
-    }
-
-    // MARK: Settings Section
-
-    private var settingsSection: some View {
-        InstrumentCard {
-            VStack(spacing: 0) {
-                // Keep Screen On
-                Toggle(isOn: $settings.keepScreenOn) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "sun.max.fill")
-                            .foregroundColor(.yellow)
-                            .frame(width: 20)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Keep Screen On While Recording")
-                                .font(.subheadline).foregroundColor(.primary)
-                            Text("Prevents sleep during active drives")
-                                .font(.caption).foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .tint(.blue)
-
-                Divider().padding(.vertical, 12)
-
-                // Unit System
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "ruler.fill")
-                            .foregroundColor(.orange)
-                            .frame(width: 20)
-                        Text("Units").font(.subheadline).foregroundColor(.primary)
-                    }
-                    Picker("Unit System", selection: $settings.unitSystem) {
-                        ForEach(UnitSystem.allCases) { system in
-                            Text(system.displayName).tag(system)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                Divider().padding(.vertical, 12)
-
-                // Appearance
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "circle.lefthalf.filled")
-                            .foregroundColor(.purple)
-                            .frame(width: 20)
-                        Text("Appearance").font(.subheadline).foregroundColor(.primary)
-                    }
-                    Picker("Color Scheme", selection: $settings.preferredColorScheme) {
-                        ForEach(AppColorScheme.allCases) { scheme in
-                            Text(scheme.displayName).tag(scheme)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
             }
         }
     }
