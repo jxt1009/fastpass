@@ -90,6 +90,11 @@ struct DriveDetailView: View {
     @State private var isPlaying = false
     @State private var playbackTimer: Timer?
 
+    @State private var showingDeleteConfirmation = false
+    @State private var isDeleting = false
+    @State private var deleteError: String?
+    @Environment(\.dismiss) private var dismiss
+
     @ObservedObject private var settings = AppSettings.shared
     @EnvironmentObject var driveManager: DriveManager
 
@@ -187,6 +192,35 @@ struct DriveDetailView: View {
         }
         .navigationTitle("Drive Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isOwner {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .destructive) {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .disabled(isDeleting)
+                }
+            }
+        }
+        .alert("Delete Drive?", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button(isDeleting ? "Deleting…" : "Delete", role: .destructive) {
+                Task { await performDelete() }
+            }
+            .disabled(isDeleting)
+        } message: {
+            Text("This permanently removes the drive from your history. This can't be undone.")
+        }
+        .alert("Unable to Delete Drive", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "Unknown error")
+        }
         .onAppear {
             parseRouteData()
             parseZeroToSixtyAttempts()
@@ -194,6 +228,25 @@ struct DriveDetailView: View {
         .onDisappear { stopPlayback() }
         .sheet(isPresented: $showingCarPicker) {
             DriveCarSelectorView(drive: drive)
+        }
+    }
+
+    private var isOwner: Bool {
+        drive.userID == AuthManager.shared.getUser()?.id
+    }
+
+    // MARK: - Delete
+
+    @MainActor
+    private func performDelete() async {
+        guard !isDeleting, let id = drive.id else { return }
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            try await driveManager.deleteDrive(id: id)
+            dismiss()
+        } catch {
+            deleteError = error.localizedDescription
         }
     }
 
