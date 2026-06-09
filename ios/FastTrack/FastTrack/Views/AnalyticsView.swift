@@ -4,16 +4,32 @@ import Charts
 struct AnalyticsView: View {
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var settings: AppSettings
+    @StateObject private var profileManager = ProfileManager.shared
     @State private var selectedTimeFrame: TimeFrame = .month
     @State private var selectedMetric: AnalyticsMetric = .speed
     @State private var showingDetailSheet = false
     @State private var selectedDrive: Drive?
-    
+    @State private var selectedCarId: String? = nil
+
+    private var garage: [UserCar] { profileManager.profile?.garage ?? [] }
+
     private var filteredDrives: [Drive] {
         let cutoffDate = Calendar.current.date(byAdding: selectedTimeFrame.dateComponent, value: -selectedTimeFrame.value, to: Date()) ?? Date()
-        return driveManager.drives.filter { $0.startTime >= cutoffDate }
+        let byTime = driveManager.drives.filter { $0.startTime >= cutoffDate }
+        guard let carId = selectedCarId else { return byTime }
+        return byTime.filter { $0.carId == carId }
     }
-    
+
+    /// Drives from the prior equivalent period, used for the period-comparison card.
+    private var prevPeriodDrives: [Drive] {
+        let now = Date()
+        let periodEnd = Calendar.current.date(byAdding: selectedTimeFrame.dateComponent, value: -selectedTimeFrame.value, to: now) ?? now
+        let periodStart = Calendar.current.date(byAdding: selectedTimeFrame.dateComponent, value: -selectedTimeFrame.value, to: periodEnd) ?? periodEnd
+        let byTime = driveManager.drives.filter { $0.startTime >= periodStart && $0.startTime < periodEnd }
+        guard let carId = selectedCarId else { return byTime }
+        return byTime.filter { $0.carId == carId }
+    }
+
     private var analyticsData: AnalyticsData {
         AnalyticsData(drives: filteredDrives)
     }
@@ -27,6 +43,11 @@ struct AnalyticsView: View {
                     VStack(spacing: 20) {
                         // Time Frame Selector
                         timeFramePicker
+
+                        // Car Filter (only when 2+ cars in garage)
+                        if garage.count >= 2 {
+                            carFilterRow
+                        }
 
                         // Performance Overview Cards
                         performanceOverview
@@ -101,10 +122,38 @@ struct AnalyticsView: View {
         .pickerStyle(SegmentedPickerStyle())
     }
     
+    // MARK: - Car Filter
+
+    private var carFilterRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                AnalyticsCarChip(
+                    title: "All Cars",
+                    isSelected: selectedCarId == nil,
+                    color: .blue
+                ) {
+                    selectedCarId = nil
+                }
+                ForEach(garage) { car in
+                    AnalyticsCarChip(
+                        title: car.shortDisplay,
+                        isSelected: selectedCarId == car.id,
+                        color: .blue
+                    ) {
+                        selectedCarId = selectedCarId == car.id ? nil : car.id
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
     // MARK: - Performance Overview
     
     private var performanceOverview: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+            periodComparisonCard
+
             AnalyticsCard(
                 title: "Total Drives",
                 value: "\(filteredDrives.count)",
@@ -138,6 +187,29 @@ struct AnalyticsView: View {
                 info: StatInfo.drivingScore
             )
         }
+    }
+
+    private var periodComparisonCard: some View {
+        let currentAvg = AnalyticsData.avgMaxSpeed(for: filteredDrives)
+        let prevAvg = AnalyticsData.avgMaxSpeed(for: prevPeriodDrives)
+
+        let (valueText, trend): (String, TrendDirection?) = {
+            guard let cur = currentAvg, let prev = prevAvg, prev > 0 else {
+                return ("—", nil)
+            }
+            let delta = (cur - prev) * settings.speedFactor
+            let sign = delta >= 0 ? "+" : ""
+            let trend: TrendDirection = delta > 0.5 ? .up : (delta < -0.5 ? .down : .neutral)
+            return (String(format: "%@%.1f %@", sign, delta, settings.speedUnit), trend)
+        }()
+
+        return AnalyticsCard(
+            title: "vs Previous Period",
+            value: valueText,
+            icon: "arrow.up.arrow.down",
+            iconColor: .purple,
+            trend: trend
+        )
     }
     
     // MARK: - Chart Section
@@ -236,10 +308,10 @@ struct AnalyticsView: View {
     
     private var recentBests: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text("Recent Best Performances")
+            Text("Top Performances")
                 .font(.headline)
             
-            if analyticsData.recentBestDrives.isEmpty {
+            if analyticsData.topSpeedDrives.isEmpty {
                 ContentUnavailableView(
                     "No Performance Data",
                     systemImage: "trophy",
@@ -247,7 +319,7 @@ struct AnalyticsView: View {
                 )
                 .frame(height: 120)
             } else {
-                ForEach(analyticsData.recentBestDrives.prefix(3), id: \.id) { drive in
+                ForEach(analyticsData.topSpeedDrives.prefix(3), id: \.id) { drive in
                     Button {
                         selectedDrive = drive
                     } label: {
@@ -357,7 +429,7 @@ struct RecentBestCard: View {
                     HStack {
                         Image(systemName: "trophy.fill")
                             .foregroundColor(.yellow)
-                        Text("Best Max Speed")
+                        Text("Top Speed")
                             .font(.subheadline)
                             .fontWeight(.medium)
                         Spacer()
@@ -383,6 +455,26 @@ struct RecentBestCard: View {
                     .foregroundColor(.secondary)
                     .font(.caption)
             }
+        }
+    }
+}
+
+private struct AnalyticsCarChip: View {
+    let title: String
+    let isSelected: Bool
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(isSelected ? .white : color)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? color : Color(.systemGray6))
+                .cornerRadius(20)
         }
     }
 }

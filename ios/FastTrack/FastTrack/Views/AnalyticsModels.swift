@@ -220,7 +220,13 @@ struct AnalyticsData {
         }
     }
     
-    var recentBestDrives: [Drive] {
+    var topSpeedDrives: [Drive] {
         drives.sorted { $0.maxSpeed > $1.maxSpeed }
+    }
+
+    /// Average max speed over a pre-filtered set of drives (used for prior-period comparison).
+    static func avgMaxSpeed(for drives: [Drive]) -> Double? {
+        guard !drives.isEmpty else { return nil }
+        return drives.reduce(0) { $0 + $1.maxSpeed } / Double(drives.count)
     }
 }
