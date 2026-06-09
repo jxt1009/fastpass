@@ -381,14 +381,14 @@ struct CarDetailView: View {
         }
     }
 
-    // MARK: - Per-car PBs
+    // MARK: - Per-car achievements
 
     @ViewBuilder
     private var perCarAchievementsSection: some View {
         if let pbs = data?.achievementPBs, !pbs.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    SectionHeader(title: "Personal Bests")
+                    SectionHeader(title: "Achievements")
                     Spacer()
                     if let indicator = recentPBIndicatorText {
                         HStack(spacing: 4) {
@@ -650,11 +650,15 @@ struct CarDetailView: View {
                         DriveDetailView(drive: drive)
                     } label: {
                         GarageDriveRow(drive: drive)
-                            .overlay(alignment: .topTrailing) {
+                            .overlay(alignment: .bottomTrailing) {
                                 if drive.id == zeroSixtyPBDriveId {
                                     pbPill(text: "PB 0-60", icon: "trophy.fill", bg: .yellow, fg: .black)
+                                        .padding(.trailing, 18)
+                                        .padding(.bottom, 8)
                                 } else if drive.id == topSpeedPBDriveId {
                                     pbPill(text: "PB Speed", icon: "flame.fill", bg: .red, fg: .white)
+                                        .padding(.trailing, 18)
+                                        .padding(.bottom, 8)
                                 }
                             }
                     }
@@ -693,7 +697,7 @@ struct CarDetailView: View {
     private var recentPBIndicatorText: String? {
         let count = data?.recentPBCount ?? 0
         guard count > 0 else { return nil }
-        return count == 1 ? "Recent PB" : "\(count) recent PBs"
+        return count == 1 ? "Recently unlocked" : "\(count) recently unlocked"
     }
 
     private var drivingStyleGuideSheet: some View {
