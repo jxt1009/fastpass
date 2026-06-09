@@ -59,7 +59,7 @@ class CarStatsManager: ObservableObject {
         loadCarStats()
     }
     
-    func updateStats(for drive: Drive) {
+    func updateStats(for drive: Drive, suppressUpload: Bool = false) {
         guard let carId = drive.carId, !carId.isEmpty else {
             print("⚠️ Drive has no car ID, skipping stats update")
             return
@@ -100,7 +100,9 @@ class CarStatsManager: ObservableObject {
         stats.smoothnessScore = calculateSmoothnessScore(stats)
         
         carStats[carId] = stats
-        saveCarStats()
+        if !suppressUpload {
+            saveCarStats()
+        }
         
         print("📊 Updated stats for car \(carId): \(stats.totalDrives) drives, \(String(format: "%.1f", stats.totalDistanceMiles)) miles")
     }
@@ -142,11 +144,14 @@ class CarStatsManager: ObservableObject {
 
     /// Rebuilds all per-car stats from scratch using the provided drive list.
     /// Call this after a drive's car assignment changes so counts stay accurate.
+    /// Accumulates all drives locally then performs a single server upload at
+    /// the end (rather than N uploads for N drives).
     func rebuildStats(from drives: [Drive]) {
         carStats.removeAll()
         for drive in drives {
-            updateStats(for: drive)
+            updateStats(for: drive, suppressUpload: true)
         }
+        saveCarStats()
     }
     
     private func calculateSmoothnessScore(_ stats: CarStats) -> Double {
