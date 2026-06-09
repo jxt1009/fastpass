@@ -173,9 +173,9 @@ enum GarageBlob {
 // even though their `car_stats_data` blob is non-empty.
 
 #if DEBUG
-import os.log
+import OSLog
 private let publicProfileStatsLookupLog = Logger(
-    subsystem: "FastTrack",
+    subsystem: Bundle.main.bundleIdentifier ?? "com.fasttrack.app",
     category: "public-profile-stats"
 )
 #endif
@@ -198,9 +198,11 @@ enum PublicProfileStatsLookup {
               let decoded = try? JSONDecoder().decode([String: CarStats].self, from: data)
         else {
             #if DEBUG
-            publicProfileStatsLookupLog.debug(
-                "statsByCarId decode miss: blob length=\(blobLength, privacy: .public) keyCount=0 sample=(none)"
-            )
+            if blobLength > 0 {
+                publicProfileStatsLookupLog.debug(
+                    "statsByCarId decode miss: blob length=\(blobLength, privacy: .public) keyCount=0 sample=(none)"
+                )
+            }
             #endif
             return [:]
         }
@@ -214,5 +216,15 @@ enum PublicProfileStatsLookup {
         #endif
 
         return decoded
+    }
+
+    /// Whether the `car_stats_data` blob actually carries any per-car
+    /// stats. True only when the blob decodes to a non-empty
+    /// `[String: CarStats]` dictionary. Used by the public car detail
+    /// view to distinguish "no driving data" (nil / empty / `{}` /
+    /// malformed) from "stats haven't synced for *this* car" (blob
+    /// has entries, just none for the car being viewed).
+    static func isSyncedBlob(_ blob: String?) -> Bool {
+        !byCarId(blob: blob).isEmpty
     }
 }

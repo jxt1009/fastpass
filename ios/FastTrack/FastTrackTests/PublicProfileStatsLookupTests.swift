@@ -86,6 +86,55 @@ final class PublicProfileStatsLookupTests: XCTestCase {
         XCTAssertEqual(result["c1"]?.carId, "c1")
     }
 
+    // MARK: - isSyncedBlob
+
+    /// `isSyncedBlob` is the empty-state discriminator used by
+    /// `PublicCarDetailView` to choose between "No driving data" and
+    /// "Stats haven't synced" copy. It must return false for the
+    /// nil / empty / empty-object / malformed inputs — all of which
+    /// are indistinguishable from "user has no driving data" on the
+    /// server.
+    func testIsSyncedBlob_NilReturnsFalse() {
+        XCTAssertFalse(PublicProfileStatsLookup.isSyncedBlob(nil))
+    }
+
+    func testIsSyncedBlob_EmptyStringReturnsFalse() {
+        XCTAssertFalse(PublicProfileStatsLookup.isSyncedBlob(""))
+    }
+
+    func testIsSyncedBlob_EmptyObjectReturnsFalse() {
+        XCTAssertFalse(PublicProfileStatsLookup.isSyncedBlob("{}"),
+                       "An empty `{}` blob is semantically equivalent to no driving data, not 'stats haven't synced'")
+    }
+
+    func testIsSyncedBlob_MalformedJSONReturnsFalse() {
+        XCTAssertFalse(PublicProfileStatsLookup.isSyncedBlob("not json"))
+        XCTAssertFalse(PublicProfileStatsLookup.isSyncedBlob("{[}"))
+        XCTAssertFalse(PublicProfileStatsLookup.isSyncedBlob("{\"c1\": 12345}"),
+                       "Wrong shape (non-CarStats value) should fail to decode and read as not-synced")
+    }
+
+    /// A blob with at least one entry — even for a different car id —
+    /// must read as "synced" so the view shows the "haven't synced for
+    /// this car yet" copy. This is the path that distinguishes a
+    /// user with stats from a user with no driving data.
+    func testIsSyncedBlob_NonEmptyDictReturnsTrue() throws {
+        let stats = makeStats(carId: "c1", totalDrives: 5, bestTopSpeed: 30, bestZeroToSixty: 4.5)
+        let blob = try encodeStats([stats])
+        XCTAssertTrue(PublicProfileStatsLookup.isSyncedBlob(blob))
+    }
+
+    func testIsSyncedBlob_EntryForDifferentCarReturnsTrue() throws {
+        // The car detail view calls isSyncedBlob on the same blob the
+        // car-detail lookup uses. The helper must answer "does the
+        // user have *any* synced stats?" — not "does the user have
+        // stats for *this* car?". The per-car check is the caller's
+        // job (look up `stats` and check for nil).
+        let stats = makeStats(carId: "other-car", totalDrives: 1, bestTopSpeed: 10, bestZeroToSixty: nil)
+        let blob = try encodeStats([stats])
+        XCTAssertTrue(PublicProfileStatsLookup.isSyncedBlob(blob))
+    }
+
     // MARK: - Helpers
 
     /// Build a `CarStats` with the handful of fields we care about

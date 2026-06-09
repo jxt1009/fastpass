@@ -36,9 +36,21 @@ struct PublicCarDetailView: View {
     /// haven't synced for this car yet (a different state from "no
     /// driving data recorded"). Optional so pre-existing call sites
     /// keep working; pass it through from the public profile.
-    var carStatsData: String? = nil
+    let carStatsData: String?
 
     @ObservedObject private var settings = AppSettings.shared
+
+    init(
+        username: String,
+        car: UserCar,
+        stats: CarStats?,
+        carStatsData: String? = nil
+    ) {
+        self.username = username
+        self.car = car
+        self.stats = stats
+        self.carStatsData = carStatsData
+    }
 
     private var data: PublicCarDetailData {
         PublicCarDetailData.derive(car: car, stats: stats)
@@ -189,7 +201,7 @@ struct PublicCarDetailView: View {
     }
 
     private var statsNotSyncedCopy: String {
-        if let blob = carStatsData, !blob.isEmpty {
+        if PublicProfileStatsLookup.isSyncedBlob(carStatsData) {
             return "Stats haven't synced for this car yet."
         }
         return noDataCopy
