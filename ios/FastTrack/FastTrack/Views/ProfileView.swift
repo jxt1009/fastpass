@@ -53,7 +53,6 @@ struct ProfileView: View {
     @EnvironmentObject var locationManager: LocationManager
     @ObservedObject private var settings = AppSettings.shared
     @State private var showingSetup = false
-    @State private var showingAddCar = false
     @State private var showingSettings = false
     @State private var showingDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
@@ -71,8 +70,8 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
+                        garageLinkRow
                         RecentAchievementsStrip(driveManager: driveManager)
-                        garageSection
                         if driveManager.isLoadingDrives {
                             profileStatsSkeleton
                         } else {
@@ -110,9 +109,6 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingSetup) {
                 ProfileSetupView()
-            }
-            .sheet(isPresented: $showingAddCar) {
-                AddCarView()
             }
             .fullScreenCover(item: $zoomedAvatar) { target in
                 AvatarZoomView(
@@ -239,6 +235,32 @@ struct ProfileView: View {
         zoomedAvatar = AvatarZoomTarget(image: image)
     }
 
+    // MARK: - Garage Link Row
+
+    private var garageLinkRow: some View {
+        NavigationLink {
+            GarageView()
+        } label: {
+            HStack {
+                Image(systemName: "car.2.fill")
+                    .foregroundColor(.ftBlue)
+                Text("Your Garage")
+                    .fontWeight(.semibold)
+                Spacer()
+                if let profile = profileManager.profile, !profile.garage.isEmpty {
+                    Text("\(profile.garage.count) car\(profile.garage.count == 1 ? "" : "s")")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+    }
+
     // MARK: - Loading skeleton (dark theme)
 
     private var profileStatsSkeleton: some View {
@@ -258,72 +280,6 @@ struct ProfileView: View {
                     .fill(Color(.systemGray6).opacity(0.2))
                     .frame(height: 60)
                     .shimmer()
-            }
-        }
-    }
-
-    // MARK: - Garage Section
-    
-    private var garageSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Garage")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                Spacer()
-                NavigationLink {
-                    GarageView()
-                } label: {
-                    HStack(spacing: 2) {
-                        Text("View Garage")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.ftBlue)
-                }
-                .accessibilityLabel("View Garage")
-                Button {
-                    showingAddCar = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.blue)
-                        .font(.title2)
-                }
-                .accessibilityLabel("Add Car")
-            }
-            
-            if let profile = profileManager.profile, !profile.garage.isEmpty {
-                LazyVGrid(columns: [GridItem(.flexible())], spacing: 8) {
-                    ForEach(profile.garage) { car in
-                        CarGarageCard(
-                            car: car,
-                            isSelected: profile.selectedCarId == car.id
-                        ) {
-                            selectCar(car.id)
-                        }
-                    }
-                }
-            } else {
-                InstrumentCard {
-                    VStack(spacing: 12) {
-                        Image(systemName: "car")
-                            .font(.title2)
-                            .foregroundColor(.secondary)
-                        Text("No cars in garage")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Button("Add Your First Car") {
-                            showingAddCar = true
-                        }
-                        .foregroundColor(.blue)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                }
             }
         }
     }
@@ -641,12 +597,6 @@ struct ProfileView: View {
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
     }
-    
-    private func selectCar(_ carId: String) {
-        guard var profile = profileManager.profile else { return }
-        profile.selectCar(id: carId)
-        profileManager.saveProfile(profile)
-    }
 
     @MainActor
     private func deleteAccount() async {
@@ -721,104 +671,6 @@ struct RemoteDriveDetailLoader: View {
             }
         }
     }
-}
-
-struct CarGarageCard: View {
-    let car: UserCar
-    let isSelected: Bool
-    let onSelect: () -> Void
-
-    @StateObject private var carStatsManager = CarStatsManager.shared
-    @State private var showingStats = false
-    @State private var editingCar: EditingCarTarget?
-
-    private var carStats: CarStats? {
-        carStatsManager.getStats(for: car.id)
-    }
-
-    var body: some View {
-        InstrumentCard {
-            VStack(spacing: 8) {
-                // Main car info
-                HStack(spacing: 12) {
-                    CarPhotoThumbnail(photoURL: car.photoUrl, size: 56)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(car.shortDisplay)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        Text(car.displayString)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 4) {
-                        if isSelected {
-                            Text("SELECTED")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.blue)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.2))
-                                .cornerRadius(8)
-                        }
-
-                        Button {
-                            showingStats.toggle()
-                        } label: {
-                            Image(systemName: showingStats ? "chevron.up" : "chart.bar")
-                                .foregroundColor(.gray)
-                        }
-                    }
-                }
-
-                // Stats section (collapsible)
-                if showingStats {
-                    Divider()
-
-                    if let stats = carStats {
-                        CarStatsRow(stats: stats)
-                    } else {
-                        Text("No driving data yet")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 4)
-                    }
-                }
-            }
-            .padding(.vertical, showingStats ? 8 : 4)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if !showingStats {
-                onSelect()
-            }
-        }
-        .contextMenu {
-            Button {
-                editingCar = EditingCarTarget(id: car.id)
-            } label: {
-                Label("Edit Car", systemImage: "pencil")
-            }
-            if !isSelected {
-                Button {
-                    onSelect()
-                } label: {
-                    Label("Select as Active", systemImage: "checkmark.circle")
-                }
-            }
-        }
-        .sheet(item: $editingCar) { target in
-            EditCarView(carId: target.id)
-        }
-    }
-}
-
-/// Wrapper so `.sheet(item:)` can drive a `carId` (String is not Identifiable).
-private struct EditingCarTarget: Identifiable {
-    let id: String
 }
 
 /// Small rounded thumbnail for a car's photo. Falls back to a tinted car icon
