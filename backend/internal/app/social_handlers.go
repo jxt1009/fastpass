@@ -42,6 +42,7 @@ type PublicProfileResponse struct {
 	FollowingCount int       `json:"following_count"`
 	IsFollowedByMe bool      `json:"is_followed_by_me"`
 	Garage         string    `json:"garage"`           // JSON array of cars
+	CarStatsData   string    `json:"car_stats_data"`   // JSON blob of per-car aggregated stats
 }
 
 type FollowUserEntry struct {
@@ -294,6 +295,7 @@ func getPublicProfile(c *gin.Context) {
 		FollowingCount: int(followingCount),
 		IsFollowedByMe: isFollowed,
 		Garage:         user.Garage,
+		CarStatsData:   user.CarStatsData,
 	})
 }
 
