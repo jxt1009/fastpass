@@ -66,7 +66,7 @@ struct CarPhotoEditorSection: View {
         .fullScreenCover(item: $croppingImage, onDismiss: {
             pickedPhoto = nil
         }) { source in
-            PhotoCropView(image: source.image) { cropped in
+            PhotoCropView(image: source.image, context: source.context) { cropped in
                 pickedImage = cropped.resizedForAvatar(maxDimension: 800)
             }
         }
@@ -124,7 +124,7 @@ struct CarPhotoEditorSection: View {
                 return
             }
             let resized = img.resizedForAvatar(maxDimension: 2048)
-            croppingImage = CropImageSource(image: resized)
+            croppingImage = CropImageSource(image: resized, context: .car)
         } catch {
             // Error surfaced to parent via errorMessage binding if needed.
         }

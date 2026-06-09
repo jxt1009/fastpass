@@ -1,19 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Avatar zoom
-//
-// A minimal fullscreen overlay that loads an avatar (or any other) image
-// at its native size and dismisses on tap. Pinch-to-zoom is intentionally
-// out of scope for the first pass — the redesign calls it "nice to have".
-//
-// At most one of `url` / `image` is expected to be set; if both are nil we
-// fall back to a generic person-icon placeholder.
-//
-// `onEdit`, when non-nil, surfaces a top-leading "Edit" button. Tapping it
-// hands a `UIImage` to the parent (fetched from `url` if needed) so the
-// parent can drive the cropper / re-save flow. The zoom itself is
-// presentation-only and never owns the cropper state.
 struct AvatarZoomView: View {
     let url: URL?
     var image: UIImage? = nil
@@ -53,11 +40,7 @@ struct AvatarZoomView: View {
     @ViewBuilder
     private var content: some View {
         if let image {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .contentShape(Rectangle())
-                .onTapGesture { onDismiss() }
+            ZoomableImageView(image: image, onDismiss: onDismiss)
         } else if let url {
             AsyncImage(url: url) { phase in
                 switch phase {
@@ -107,6 +90,92 @@ struct AvatarZoomView: View {
                     onEdit(fetched)
                 }
             }
+        }
+    }
+}
+
+private struct ZoomableImageView: UIViewRepresentable {
+    let image: UIImage
+    let onDismiss: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onDismiss: onDismiss)
+    }
+
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.backgroundColor = .clear
+        scrollView.minimumZoomScale = 1
+        scrollView.maximumZoomScale = 6
+        scrollView.zoomScale = 1
+        scrollView.delegate = context.coordinator
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.bouncesZoom = true
+
+        let imageView = context.coordinator.imageView
+        imageView.image = image
+        imageView.contentMode = .scaleAspectFit
+        imageView.isUserInteractionEnabled = true
+        imageView.frame = scrollView.bounds
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        scrollView.addSubview(imageView)
+
+        let singleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleSingleTap))
+        let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        singleTap.require(toFail: doubleTap)
+        scrollView.addGestureRecognizer(singleTap)
+        scrollView.addGestureRecognizer(doubleTap)
+
+        context.coordinator.scrollView = scrollView
+        return scrollView
+    }
+
+    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        context.coordinator.imageView.image = image
+        context.coordinator.scrollView = scrollView
+    }
+
+    final class Coordinator: NSObject, UIScrollViewDelegate {
+        let imageView = UIImageView()
+        private let onDismiss: () -> Void
+        weak var scrollView: UIScrollView?
+
+        init(onDismiss: @escaping () -> Void) {
+            self.onDismiss = onDismiss
+        }
+
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            imageView
+        }
+
+        @objc
+        func handleSingleTap() {
+            onDismiss()
+        }
+
+        @objc
+        func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
+            guard let scrollView else { return }
+            if scrollView.zoomScale > scrollView.minimumZoomScale {
+                scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
+                return
+            }
+
+            let targetZoom: CGFloat = 3
+            let tapPoint = recognizer.location(in: imageView)
+            let size = CGSize(
+                width: scrollView.bounds.size.width / targetZoom,
+                height: scrollView.bounds.size.height / targetZoom
+            )
+            let rect = CGRect(
+                x: tapPoint.x - (size.width / 2),
+                y: tapPoint.y - (size.height / 2),
+                width: size.width,
+                height: size.height
+            )
+            scrollView.zoom(to: rect, animated: true)
         }
     }
 }

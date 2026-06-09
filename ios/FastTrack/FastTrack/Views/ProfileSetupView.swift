@@ -91,7 +91,7 @@ struct ProfileSetupView: View {
             .fullScreenCover(item: $croppingImage, onDismiss: {
                 selectedPhoto = nil
             }) { source in
-                PhotoCropView(image: source.image) { cropped in
+                PhotoCropView(image: source.image, context: source.context) { cropped in
                     avatarImage = cropped.resizedForAvatar(maxDimension: 800)
                 }
             }
@@ -115,7 +115,7 @@ struct ProfileSetupView: View {
             return
         }
         let resized = img.resizedForAvatar(maxDimension: 2048)
-        croppingImage = CropImageSource(image: resized)
+        croppingImage = CropImageSource(image: resized, context: .avatar)
     }
 
     private func validateUsername(_ val: String) {
