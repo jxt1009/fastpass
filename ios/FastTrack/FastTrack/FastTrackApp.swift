@@ -14,7 +14,8 @@ struct FastTrackApp: App {
     @StateObject private var authManager: AuthManager
     @StateObject private var settings: AppSettings
     @StateObject private var profileManager: ProfileManager
-    
+    @StateObject private var notificationsManager: NotificationsManager
+
     init() {
         let locMgr = LocationManager()
         let drvMgr = DriveManager()
@@ -22,14 +23,16 @@ struct FastTrackApp: App {
         let authMgr = AuthManager.shared
         let appSettings = AppSettings.shared
         let profMgr = ProfileManager.shared
-        
+        let notifMgr = NotificationsManager.shared
+
         _locationManager = StateObject(wrappedValue: locMgr)
         _driveManager = StateObject(wrappedValue: drvMgr)
         _authManager = StateObject(wrappedValue: authMgr)
         _settings = StateObject(wrappedValue: appSettings)
         _profileManager = StateObject(wrappedValue: profMgr)
+        _notificationsManager = StateObject(wrappedValue: notifMgr)
     }
-    
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -43,6 +46,7 @@ struct FastTrackApp: App {
                         .environmentObject(authManager)
                         .environmentObject(settings)
                         .environmentObject(profileManager)
+                        .environmentObject(notificationsManager)
                 }
 #else
                 RootView()
@@ -51,6 +55,7 @@ struct FastTrackApp: App {
                     .environmentObject(authManager)
                     .environmentObject(settings)
                     .environmentObject(profileManager)
+                    .environmentObject(notificationsManager)
 #endif
             }
         }
@@ -65,6 +70,8 @@ struct RootView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var notificationsManager: NotificationsManager
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isInitializing = true
     @State private var selectedTab = 0
     @State private var showingProfileSetup = false
@@ -100,8 +107,21 @@ struct RootView: View {
             if !isAuthenticated {
                 Task { @MainActor in
                     driveManager.clearLocalData()
+                    notificationsManager.stopPolling()
                     selectedTab = 0
                 }
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .active:
+                if authManager.isAuthenticated {
+                    notificationsManager.startPolling()
+                }
+            case .background:
+                notificationsManager.stopPolling()
+            default:
+                break
             }
         }
     }
@@ -139,6 +159,7 @@ struct RootView: View {
                             showingProfileSetup = true
                         }
                     }
+                    notificationsManager.startPolling()
                 }
             }
             .onChange(of: selectedTab) { oldTab, _ in
@@ -157,6 +178,7 @@ struct RootView: View {
             .onAppear {
                 locationManager.requestPermission()
                 driveManager.startPolling()
+                notificationsManager.startPolling()
             }
         } else {
             SignInView()

@@ -363,9 +363,39 @@ class APIService {
     func deleteCarPhoto(carId: String) async throws {
         try await delete(endpoint: "/garage/cars/\(carId)/photo")
     }
+
+    // MARK: - Notification Methods
+
+    func fetchNotifications(cursor: String? = nil, limit: Int = 50) async throws -> InAppNotificationsListResponse {
+        var query = "limit=\(limit)"
+        if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            query += "&cursor=\(encoded)"
+        }
+        return try await get(endpoint: "/me/notifications?\(query)")
+    }
+
+    func fetchUnreadNotificationCount() async throws -> Int {
+        let r: UnreadCountResponse = try await get(endpoint: "/me/notifications/unread-count")
+        return r.unreadCount
+    }
+
+    func markNotificationRead(id: Int) async throws {
+        struct Empty: Codable {}
+        let _: Empty = try await post(endpoint: "/me/notifications/\(id)/read", body: Empty())
+    }
+
+    func markAllNotificationsRead() async throws {
+        struct Empty: Codable {}
+        let _: Empty = try await post(endpoint: "/me/notifications/read-all", body: Empty())
+    }
 }
 
 private struct _EmptyBody: Encodable {}
+
+private struct UnreadCountResponse: Decodable {
+    let unreadCount: Int
+    enum CodingKeys: String, CodingKey { case unreadCount = "unread_count" }
+}
 
 private struct DeleteAccountPayload: Encodable {
     let appleAuthorizationCode: String?
