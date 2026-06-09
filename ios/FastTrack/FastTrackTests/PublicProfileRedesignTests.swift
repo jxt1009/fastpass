@@ -35,16 +35,32 @@ final class PublicProfileRedesignTests: XCTestCase {
             "PublicProfileView's Garage section must push PublicCarDetailView")
     }
 
+    /// Explicit guard that the public profile still wires
+    /// `NavigationLink { PublicCarDetailView(...) }` (not some other
+    /// view). The duplicate-chevron fix in #64 / spec section 4.2.4
+    /// changed the card's chrome; this test makes sure the navigation
+    /// behaviour itself didn't regress.
+    func testPublicProfileView_KeepsNavigationLinkToPublicCarDetailView() throws {
+        let source = try readPublicProfileViewSource()
+        let garageBody = try firstSubstring(in: source, open: "Section(\"Garage\")", close: "}\n            }")
+        XCTAssertTrue(garageBody.contains("NavigationLink"),
+            "PublicProfileView's Garage section must wrap each card in a NavigationLink")
+        XCTAssertTrue(garageBody.contains("PublicCarDetailView("),
+            "PublicProfileView's Garage section must push PublicCarDetailView")
+    }
+
     // MARK: - Card chevron hint
 
-    /// `PublicGarageCard` must include a trailing chevron hint so the
-    /// "tap to view" affordance is visible at a glance, not just
-    /// inferred from the navigation behaviour. Regression guard for
-    /// #64 Track F.
-    func testPublicGarageCard_HasTrailingChevronHint() throws {
+    /// `PublicGarageCard` must NOT render a trailing chevron hint. The
+    /// system disclosure indicator (on a `NavigationLink` inside a
+    /// `List`) is the consistent "tap to view" affordance across the
+    /// whole profile, and a card-local chevron on top of the system
+    /// one was a doubled-up affordance on iOS 17+. Regression guard
+    /// for spec section 4.2.4.
+    func testPublicGarageCard_HasNoTrailingChevronHint() throws {
         let source = try readPublicGarageCardSource()
-        XCTAssertTrue(source.contains("chevron.right"),
-            "PublicGarageCard must include a chevron.right hint for tap-to-view")
+        XCTAssertFalse(source.contains("chevron.right"),
+            "PublicGarageCard must not render a chevron.right; the system disclosure indicator on the NavigationLink is the only affordance")
     }
 
     /// `PublicGarageCard` must NOT wrap its body in a `Button` (or
@@ -75,6 +91,17 @@ final class PublicProfileRedesignTests: XCTestCase {
             "PublicGarageCard must not wrap its body in a Button { ... } trailing-closure init; the parent NavigationLink is the tap handler.")
     }
 
+    /// The public car detail view must distinguish "no data recorded"
+    /// from "stats haven't synced for this car yet" in its empty
+    /// state. This is a source-order guard for spec section 4.2.3:
+    /// the new copy must exist on disk so the client-side fix doesn't
+    /// regress.
+    func testPublicCarDetailView_HasStatsNotSyncedEmptyStateCopy() throws {
+        let source = try readPublicCarDetailViewSource()
+        XCTAssertTrue(source.contains("Stats haven't synced for this car yet."),
+            "PublicCarDetailView must render the new 'Stats haven't synced' copy when the blob is non-empty but has no key for this car")
+    }
+
     // MARK: - Helpers
 
     private func readPublicProfileViewSource() throws -> String {
@@ -83,6 +110,10 @@ final class PublicProfileRedesignTests: XCTestCase {
 
     private func readPublicGarageCardSource() throws -> String {
         try readSourceFile(name: "PublicGarageCard.swift", in: "Views")
+    }
+
+    private func readPublicCarDetailViewSource() throws -> String {
+        try readSourceFile(name: "PublicCarDetailView.swift", in: "Views")
     }
 
     /// Reads a Swift file from the `ios/FastTrack/FastTrack/<dir>/<name>`

@@ -83,13 +83,14 @@ struct PublicProfileView: View {
                     // Decode the per-car stats blob once for the section
                     // rather than re-parsing the JSON for every row inside
                     // the ForEach.
-                    let statsByCarId = statsByCarId(blob: profile.carStatsData)
+                    let statsByCarId = PublicProfileStatsLookup.byCarId(blob: profile.carStatsData)
                     ForEach(garage) { car in
                         NavigationLink {
                             PublicCarDetailView(
                                 username: profile.username,
                                 car: car,
-                                stats: statsByCarId[car.id]
+                                stats: statsByCarId[car.id],
+                                carStatsData: profile.carStatsData
                             )
                         } label: {
                             PublicGarageCard(
@@ -292,20 +293,8 @@ struct PublicProfileView: View {
     /// `car_stats_data` JSON blob the server stores on each user. Returns
     /// nil if the blob is missing/empty/malformed or the car is not in
     /// the blob.
-    @available(*, unavailable, message: "Decode the blob once via statsByCarId(blob:) and look up by id.")
+    @available(*, unavailable, message: "Decode the blob once via PublicProfileStatsLookup.byCarId(blob:) and look up by id.")
     private func statsForCar(id: String, blob: String?) -> CarStats? { nil }
-
-    /// Decode the per-car stats blob once into a `[carId: CarStats]`
-    /// dictionary so the garage section can index by id without
-    /// re-parsing the JSON for every row. Returns an empty dictionary
-    /// when the blob is missing, empty, or malformed.
-    private func statsByCarId(blob: String?) -> [String: CarStats] {
-        guard let blob, !blob.isEmpty,
-              let data = blob.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode([String: CarStats].self, from: data)
-        else { return [:] }
-        return decoded
-    }
 
     private func presentAvatarZoom(_ profile: PublicProfile) {
         let url: URL? = profile.avatarURL.isEmpty
