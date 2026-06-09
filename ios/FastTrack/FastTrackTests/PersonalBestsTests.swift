@@ -15,6 +15,18 @@ final class PersonalBestsTests: XCTestCase {
     /// Other fields are set to safe defaults so the computed property
     /// under test only depends on what this helper varies.
     private func makeDrive(id: Int, maxSpeed: Double, startTime: Date) -> Drive {
+        makeDrive(id: id, carId: nil, maxSpeed: maxSpeed, best060Time: nil, startTime: startTime)
+    }
+
+    /// Builds a drive with an explicit car id, top speed, optional 0-60
+    /// time, and start time.
+    private func makeDrive(
+        id: Int,
+        carId: String?,
+        maxSpeed: Double,
+        best060Time: Double? = nil,
+        startTime: Date
+    ) -> Drive {
         Drive(
             id: id,
             userID: 1,
@@ -30,7 +42,7 @@ final class PersonalBestsTests: XCTestCase {
             minSpeed: 0,
             avgSpeed: maxSpeed / 2,
             routeData: nil,
-            carId: nil,
+            carId: carId,
             carMake: nil,
             carModel: nil,
             carYear: nil,
@@ -45,7 +57,7 @@ final class PersonalBestsTests: XCTestCase {
             maxDeceleration: 0,
             peakGForce: 0,
             topCornerSpeed: 0,
-            best060Time: nil
+            best060Time: best060Time
         )
     }
 
@@ -131,5 +143,77 @@ final class PersonalBestsTests: XCTestCase {
         let fast  = makeDrive(id: 42, maxSpeed: 50, startTime: Date(timeIntervalSince1970: 1_700_000_200))
         let m = makeManager(drives: [zero1, zero2, fast], unlocks: [])
         XCTAssertEqual(m.pbTopSpeedDriveId, 42)
+    }
+
+    // MARK: - PersonalBests helper — true top speed
+
+    /// `PersonalBests.trueTopSpeed` must return the drive with the
+    /// maximum `maxSpeed` for the given car, ignoring drives tagged
+    /// to other cars.
+    func testTrueTopSpeedPB_usesMaxAcrossAllDrivesForCar() {
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+        let myCar = "car-A"
+        let drives = [
+            makeDrive(id: 1, carId: myCar,  maxSpeed: 30,  startTime: t0),
+            makeDrive(id: 2, carId: myCar,  maxSpeed: 55,  startTime: t0.addingTimeInterval(60)),
+            makeDrive(id: 3, carId: myCar,  maxSpeed: 40,  startTime: t0.addingTimeInterval(120)),
+            // Drive belonging to a different car must be ignored.
+            makeDrive(id: 4, carId: "car-B", maxSpeed: 99, startTime: t0.addingTimeInterval(180)),
+        ]
+        let (speed, drive) = PersonalBests.trueTopSpeed(carId: myCar, drives: drives)
+        XCTAssertEqual(speed, 55, accuracy: 0.001)
+        XCTAssertEqual(drive?.id, 2)
+    }
+
+    // MARK: - PersonalBests helper — true 0-60
+
+    /// `PersonalBests.trueZeroToSixty` must return the drive with the
+    /// minimum positive `best060Time` for the given car, ignoring
+    /// drives for other cars and non-positive sentinel values.
+    func testTrueZeroToSixtyPB_usesMinAcrossAllDrivesForCar() {
+        let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+        let myCar = "car-A"
+        let drives = [
+            makeDrive(id: 1, carId: myCar,  maxSpeed: 30, best060Time: 5.8,  startTime: t0),
+            makeDrive(id: 2, carId: myCar,  maxSpeed: 30, best060Time: 4.2,  startTime: t0.addingTimeInterval(60)),
+            makeDrive(id: 3, carId: myCar,  maxSpeed: 30, best060Time: 0,    startTime: t0.addingTimeInterval(120)),  // sentinel
+            makeDrive(id: 4, carId: myCar,  maxSpeed: 30, best060Time: nil,  startTime: t0.addingTimeInterval(180)),  // no attempt
+            // Drive belonging to a different car with a faster time must be ignored.
+            makeDrive(id: 5, carId: "car-B", maxSpeed: 30, best060Time: 2.9, startTime: t0.addingTimeInterval(240)),
+        ]
+        let (time, drive) = PersonalBests.trueZeroToSixty(carId: myCar, drives: drives)
+        XCTAssertEqual(time, 4.2, accuracy: 0.001)
+        XCTAssertEqual(drive?.id, 2)
+    }
+
+    // MARK: - 0-60 label is not unit-dependent
+
+    /// The "Best 0-60" label in ProfileView must be the fixed string
+    /// "Best 0-60 mph time", not an interpolated unit string that would
+    /// render incorrectly in metric mode ("Best 0-60 km/h time").
+    func testZeroToSixtyLabel_isNotUnitDependent() throws {
+        // Read the ProfileView source and assert the interpolated pattern is absent.
+        let bundle = Bundle(for: PersonalBestsTests.self)
+        // The test target includes the app sources; locate ProfileView.swift
+        // via its known relative path from the module root.
+        guard let srcURL = bundle.resourceURL?
+            .deletingLastPathComponent()   // .build/Debug-iphonesimulator
+            .deletingLastPathComponent()   // .build
+            .deletingLastPathComponent()   // FastTrack.xcodeproj parent
+            .appendingPathComponent("FastTrack/Views/ProfileView.swift"),
+              let source = try? String(contentsOf: srcURL, encoding: .utf8) else {
+            // If file resolution fails in CI (paths vary), skip gracefully.
+            throw XCTSkip("Could not locate ProfileView.swift for source inspection")
+        }
+        // The interpolated unit pattern must be absent.
+        XCTAssertFalse(
+            source.contains("Best 0-60 \\(settings.speedUnit)"),
+            "ProfileView still contains unit-interpolated 0-60 label"
+        )
+        // The correct fixed label must be present.
+        XCTAssertTrue(
+            source.contains("Best 0-60 mph time"),
+            "ProfileView does not contain the fixed 'Best 0-60 mph time' label"
+        )
     }
 }

@@ -50,10 +50,12 @@ struct AchievementsView: View {
                         }
                         .padding()
                     }
+                    .background(Color.ftSurfaceBg.ignoresSafeArea())
                 }
             }
             .navigationTitle("Achievements")
             .navigationBarTitleDisplayMode(.inline)
+            .accentColor(.ftBlue)
             .onAppear {
                 achievementManager.updateProgress(with: driveManager.drives)
             }
@@ -76,7 +78,7 @@ struct AchievementsView: View {
         .font(.subheadline)
         .padding(.horizontal)
         .padding(.vertical, 10)
-        .background(Color(.systemGroupedBackground))
+        .background(Color.ftSurfaceBg)
         .overlay(alignment: .bottom) {
             ProgressView(value: progressPercentage / 100.0)
                 .progressViewStyle(LinearProgressViewStyle(tint: .green))
@@ -216,11 +218,8 @@ struct AchievementCard: View {
             }
             .padding()
             .frame(height: 140)
-            .background(achievement.isUnlocked ? Color(.systemBackground) : Color(.systemGray6))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(achievement.isUnlocked ? achievement.category.color.opacity(0.3) : Color.clear, lineWidth: 2)
-            )
+            .opacity(achievement.isUnlocked ? 1.0 : 0.65)
+            .background(Color.ftCardBg)
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())

@@ -90,6 +90,11 @@ struct DriveDetailView: View {
     @State private var isPlaying = false
     @State private var playbackTimer: Timer?
 
+    @State private var showingDeleteConfirmation = false
+    @State private var isDeleting = false
+    @State private var deleteError: String?
+    @Environment(\.dismiss) private var dismiss
+
     @ObservedObject private var settings = AppSettings.shared
     @EnvironmentObject var driveManager: DriveManager
 
@@ -170,7 +175,7 @@ struct DriveDetailView: View {
                             Button { showingCarPicker = true } label: {
                                 HStack(spacing: 4) {
                                     Text(drive.carDisplayString).foregroundColor(.primary)
-                                    Image(systemName: "pencil").font(.caption).foregroundColor(.blue)
+                                    Image(systemName: "pencil").font(.caption).foregroundColor(.ftBlue)
                                 }
                             }
                         }
@@ -187,6 +192,35 @@ struct DriveDetailView: View {
         }
         .navigationTitle("Drive Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isOwner {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .destructive) {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .disabled(isDeleting)
+                }
+            }
+        }
+        .alert("Delete Drive?", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button(isDeleting ? "Deleting…" : "Delete", role: .destructive) {
+                Task { await performDelete() }
+            }
+            .disabled(isDeleting)
+        } message: {
+            Text("This permanently removes the drive from your history. This can't be undone.")
+        }
+        .alert("Unable to Delete Drive", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "Unknown error")
+        }
         .onAppear {
             parseRouteData()
             parseZeroToSixtyAttempts()
@@ -194,6 +228,25 @@ struct DriveDetailView: View {
         .onDisappear { stopPlayback() }
         .sheet(isPresented: $showingCarPicker) {
             DriveCarSelectorView(drive: drive)
+        }
+    }
+
+    private var isOwner: Bool {
+        drive.userID == AuthManager.shared.getUser()?.id
+    }
+
+    // MARK: - Delete
+
+    @MainActor
+    private func performDelete() async {
+        guard !isDeleting, let id = drive.id else { return }
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            try await driveManager.deleteDrive(id: id)
+            dismiss()
+        } catch {
+            deleteError = error.localizedDescription
         }
     }
 
@@ -262,7 +315,7 @@ struct DriveDetailView: View {
                         .stroke(speedBandColor(seg.speedBand), lineWidth: 4)
                 }
             } else {
-                MapPolyline(coordinates: routeCoordinates).stroke(.blue, lineWidth: 3)
+                MapPolyline(coordinates: routeCoordinates).stroke(Color.ftBlue, lineWidth: 3)
             }
 
             // Start / End markers
@@ -310,7 +363,7 @@ struct DriveDetailView: View {
             if let playCoord = playbackCoordinate {
                 Annotation("", coordinate: playCoord) {
                     ZStack {
-                        Circle().fill(Color.blue).frame(width: 14, height: 14)
+                        Circle().fill(Color.ftBlue).frame(width: 14, height: 14)
                         Circle().stroke(Color.white, lineWidth: 2).frame(width: 14, height: 14)
                     }
                 }
@@ -338,7 +391,7 @@ struct DriveDetailView: View {
             Slider(value: $playbackProgress, in: 0...1, onEditingChanged: { editing in
                 if editing && isPlaying { stopPlayback() }
             })
-            .tint(.blue)
+            .tint(.ftBlue)
 
             // Transport controls
             HStack {
@@ -354,7 +407,7 @@ struct DriveDetailView: View {
                 Button { togglePlayback() } label: {
                     Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .font(.title)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.ftBlue)
                 }
                 Spacer()
                 // Seek forward 10 seconds
@@ -752,7 +805,7 @@ struct DriveCarSelectorView: View {
                                         Spacer()
                                         if drive.carId == car.id {
                                             Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.blue)
+                                                .foregroundColor(.ftBlue)
                                         }
                                     }
                                 }

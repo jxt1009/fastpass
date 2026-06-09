@@ -14,42 +14,39 @@ import Charts
 // body stays a thin renderer.
 
 struct CarDetailView: View {
-    let car: UserCar
+    let carId: String
 
     @StateObject private var profileManager = ProfileManager.shared
     @StateObject private var carStatsManager = CarStatsManager.shared
     @StateObject private var achievementManager = AchievementManager.shared
     @ObservedObject private var settings = AppSettings.shared
     @EnvironmentObject var driveManager: DriveManager
+
+    private var car: UserCar? {
+        profileManager.profile?.garage.first(where: { $0.id == carId })
+    }
+
+    private var isActiveCar: Bool {
+        profileManager.profile?.selectedCarId == carId
+    }
+
     @State private var zoomedPhoto: AvatarZoomTarget?
     @State private var showConfetti = false
     @State private var confettiTask: Task<Void, Never>?
-    /// Guards the one-shot confetti so it doesn't replay on every
-    /// `onChange` refresh while the user remains on the view. Reset in
-    /// `handleAppear` so navigating away and back re-arms the trigger.
-    @State private var hasPlayedConfetti = false
+    @State private var showingEditCar = false
+    @State private var showingDrivingStyleGuide = false
+    @State private var lastPresentedConfettiToken: String?
+    @State private var drivePendingDelete: Drive?
+    @State private var deleteError: String?
 
     /// Snapshot of the data the view is rendering. Rebuilt whenever
-    /// the source data changes. The view re-evaluates the closure on
-    /// every body invocation; the `@State` keeps the *displayed*
-    /// snapshot stable across body re-renders that don't actually
-    /// change the inputs.
-    @State private var data: CarDetailData = CarDetailData(
-        car: UserCar(make: "", model: ""),
-        stats: nil,
-        sparklinePoints: [],
-        pbSparklineIndex: nil,
-        bestTopSpeed: nil,
-        bestZeroToSixty: nil,
-        topSpeedPBDate: nil,
-        zeroSixtyPBDate: nil,
-        drivingStyle: .unknown,
-        achievementPBs: [],
-        confettiEligible: false
-    )
+    /// the source data changes. Nil until the first `refresh()` call
+    /// or when the car has been removed from the garage.
+    @State private var data: CarDetailData?
 
-    private var currentData: CarDetailData {
-        CarDetailData.derive(
+    private var currentData: CarDetailData? {
+        guard let car else { return nil }
+        return CarDetailData.derive(
             car: car,
             drives: driveManager.drives,
             carStats: carStatsManager.getStats(for: car.id),
@@ -59,20 +56,64 @@ struct CarDetailView: View {
     }
 
     var body: some View {
-        content
-            .background(Color.ftSurfaceBg.ignoresSafeArea())
-            .navigationTitle(car.nickname.isEmpty ? car.shortDisplay : car.nickname)
-            .navigationBarTitleDisplayMode(.inline)
-            .fullScreenCover(item: $zoomedPhoto, content: photoZoomCover)
-            .overlay(alignment: .top, content: confettiOverlay)
-            .modifier(LifecycleModifier(
-                onAppear: handleAppear,
-                onDisappear: handleDisappear,
-                driveCount: driveManager.drives.count,
-                carStatsCount: carStatsManager.carStats.count,
-                achievementCount: achievementManager.achievements.count,
-                onChangeRefresh: refresh
-            ))
+        Group {
+            if car != nil {
+                content
+                    .fullScreenCover(item: $zoomedPhoto, content: photoZoomCover)
+                    .sheet(isPresented: $showingEditCar) {
+                        EditCarView(carId: carId)
+                    }
+                    .sheet(isPresented: $showingDrivingStyleGuide) {
+                        drivingStyleGuideSheet
+                    }
+                    .overlay(alignment: .top, content: confettiOverlay)
+                    .modifier(LifecycleModifier(
+                        onAppear: handleAppear,
+                        onDisappear: handleDisappear,
+                        driveCount: driveManager.drives.count,
+                        carStatsCount: carStatsManager.carStats.count,
+                        achievementCount: achievementManager.achievements.count,
+                        onChangeRefresh: refresh
+                    ))
+            } else {
+                ContentUnavailableView(
+                    "Car Removed",
+                    systemImage: "car.fill",
+                    description: Text("This car is no longer in your garage.")
+                )
+            }
+        }
+        .background(Color.ftSurfaceBg.ignoresSafeArea())
+        .navigationTitle(car.map { $0.nickname.isEmpty ? $0.shortDisplay : $0.nickname } ?? "")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 12) {
+                    if car != nil {
+                        Button {
+                            showingEditCar = true
+                        } label: {
+                            Image(systemName: "pencil")
+                                .foregroundColor(.ftBlue)
+                        }
+                    }
+                    if isActiveCar {
+                        Text("Active")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.ftBlue))
+                    } else if car != nil {
+                        Button("Set Active") {
+                            setActiveCar()
+                        }
+                        .foregroundColor(.ftBlue)
+                    }
+                }
+            }
+        }
     }
 
     private var content: some View {
@@ -80,26 +121,53 @@ struct CarDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 hero
                 pbGauges
+                topSummaryRow
+                performanceBreakdown
+                periodComparison
+                trendSparklines
                 sparklineSection
-                drivingStyleRow
-                statsGrid
                 perCarAchievementsSection
+                recentDrivesSection
                 Spacer(minLength: 16)
             }
             .padding(.horizontal)
             .padding(.bottom, 32)
         }
+        .alert("Delete Drive?", isPresented: Binding(
+            get: { drivePendingDelete != nil },
+            set: { if !$0 { drivePendingDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { drivePendingDelete = nil }
+            Button("Delete", role: .destructive) {
+                Task { await performDelete() }
+            }
+        } message: {
+            Text("This permanently removes the drive from your history. This can't be undone.")
+        }
+        .alert("Unable to Delete Drive", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "Unknown error")
+        }
     }
 
     private func handleAppear() {
-        hasPlayedConfetti = false
         refresh()
-        triggerConfettiIfEligible()
     }
 
     private func handleDisappear() {
         confettiTask?.cancel()
         confettiTask = nil
+        showConfetti = false
+    }
+
+    private func setActiveCar() {
+        guard var profile = profileManager.profile else { return }
+        profile.selectCar(id: carId)
+        profileManager.saveProfile(profile)
     }
 
     // MARK: - Hero
@@ -123,14 +191,14 @@ struct CarDetailView: View {
             .allowsHitTesting(false)
 
             VStack(alignment: .leading, spacing: 4) {
-                if !car.nickname.isEmpty {
-                    Text(car.nickname)
+                if let nickname = car?.nickname, !nickname.isEmpty {
+                    Text(nickname)
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .lineLimit(1)
                 }
-                Text(car.displayString)
+                Text(car?.displayString ?? "")
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.white.opacity(0.9))
@@ -144,37 +212,12 @@ struct CarDetailView: View {
 
     @ViewBuilder
     private var photo: some View {
-        if let urlString = car.photoUrl, !urlString.isEmpty,
-           let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    heroPlaceholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure:
-                    heroPlaceholder
-                @unknown default:
-                    heroPlaceholder
-                }
-            }
-        } else {
-            heroPlaceholder
-        }
-    }
-
-    private var heroPlaceholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [.ftBlue.opacity(0.6), .purple.opacity(0.5)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+        if let car {
+            CarPhotoView(
+                car: car,
+                url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+                cornerRadius: 0
             )
-            Text(initials(for: car))
-                .font(.system(size: 96, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.9))
         }
     }
 
@@ -187,15 +230,15 @@ struct CarDetailView: View {
                 title: "Top Speed",
                 value: topSpeedDisplay,
                 unit: settings.speedUnit,
-                color: SpeedColor.color(for: data.bestTopSpeed ?? 0),
-                setOn: data.topSpeedPBDate
+                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0),
+                setOn: data?.topSpeedPBDate
             )
             CarDetailGauge(
                 title: "Best 0-60",
                 value: zeroSixtyDisplay,
                 unit: "sec",
                 color: .ftAmber,
-                setOn: data.zeroSixtyPBDate
+                setOn: data?.zeroSixtyPBDate
             )
         }
     }
@@ -217,8 +260,8 @@ struct CarDetailView: View {
             Text("Max Speed Trend")
                 .font(.headline)
             Spacer()
-            if data.sparklinePoints.count > 1 {
-                Text("Last \(data.sparklinePoints.count) drives")
+            if (data?.sparklinePoints.count ?? 0) > 1 {
+                Text("Last \(data?.sparklinePoints.count ?? 0) drives")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -227,7 +270,7 @@ struct CarDetailView: View {
 
     @ViewBuilder
     private var sparklineChart: some View {
-        if data.sparklinePoints.count > 1 {
+        if (data?.sparklinePoints.count ?? 0) > 1 {
             if #available(iOS 16.0, *) {
                 sparklineChartBody
             } else {
@@ -242,10 +285,10 @@ struct CarDetailView: View {
     private var sparklineChartBody: some View {
         if #available(iOS 16.0, *) {
             Chart {
-                ForEach(Array(data.sparklinePoints.enumerated()), id: \.offset) { item in
+                ForEach(Array((data?.sparklinePoints ?? []).enumerated()), id: \.offset) { item in
                     sparklineLineMark(index: item.offset, speed: item.element)
                 }
-                if let pbIndex = data.pbSparklineIndex {
+                if let pbIndex = data?.pbSparklineIndex {
                     sparklinePBPointMark(index: pbIndex)
                 }
             }
@@ -275,7 +318,7 @@ struct CarDetailView: View {
 
     @available(iOS 16.0, *)
     private func sparklinePBPointMark(index: Int) -> some ChartContent {
-        let speed = data.sparklinePoints[index]
+        let speed = data?.sparklinePoints[index] ?? 0
         return PointMark(
             x: .value("Drive", index),
             y: .value("Max Speed", settings.speedValue(speed))
@@ -303,55 +346,68 @@ struct CarDetailView: View {
         .frame(height: 120)
     }
 
-    // MARK: - Driving style
+    // MARK: - Top summary
 
-    @ViewBuilder
-    private var drivingStyleRow: some View {
+    private var totalDrivesCount: Int {
+        if let count = data?.stats?.totalDrives {
+            return count
+        }
+        return driveManager.drives.filter { $0.carId == carId }.count
+    }
+
+    private var topSummaryRow: some View {
         InstrumentCard {
-            HStack(alignment: .center, spacing: 12) {
-                DrivingStyleBadge(style: data.drivingStyle)
+            HStack(spacing: 12) {
+                DrivingStyleBadge(style: data?.drivingStyle ?? .unknown)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Driving Style")
+                    Text("Total Drives")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(data.drivingStyle.explanation)
+                    Text("\(totalDrivesCount)")
                         .font(.subheadline)
-                        .fontWeight(.medium)
+                        .fontWeight(.semibold)
                         .foregroundColor(.primary)
                 }
                 Spacer()
-            }
-        }
-    }
-
-    // MARK: - Stats grid
-
-    @ViewBuilder
-    private var statsGrid: some View {
-        if let stats = data.stats {
-            CarStatsRow(stats: stats)
-        } else {
-            InstrumentCard {
-                HStack(spacing: 12) {
-                    Image(systemName: "chart.bar")
-                        .foregroundColor(.secondary)
-                    Text("No driving data yet")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Spacer()
+                Button {
+                    showingDrivingStyleGuide = true
+                } label: {
+                    Label("Style Guide", systemImage: "info.circle")
+                        .font(.caption.weight(.semibold))
                 }
+                .buttonStyle(.plain)
+                .foregroundColor(.ftBlue)
             }
         }
     }
 
-    // MARK: - Per-car PBs
+    // MARK: - Per-car achievements
 
     @ViewBuilder
     private var perCarAchievementsSection: some View {
-        if !data.achievementPBs.isEmpty {
+        if let pbs = data?.achievementPBs, !pbs.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                SectionHeader(title: "Personal Bests")
-                ForEach(data.achievementPBs) { achievement in
+                HStack {
+                    SectionHeader(title: "Achievements")
+                    Spacer()
+                    if let indicator = recentPBIndicatorText {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.ftAmber)
+                                .frame(width: 6, height: 6)
+                            Text(indicator)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(.ftAmber)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.ftAmber.opacity(0.12))
+                        )
+                    }
+                }
+                ForEach(pbs) { achievement in
                     NavigationLink {
                         destination(for: achievement)
                     } label: {
@@ -403,16 +459,277 @@ struct CarDetailView: View {
         }
     }
 
+    // MARK: - Performance Breakdown
+
+    private var zeroToSixtyCategory: String {
+        guard let time = data?.bestZeroToSixty else { return "N/A" }
+        switch time {
+        case 0..<3.0: return "Hypercar"
+        case 3.0..<4.0: return "Supercar"
+        case 4.0..<6.0: return "Sports Car"
+        default: return "Quick"
+        }
+    }
+
+    private var corneringCategory: String {
+        switch data?.peakLateralG ?? 0 {
+        case 0.8...: return "Race Driver"
+        case 0.6..<0.8: return "Enthusiast"
+        default: return "Spirited"
+        }
+    }
+
+    private var performanceBreakdown: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text("Performance")
+                .font(.headline)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                PerformanceBreakdownCard(
+                    title: "Best 0-60",
+                    value: data?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
+                    category: zeroToSixtyCategory,
+                    icon: "bolt.fill",
+                    color: .red
+                )
+                PerformanceBreakdownCard(
+                    title: "Cornering",
+                    value: String(format: "%.2fG", data?.peakLateralG ?? 0),
+                    category: corneringCategory,
+                    icon: "arrow.triangle.turn.up.right.circle.fill",
+                    color: .purple
+                )
+            }
+        }
+    }
+
+    // MARK: - Period Comparison
+
+    private enum TimePeriod {
+        case lastMonth
+        case previousMonth
+    }
+
+    private func drives(of carId: String, in period: TimePeriod) -> [Drive] {
+        let now = Date()
+        let start: Date
+        switch period {
+        case .lastMonth:
+            start = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+        case .previousMonth:
+            let lastMonthStart = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+            start = Calendar.current.date(byAdding: .month, value: -1, to: lastMonthStart) ?? lastMonthStart
+            return driveManager.drives.filter { $0.carId == carId && $0.startTime >= start && $0.startTime < lastMonthStart }
+        }
+        return driveManager.drives.filter { $0.carId == carId && $0.startTime >= start }
+    }
+
+    private var periodComparison: some View {
+        let currentAvg: Double? = {
+            guard let carId = car?.id else { return nil }
+            let drives = self.drives(of: carId, in: .lastMonth)
+            guard !drives.isEmpty else { return nil }
+            return drives.reduce(0.0) { $0 + $1.maxSpeed } / Double(drives.count)
+        }()
+        let prevAvg = data?.prevPeriodAvgMaxSpeed
+
+        let (valueText, trend): (String, TrendDirection?) = {
+            guard let cur = currentAvg, let prev = prevAvg, prev > 0 else {
+                return ("—", nil)
+            }
+            let delta = (cur - prev) * settings.speedFactor
+            let sign = delta >= 0 ? "+" : ""
+            let t: TrendDirection = delta > 0.5 ? .up : (delta < -0.5 ? .down : .neutral)
+            return (String(format: "%@%.1f %@", sign, delta, settings.speedUnit), t)
+        }()
+
+        return AnalyticsCard(
+            title: "vs Last Month",
+            value: valueText,
+            icon: "arrow.up.arrow.down",
+            iconColor: .purple,
+            trend: trend,
+            info: StatInfo.periodComparison
+        )
+    }
+
+    // MARK: - Trend Sparklines
+
+    private var trendSparklines: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Trends")
+                .font(.headline)
+
+            if #available(iOS 16.0, *) {
+                LazyVGrid(columns: [GridItem(.flexible())], spacing: 10) {
+                    sparklineCard(
+                        title: "Max Speed",
+                        values: data?.sparklinePoints ?? [],
+                        unit: settings.speedUnit,
+                        formatValue: { String(format: "%.0f", settings.speedValue($0)) }
+                    )
+                    sparklineCard(
+                        title: "Distance",
+                        values: data?.distanceTrendPoints ?? [],
+                        unit: settings.distanceUnit,
+                        formatValue: { String(format: "%.1f", settings.distanceValue($0)) }
+                    )
+                }
+            } else {
+                Text("iOS 16+ required for trend charts")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    @available(iOS 16.0, *)
+    private func sparklineCard(title: String, values: [Double], unit: String, formatValue: @escaping (Double) -> String) -> some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    if let last = values.last, last > 0 {
+                        Text(formatValue(last))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                if values.count > 1 {
+                    Chart {
+                        ForEach(Array(values.enumerated()), id: \.offset) { index, value in
+                            LineMark(
+                                x: .value("Drive", index),
+                                y: .value(title, value)
+                            )
+                            .foregroundStyle(Color.ftBlue)
+                            .interpolationMethod(.monotone)
+                        }
+                    }
+                    .chartYAxis(.hidden)
+                    .chartXAxis(.hidden)
+                    .frame(height: 60)
+                } else {
+                    Text("Need more drives")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Recent Drives
+
+    @ViewBuilder
+    private var recentDrivesSection: some View {
+        let carRecentDrives = data?.recentDrives ?? []
+
+        let topSpeedPBDriveId: Int? = {
+            guard let carId = car?.id,
+                  let drive = driveManager.drives.filter({ $0.carId == carId }).max(by: { $0.maxSpeed < $1.maxSpeed }),
+                  drive.maxSpeed == data?.bestTopSpeed else { return nil }
+            return drive.id
+        }()
+
+        let zeroSixtyPBDriveId: Int? = {
+            guard let carId = car?.id,
+                  let time = data?.bestZeroToSixty,
+                  let drive = driveManager.drives.first(where: { $0.carId == carId && $0.best060Time == time }) else { return nil }
+            return drive.id
+        }()
+
+        if !carRecentDrives.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Recent Drives")
+
+                ForEach(carRecentDrives) { drive in
+                    NavigationLink {
+                        DriveDetailView(drive: drive)
+                    } label: {
+                        GarageDriveRow(
+                            drive: drive,
+                            badge: driveBadge(
+                                for: drive,
+                                topSpeedPBDriveId: topSpeedPBDriveId,
+                                zeroSixtyPBDriveId: zeroSixtyPBDriveId
+                            )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing) {
+                        if drive.userID == AuthManager.shared.getUser()?.id {
+                            Button(role: .destructive) {
+                                drivePendingDelete = drive
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func driveBadge(for drive: Drive, topSpeedPBDriveId: Int?, zeroSixtyPBDriveId: Int?) -> GarageDriveBadge? {
+        if drive.id == zeroSixtyPBDriveId {
+            return GarageDriveBadge(text: "PB 0-60", icon: "trophy.fill", background: .yellow, foreground: .black)
+        }
+        if drive.id == topSpeedPBDriveId {
+            return GarageDriveBadge(text: "PB Speed", icon: "flame.fill", background: .red, foreground: .white)
+        }
+        return nil
+    }
+
     // MARK: - Display helpers
 
     private var topSpeedDisplay: String {
-        guard let speed = data.bestTopSpeed, speed > 0 else { return "—" }
+        guard let speed = data?.bestTopSpeed, speed > 0 else { return "—" }
         return String(format: "%.0f", settings.speedValue(speed))
     }
 
     private var zeroSixtyDisplay: String {
-        guard let time = data.bestZeroToSixty, time > 0 else { return "—" }
+        guard let time = data?.bestZeroToSixty, time > 0 else { return "—" }
         return String(format: "%.2f", time)
+    }
+
+    private var recentPBIndicatorText: String? {
+        let count = data?.recentPBCount ?? 0
+        guard count > 0 else { return nil }
+        return count == 1 ? "Recently unlocked" : "\(count) recently unlocked"
+    }
+
+    private var drivingStyleGuideSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(DrivingStyle.guideStyles, id: \.self) { style in
+                    HStack(alignment: .top, spacing: 12) {
+                        DrivingStyleBadge(style: style)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(style.title)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text(style.detailedExplanation)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            .navigationTitle("Driving Style Guide")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        showingDrivingStyleGuide = false
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -431,15 +748,8 @@ struct CarDetailView: View {
         }
     }
 
-    private func initials(for car: UserCar) -> String {
-        let first = car.make.first.map(String.init) ?? ""
-        let second = car.model.first.map(String.init) ?? ""
-        let combined = (first + second).uppercased()
-        return combined.isEmpty ? "?" : combined
-    }
-
     private func presentPhotoZoom() {
-        guard let urlString = car.photoUrl, !urlString.isEmpty,
+        guard let urlString = car?.photoUrl, !urlString.isEmpty,
               let url = URL(string: urlString) else { return }
         zoomedPhoto = AvatarZoomTarget(url: url)
     }
@@ -447,7 +757,8 @@ struct CarDetailView: View {
     // MARK: - Lifecycle
 
     private func refresh() {
-        data = currentData
+        data = currentData  // currentData is CarDetailData? — nil when car removed
+        triggerConfettiIfEligible()
     }
 
     /// One-shot confetti: schedule it if the freshly-derived data says
@@ -456,13 +767,38 @@ struct CarDetailView: View {
     /// stack up multiple timers.
     private func triggerConfettiIfEligible() {
         confettiTask?.cancel()
-        guard data.confettiEligible else { return }
+        guard data?.confettiEligible == true,
+              let token = data?.confettiTriggerToken else { return }
+        guard token != lastPresentedConfettiToken else { return }
+        guard UserDefaults.standard.string(forKey: confettiTokenDefaultsKey) != token else {
+            lastPresentedConfettiToken = token
+            return
+        }
+
+        lastPresentedConfettiToken = token
+        UserDefaults.standard.set(token, forKey: confettiTokenDefaultsKey)
         showConfetti = true
         confettiTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             if Task.isCancelled { return }
             showConfetti = false
             confettiTask = nil
+        }
+    }
+
+    private var confettiTokenDefaultsKey: String {
+        "CarDetailView.lastConfettiToken.\(carId)"
+    }
+
+    @MainActor
+    private func performDelete() async {
+        guard let drive = drivePendingDelete, let id = drive.id else { return }
+        do {
+            try await driveManager.deleteDrive(id: id)
+            drivePendingDelete = nil
+        } catch {
+            deleteError = error.localizedDescription
+            drivePendingDelete = nil
         }
     }
 }

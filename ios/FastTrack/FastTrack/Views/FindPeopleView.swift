@@ -46,6 +46,8 @@ struct FindPeopleView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.ftSurfaceBg.ignoresSafeArea())
         .navigationTitle("Find People")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search by username or name")
@@ -85,7 +87,7 @@ private struct UserSearchRow: View {
         ZStack {
             Circle()
                 .fill(LinearGradient(
-                    colors: [.blue, .purple],
+                    colors: [.ftBlue, .purple],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))
@@ -127,7 +129,7 @@ private struct UserSearchRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(Color.blue, in: Capsule())
+                            .background(Color.ftBlue, in: Capsule())
                     }
                 }
                 if !result.fullName.isEmpty {
@@ -181,7 +183,7 @@ private struct FollowToggleButton: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.blue, in: Capsule())
+                    .background(Color.ftBlue, in: Capsule())
             }
         }
         .buttonStyle(.plain)

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A1ECBE36197800194773C221 /* FastTrackWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A1717AC285AC7B5F1C4400C2 /* FastTrackWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C0A1C21444B94AD7A60BEE11 /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = C0A1C21344B94AD7A60BEE11 /* CropViewController */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +101,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0A1C21444B94AD7A60BEE11 /* CropViewController in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -177,6 +179,7 @@
 			);
 			name = FastTrack;
 			packageProductDependencies = (
+				C0A1C21344B94AD7A60BEE11 /* CropViewController */,
 			);
 			productName = FastTrack;
 			productReference = B6B2AAA82F7CBF1700AA4AA0 /* FastTrack.app */;
@@ -237,6 +240,9 @@
 			mainGroup = B6B2AA9F2F7CBF1700AA4AA0;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				C0A1C21244B94AD7A60BEE11 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
+			);
 			productRefGroup = B6B2AAA92F7CBF1700AA4AA0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -308,6 +314,25 @@
 			targetProxy = B6CDB23D2F7F6D330013FCA5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C0A1C21244B94AD7A60BEE11 /* XCRemoteSwiftPackageReference "TOCropViewController" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TimOliver/TOCropViewController.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C0A1C21344B94AD7A60BEE11 /* CropViewController */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A1C21244B94AD7A60BEE11 /* XCRemoteSwiftPackageReference "TOCropViewController" */;
+			productName = CropViewController;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A13C87FB33927977FCE3906A /* Debug */ = {

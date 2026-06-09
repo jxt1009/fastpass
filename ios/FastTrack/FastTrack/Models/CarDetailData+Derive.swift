@@ -1,5 +1,49 @@
 import Foundation
 
+// MARK: - PersonalBests
+//
+// Pure helper that computes the true current personal-best values for a
+// single car directly from its drives — not from achievement source
+// drives (which mark the drive that first crossed an unlock threshold,
+// not necessarily the all-time best). Use this for the headline PB
+// gauges in CarDetailView.
+
+enum PersonalBests {
+    /// The true all-time best top speed (m/s) across all drives for
+    /// `carId`, together with the drive that produced it.
+    /// Returns `(nil, nil)` when the car has no drives with
+    /// a positive maxSpeed.
+    static func trueTopSpeed(
+        carId: String,
+        drives: [Drive]
+    ) -> (speed: Double, drive: Drive?) {
+        let carDrives = drives.filter { $0.carId == carId && $0.maxSpeed > 0 }
+        guard let best = carDrives.max(by: { $0.maxSpeed < $1.maxSpeed }) else {
+            return (0, nil)
+        }
+        return (best.maxSpeed, best)
+    }
+
+    /// The true all-time best 0-60 time (seconds) across all drives for
+    /// `carId`, together with the drive that produced it.
+    /// Returns `(nil, nil)` when the car has no drives with a
+    /// positive best060Time.
+    static func trueZeroToSixty(
+        carId: String,
+        drives: [Drive]
+    ) -> (time: Double, drive: Drive?) {
+        let carDrives = drives.filter { $0.carId == carId }
+        let candidates = carDrives.compactMap { drive -> (Drive, Double)? in
+            guard let t = drive.best060Time, t > 0 else { return nil }
+            return (drive, t)
+        }
+        guard let best = candidates.min(by: { $0.1 < $1.1 }) else {
+            return (0, nil)
+        }
+        return (best.1, best.0)
+    }
+}
+
 // MARK: - CarDetailData derivation
 //
 // Pure functions that take everything `CarDetailView` needs (the car,
@@ -61,17 +105,19 @@ extension CarDetailData {
         }()
 
         // Resolve the per-car top speed and the date of the drive that
-        // set it. Prefer the `CarStats` blob as the authoritative value
-        // (it's the union of local + server-side data) and use the
-        // filtered drives only to find the timestamp. Fall back to
-        // computing from the drives when stats are missing.
+        // set it. Always scan actual drives for the true maximum so the
+        // headline PB reflects the real all-time best, not the
+        // achievement-source drive. Fall back to the `CarStats` blob
+        // only when no drives are available locally.
         let (bestTopSpeed, topSpeedPBDate) = resolveTopSpeed(
+            carId: car.id,
             stats: carStats,
             drives: carDrives
         )
 
-        // Same idea for 0-60: prefer the blob, fall back to drives.
+        // Same idea for 0-60: true minimum from drive data first.
         let (bestZeroToSixty, zeroSixtyPBDate) = resolveZeroToSixty(
+            carId: car.id,
             stats: carStats,
             drives: carDrives
         )
@@ -88,14 +134,59 @@ extension CarDetailData {
                 return drives.contains { $0.id == sourceDriveId && $0.carId == car.id }
             }
 
-        let confetti = carAchievements.contains { achievement in
-            guard let unlocked = achievement.unlockedDate else { return false }
+        let recentPBUnlocks = carAchievements.compactMap { achievement -> (id: String, unlocked: Date)? in
+            guard let unlocked = achievement.unlockedDate else { return nil }
             // Reject future-dated unlocks explicitly: a negative
             // interval would otherwise pass the `<= window` check
             // whenever the device clock drifts.
             let interval = now.timeIntervalSince(unlocked)
-            return interval >= 0 && interval <= confettiWindowSeconds
+            guard interval >= 0 && interval <= confettiWindowSeconds else { return nil }
+            return (achievement.id, unlocked)
         }
+
+        let confetti = !recentPBUnlocks.isEmpty
+        let confettiToken = recentPBUnlocks
+            .sorted { lhs, rhs in
+                if lhs.unlocked != rhs.unlocked { return lhs.unlocked < rhs.unlocked }
+                return lhs.id < rhs.id
+            }
+            .map { "\($0.id):\(Int($0.unlocked.timeIntervalSince1970))" }
+            .joined(separator: "|")
+
+        // New fields computation
+        let smoothnessScore = carStats?.smoothnessScore ?? 0
+
+        let speeds = carDrives.map(\.maxSpeed)
+        let mean = speeds.reduce(0, +) / Double(max(1, speeds.count))
+        let variance = speeds.map { pow($0 - mean, 2) }.reduce(0, +) / Double(max(1, speeds.count))
+        let cv = mean > 0 ? sqrt(variance) / mean : 0
+        let consistencyScore = max(0, min(100, 100 - cv * 150))
+
+        let peakLateralG = carStats?.bestLateralG ?? carDrives.map(\.peakGForce).max() ?? 0
+
+        let bestZeroToSixtyTime = bestZeroToSixty
+
+        let recentSorted = carDrives.sorted { $0.startTime > $1.startTime }
+        let recentForTrendsNewestFirst = Array(recentSorted.prefix(5))
+        // Trend arrays are documented as oldest-first so sparklines
+        // render chronologically left-to-right.
+        let recentForTrends = recentForTrendsNewestFirst.reversed()
+        let recentDrives = recentForTrendsNewestFirst
+
+        let distanceTrendPoints = recentForTrends.map { $0.distance }
+
+        let smoothnessTrendPoints = recentForTrends.map { drive in
+            CarStatsManager.shared.calculateSmoothnessScore(for: [drive])
+        }
+
+        let prevPeriodAvgMaxSpeed: Double? = {
+            let lastMonthStart = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+            let prevMonthStart = Calendar.current.date(byAdding: .month, value: -2, to: now) ?? now
+            let prevDrives = drives.filter { $0.carId == car.id && $0.startTime >= prevMonthStart && $0.startTime < lastMonthStart }
+            guard !prevDrives.isEmpty else { return nil }
+            let total = prevDrives.reduce(0.0) { $0 + $1.maxSpeed }
+            return total / Double(prevDrives.count)
+        }()
 
         return CarDetailData(
             car: car,
@@ -108,58 +199,65 @@ extension CarDetailData {
             zeroSixtyPBDate: zeroSixtyPBDate,
             drivingStyle: style,
             achievementPBs: carAchievements,
-            confettiEligible: confetti
+            confettiEligible: confetti,
+            confettiTriggerToken: confettiToken.isEmpty ? nil : confettiToken,
+            recentPBCount: recentPBUnlocks.count,
+            smoothnessScore: smoothnessScore,
+            consistencyScore: consistencyScore,
+            peakLateralG: peakLateralG,
+            bestZeroToSixtyTime: bestZeroToSixtyTime,
+            recentDrives: recentDrives,
+            distanceTrendPoints: distanceTrendPoints,
+            smoothnessTrendPoints: smoothnessTrendPoints,
+            prevPeriodAvgMaxSpeed: prevPeriodAvgMaxSpeed
         )
     }
 
     // MARK: - Internal helpers (exposed via internal access for tests)
 
-    /// Resolves the per-car best top speed (m/s) plus the drive that
-    /// produced it. When the stats blob is missing or zero, falls back
-    /// to scanning the supplied drives. When neither source has data,
-    /// returns `(nil, nil)`.
+    /// Resolves the per-car best top speed (m/s) plus the date of the
+    /// drive that produced it. The true maximum is always computed from
+    /// actual drive data via `PersonalBests.trueTopSpeed`. The `CarStats`
+    /// blob is used only as a fallback when no drives are present locally
+    /// (e.g. stats were restored from the server before drives loaded).
+    /// Returns `(nil, nil)` when neither source has data.
     static func resolveTopSpeed(
+        carId: String,
         stats: CarStats?,
         drives: [Drive]
     ) -> (Double?, Date?) {
+        let (trueSpeed, trueDrive) = PersonalBests.trueTopSpeed(carId: carId, drives: drives)
+        if trueSpeed > 0 {
+            return (trueSpeed, trueDrive?.startTime)
+        }
+        // No drives available locally — fall back to the cached stats blob.
         if let stats, stats.bestTopSpeed > 0 {
-            let matchingDrive = drives
-                .filter { $0.maxSpeed == stats.bestTopSpeed }
-                .min { $0.startTime < $1.startTime }
-            return (stats.bestTopSpeed, matchingDrive?.startTime)
+            return (stats.bestTopSpeed, nil)
         }
-        guard let maxDrive = drives.max(by: { $0.maxSpeed < $1.maxSpeed }),
-              maxDrive.maxSpeed > 0 else {
-            return (nil, nil)
-        }
-        return (maxDrive.maxSpeed, maxDrive.startTime)
+        return (nil, nil)
     }
 
-    /// Resolves the per-car best 0-60 (seconds) plus the drive that
-    /// produced it. `best060Time` is `Double?` on the stats blob, so
-    /// we treat nil/zero as "no time". The local-scan fallback filters
-    /// out non-positive times for the same reason — a sentinel `0` in
-    /// the drive list must not become the minimum.
+    /// Resolves the per-car best 0-60 (seconds) plus the date of the
+    /// drive that produced it. The true minimum is always computed from
+    /// actual drive data via `PersonalBests.trueZeroToSixty`. The
+    /// `CarStats` blob is used only as a fallback when no drives are
+    /// present locally. Non-positive sentinel values are filtered out
+    /// in `PersonalBests` so a `0` in a legacy drive never becomes the
+    /// all-time minimum.
     static func resolveZeroToSixty(
+        carId: String,
         stats: CarStats?,
         drives: [Drive]
     ) -> (Double?, Date?) {
+        let (trueTime, trueDrive) = PersonalBests.trueZeroToSixty(carId: carId, drives: drives)
+        if trueTime > 0 {
+            return (trueTime, trueDrive?.startTime)
+        }
+        // No drives available locally — fall back to the cached stats blob.
         if let stats, let t = stats.bestZeroToSixty, t > 0 {
-            // The drive that set the PB is the one with the matching
-            // best060Time. Ties go to the earliest.
-            let matchingDrive = drives
-                .filter { $0.best060Time == t }
-                .min { $0.startTime < $1.startTime }
-            return (t, matchingDrive?.startTime)
+            return (t, nil)
         }
-        let positiveTimes = drives
-            .compactMap { $0.best060Time }
-            .filter { $0 > 0 }
-        guard let best = positiveTimes.min(),
-              let bestDrive = drives.first(where: { $0.best060Time == best }) else {
-            return (nil, nil)
-        }
-        return (best, bestDrive.startTime)
+        return (nil, nil)
     }
 
     /// Classifies a driving style from the car's per-car stats. The

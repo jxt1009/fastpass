@@ -59,7 +59,7 @@ class CarStatsManager: ObservableObject {
         loadCarStats()
     }
     
-    func updateStats(for drive: Drive) {
+    func updateStats(for drive: Drive, suppressUpload: Bool = false) {
         guard let carId = drive.carId, !carId.isEmpty else {
             print("⚠️ Drive has no car ID, skipping stats update")
             return
@@ -96,11 +96,15 @@ class CarStatsManager: ObservableObject {
         // Calculate average speed
         stats.avgSpeed = stats.totalDistance / max(1, stats.totalTime)
         
-        // Calculate smoothness score (simplified)
-        stats.smoothnessScore = calculateSmoothnessScore(stats)
+        // Smoothness is recomputed in rebuildStats where all drives for
+        // the car are available. A single-drive update does a best-effort
+        // score using only that drive; rebuildStats replaces it.
+        stats.smoothnessScore = smoothnessScore(for: drive)
         
         carStats[carId] = stats
-        saveCarStats()
+        if !suppressUpload {
+            saveCarStats()
+        }
         
         print("📊 Updated stats for car \(carId): \(stats.totalDrives) drives, \(String(format: "%.1f", stats.totalDistanceMiles)) miles")
     }
@@ -142,28 +146,31 @@ class CarStatsManager: ObservableObject {
 
     /// Rebuilds all per-car stats from scratch using the provided drive list.
     /// Call this after a drive's car assignment changes so counts stay accurate.
+    /// Accumulates all drives locally then performs a single server upload at
+    /// the end (rather than N uploads for N drives).
     func rebuildStats(from drives: [Drive]) {
         carStats.removeAll()
         for drive in drives {
-            updateStats(for: drive)
+            updateStats(for: drive, suppressUpload: true)
         }
+        // After all drives are accumulated, replace per-drive smoothness
+        // estimates with the accurate average across all of each car's drives.
+        for carId in carStats.keys {
+            carStats[carId]?.smoothnessScore = calculateSmoothnessScore(
+                for: drives.filter { $0.carId == carId }
+            )
+        }
+        saveCarStats()
     }
     
-    private func calculateSmoothnessScore(_ stats: CarStats) -> Double {
-        // Simplified smoothness calculation based on brake events per mile
-        guard stats.totalDistanceMiles > 0 else { return 100 }
-        
-        let brakeEventsPerMile = Double(stats.totalBrakeEvents) / stats.totalDistanceMiles
-        
-        // Score from 0-100, lower brake events = higher score
-        switch brakeEventsPerMile {
-        case 0..<0.5: return 95
-        case 0.5..<1.0: return 85
-        case 1.0..<2.0: return 75
-        case 2.0..<3.0: return 65
-        case 3.0..<5.0: return 55
-        default: return 45
-        }
+    /// Computes the smoothness score for a car as the average of
+    /// `smoothnessScore(for:)` across all of the car's
+    /// drives. This uses the same formula everywhere it appears. Returns 0 when there
+    /// are no drives.
+    func calculateSmoothnessScore(for drives: [Drive]) -> Double {
+        guard !drives.isEmpty else { return 0 }
+        let total = drives.reduce(0.0) { $0 + smoothnessScore(for: $1) }
+        return total / Double(drives.count)
     }
     
     private func loadCarStats() {
@@ -246,6 +253,20 @@ struct CarComparison {
         let efficiency2 = car2.avgSpeedMph / max(1, Double(car2.totalBrakeEvents))
         return efficiency1 > efficiency2 ? car1.carId : car2.carId
     }
+}
+
+// MARK: - Drive Smoothness Score
+
+/// Smoothness score 0–100 for a single drive.
+/// Penalises harsh acceleration, hard braking, and high G-force events.
+func smoothnessScore(for drive: Drive) -> Double {
+    guard drive.maxSpeed > 0, drive.duration > 0 else { return 50 }
+    let speedEfficiency = drive.avgSpeed / max(drive.maxSpeed, 1)
+    let accelPenalty    = min(drive.maxAcceleration / 9.81, 1.0) * 15
+    let decelPenalty    = min(drive.maxDeceleration / 9.81, 1.0) * 15
+    let gPenalty        = min(drive.peakGForce / 2.0, 1.0) * 20
+    let brakePenalty    = min(Double(drive.brakeEvents) * 2.0, 20)
+    return max(0, min(100, speedEfficiency * 100 - accelPenalty - decelPenalty - gPenalty - brakePenalty))
 }
 
 // MARK: - Drive Extension

@@ -30,6 +30,24 @@ extension Color {
             ? UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1)
             : UIColor.systemBackground
     })
+
+    static let ftGlassSurface = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.06)
+            : UIColor(white: 1, alpha: 0.72)
+    })
+
+    static let ftGlassStroke = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.14)
+            : UIColor(white: 1, alpha: 0.85)
+    })
+
+    static let ftHighlight = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.16)
+            : UIColor(white: 1, alpha: 0.42)
+    })
 }
 
 // ─── Spacing ───────────────────────────────────────────────
@@ -40,6 +58,13 @@ enum Spacing {
     static let md: CGFloat = 16
     static let lg: CGFloat = 24
     static let xl: CGFloat = 32
+}
+
+enum Motion {
+    static let quick: Animation = .easeOut(duration: 0.14)
+    static let standard: Animation = .easeInOut(duration: 0.24)
+    static let entrance: Animation = .spring(response: 0.36, dampingFraction: 0.88)
+    static let hero: Animation = .spring(response: 0.52, dampingFraction: 0.84)
 }
 
 // ─── Speed Color Mapping ───────────────────────────────────
@@ -116,11 +141,11 @@ struct DashboardGauge: View {
             .padding(.horizontal, 12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(.systemGray4).opacity(0.3), lineWidth: 1)
+                    .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray6))
+                    .fill(Color.ftCardBg)
             )
         } else {
             VStack(spacing: 8) {
@@ -149,11 +174,11 @@ struct DashboardGauge: View {
             .padding(.horizontal, 8)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(.systemGray4).opacity(0.3), lineWidth: 1)
+                    .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
+                    .fill(Color.ftCardBg)
             )
         }
     }
@@ -177,16 +202,24 @@ struct StatValue: View {
 
 struct InstrumentCard<Content: View>: View {
     let content: Content
+    var glass: Bool
 
-    init(@ViewBuilder content: () -> Content) {
+    init(glass: Bool = false, @ViewBuilder content: () -> Content) {
+        self.glass = glass
         self.content = content()
     }
 
     var body: some View {
         content
             .padding(Spacing.md)
-            .background(Color.ftCardBg)
-            .cornerRadius(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(glass ? Color.ftGlassSurface : Color.ftCardBg)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(glass ? Color.ftGlassStroke : Color.clear, lineWidth: 1)
+            )
     }
 }
 

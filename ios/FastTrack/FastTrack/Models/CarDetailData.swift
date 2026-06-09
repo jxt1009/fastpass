@@ -10,7 +10,7 @@ import SwiftUI
 // high top speed *and* a very low brake-per-mile ratio is still
 // classified rather than falling through to `.balanced` silently.
 
-enum DrivingStyle: Equatable, Hashable {
+enum DrivingStyle: Equatable, Hashable, CaseIterable {
     case sporty
     case smooth
     case balanced
@@ -35,6 +35,24 @@ enum DrivingStyle: Equatable, Hashable {
         case .balanced:  return "Mixed driving pattern"
         case .unknown:   return "Not enough data yet"
         }
+    }
+
+    /// Longer explanation used in the style guide sheet.
+    var detailedExplanation: String {
+        switch self {
+        case .sporty:
+            return "Higher brake-event frequency with higher top-speed tendency. Usually indicates aggressive acceleration/braking patterns."
+        case .smooth:
+            return "Lower brake-event frequency with steady pace changes. Inputs are controlled and measured across most drives."
+        case .balanced:
+            return "Mix of calm and aggressive sessions. Not strongly biased toward either sporty or smooth behavior."
+        case .unknown:
+            return "Not enough recorded drives for a reliable classification yet."
+        }
+    }
+
+    static var guideStyles: [DrivingStyle] {
+        [.smooth, .balanced, .sporty, .unknown]
     }
 
     /// Color for the badge — green for safe, amber for moderate, red for
@@ -100,4 +118,27 @@ struct CarDetailData {
     /// days relative to the injected `now`. The view uses this to gate
     /// the one-shot confetti animation.
     let confettiEligible: Bool
+    /// Stable token derived from currently eligible recent PB unlocks.
+    /// Changes only when the eligible set changes, allowing the view to
+    /// persist one-shot confetti behavior across revisits.
+    let confettiTriggerToken: String?
+    /// Number of recent PB unlocks currently inside the confetti window.
+    /// Used for subtle ongoing UI indication after one-shot confetti.
+    let recentPBCount: Int
+    /// Smoothness score for this car (0-100).
+    let smoothnessScore: Double
+    /// Consistency score for this car (0-100).
+    let consistencyScore: Double
+    /// Cornering (peak lateral G) for this car.
+    let peakLateralG: Double
+    /// Best 0-60 time in seconds for this car (nil if never reached 60).
+    let bestZeroToSixtyTime: Double?
+    /// Drives for this car, sorted by startTime descending, capped at 5.
+    let recentDrives: [Drive]
+    /// Distance per drive trend points (last N drives, oldest first).
+    let distanceTrendPoints: [Double]
+    /// Smoothness per drive trend points (last N drives, oldest first).
+    let smoothnessTrendPoints: [Double]
+    /// Avg max speed for the previous period, nil if no prior data.
+    let prevPeriodAvgMaxSpeed: Double?
 }

@@ -232,6 +232,7 @@ struct User: Codable, Identifiable {
     let carStatsData: String?
     let unitSystem: String?
     let colorScheme: String?
+    let isPublic: Bool
 
     let authProvider: String?
     let createdAt: Date
@@ -255,9 +256,81 @@ struct User: Codable, Identifiable {
         case carStatsData = "car_stats_data"
         case unitSystem   = "unit_system"
         case colorScheme  = "color_scheme"
+        case isPublic     = "is_public"
         case authProvider = "auth_provider"
         case createdAt    = "created_at"
         case updatedAt    = "updated_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id           = try c.decode(Int.self, forKey: .id)
+        appleUserID  = try c.decodeIfPresent(String.self, forKey: .appleUserID)
+        googleUserID = try c.decodeIfPresent(String.self, forKey: .googleUserID)
+        email        = try c.decodeIfPresent(String.self, forKey: .email)
+        fullName     = try c.decodeIfPresent(String.self, forKey: .fullName)
+        username     = try c.decodeIfPresent(String.self, forKey: .username)
+        country      = try c.decodeIfPresent(String.self, forKey: .country)
+        avatarURL    = try c.decodeIfPresent(String.self, forKey: .avatarURL)
+        carMake      = try c.decodeIfPresent(String.self, forKey: .carMake)
+        carModel     = try c.decodeIfPresent(String.self, forKey: .carModel)
+        carYear      = try c.decodeIfPresent(Int.self,    forKey: .carYear)
+        carTrim      = try c.decodeIfPresent(String.self, forKey: .carTrim)
+        garage       = try c.decodeIfPresent(String.self, forKey: .garage)
+        selectedCarID = try c.decodeIfPresent(String.self, forKey: .selectedCarID)
+        carStatsData = try c.decodeIfPresent(String.self, forKey: .carStatsData)
+        unitSystem   = try c.decodeIfPresent(String.self, forKey: .unitSystem)
+        colorScheme  = try c.decodeIfPresent(String.self, forKey: .colorScheme)
+        isPublic     = try c.decodeIfPresent(Bool.self,   forKey: .isPublic) ?? true
+        authProvider = try c.decodeIfPresent(String.self, forKey: .authProvider)
+        createdAt    = try c.decode(Date.self, forKey: .createdAt)
+        updatedAt    = try c.decode(Date.self, forKey: .updatedAt)
+    }
+
+    init(
+        id: Int,
+        appleUserID: String?,
+        googleUserID: String?,
+        email: String?,
+        fullName: String?,
+        username: String?,
+        country: String?,
+        avatarURL: String?,
+        carMake: String?,
+        carModel: String?,
+        carYear: Int?,
+        carTrim: String?,
+        garage: String?,
+        selectedCarID: String?,
+        carStatsData: String?,
+        unitSystem: String?,
+        colorScheme: String?,
+        isPublic: Bool = true,
+        authProvider: String?,
+        createdAt: Date,
+        updatedAt: Date
+    ) {
+        self.id           = id
+        self.appleUserID  = appleUserID
+        self.googleUserID = googleUserID
+        self.email        = email
+        self.fullName     = fullName
+        self.username     = username
+        self.country      = country
+        self.avatarURL    = avatarURL
+        self.carMake      = carMake
+        self.carModel     = carModel
+        self.carYear      = carYear
+        self.carTrim      = carTrim
+        self.garage       = garage
+        self.selectedCarID = selectedCarID
+        self.carStatsData = carStatsData
+        self.unitSystem   = unitSystem
+        self.colorScheme  = colorScheme
+        self.isPublic     = isPublic
+        self.authProvider = authProvider
+        self.createdAt    = createdAt
+        self.updatedAt    = updatedAt
     }
 }
 

@@ -73,8 +73,8 @@ enum StatInfo {
     )
     static let smoothness = StatInfoEntry(
         "Driving Smoothness",
-        summary: "A 0–100 score measuring how steady and consistent your acceleration inputs are.",
-        howCalculated: "Calculated as 100 minus ten times the statistical variance of acceleration samples throughout the drive. High variance (lots of hard throttle/brake inputs) lowers the score. Scores above 80 indicate smooth, controlled driving.",
+        summary: "A 0–100 score measuring how steady and progressive your throttle, braking, and cornering inputs are.",
+        howCalculated: "Starts from a speed-efficiency base (avg speed ÷ max speed × 100), then subtracts penalties: up to 15 points for hard acceleration (> 1g), up to 15 for hard braking (> 1g), up to 20 for high peak G-force (> 2g), and up to 20 for brake events (2 points each, capped at 10 events). The per-car score is the average across all drives for that car.",
         unit: "0–100"
     )
     static let performanceCategory = StatInfoEntry(
@@ -101,6 +101,30 @@ enum StatInfo {
         howCalculated: "Weighted average of three components: Smoothness (40%) — consistency of throttle and braking inputs; Consistency (30%) — how repeatable your smoothness is drive-to-drive; Performance (30%) — average top speed relative to the Sports Car threshold (100 mph). Higher scores reward smooth, consistent driving with decent speed.",
         unit: "0–100"
     )
+static let cornering = StatInfoEntry(
+        "Cornering",
+        summary: "The highest lateral G-force recorded during your drives.",
+        howCalculated: "Peak lateral G-force is derived from GPS heading changes. The value shown is the maximum across all filtered drives. Values above 0.6g indicate spirited cornering; above 0.8g is race-driver territory.",
+        unit: "G"
+    )
+    static let consistency = StatInfoEntry(
+        "Consistency",
+        summary: "How repeatable your performance is drive-to-drive.",
+        howCalculated: "Coefficient of variation of top speeds across drives. The standard deviation of max speeds is divided by the mean, then inverted to a 0–100 score. Higher means your top speeds are more predictable from drive to drive.",
+        unit: "0–100"
+    )
+    static let periodComparison = StatInfoEntry(
+        "Period Comparison",
+        summary: "How your average max speed this period compares to the previous equivalent period.",
+        howCalculated: "The average max speed across all drives in the current time window minus the same metric from the prior window. A delta above +0.5 speed-units shows as 'Up'; below −0.5 as 'Down'; within ±0.5 as 'Same'.",
+        unit: nil
+    )
+    static let avgMaxSpeed = StatInfoEntry(
+        "Avg Max Speed",
+        summary: "The average of your highest speeds across all filtered drives.",
+        howCalculated: "Sum of each drive's max speed divided by the number of drives. Not the average speed of a single drive — this measures the typical ceiling of your driving sessions.",
+        unit: "speed"
+    )
     // Section-level info
     static let maneuversSection = StatInfoEntry(
         "Maneuvers",
@@ -114,6 +138,36 @@ enum StatInfo {
         howCalculated: "Calculated by comparing consecutive GPS speed readings. GPS speed accuracy varies by device and environment — values recorded at poor GPS accuracy are excluded. All metrics represent the peak value recorded during the drive.",
         unit: nil
     )
+}
+
+// MARK: - Trend Direction
+
+enum TrendDirection {
+    case up, down, neutral
+
+    var icon: String {
+        switch self {
+        case .up: return "arrow.up"
+        case .down: return "arrow.down"
+        case .neutral: return "minus"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .up: return .green
+        case .down: return .red
+        case .neutral: return .gray
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .up: return "Up"
+        case .down: return "Down"
+        case .neutral: return "Same"
+        }
+    }
 }
 
 // MARK: - Stat Info Button
@@ -239,9 +293,9 @@ struct StatCard: View {
                     .fontWeight(.semibold)
                     .monospacedDigit()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+.frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.ftCardBg)
             .cornerRadius(12)
         }
     }
@@ -260,6 +314,50 @@ struct DetailRow: View {
                 .fontWeight(.medium)
         }
         .font(.subheadline)
+    }
+}
+
+struct GaugeProgressBar: View {
+    let progress: Double
+    var color: Color = .ftBlue
+    var height: CGFloat = 6
+
+    private var clampedProgress: Double {
+        min(max(progress, 0), 1)
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = max(proxy.size.width * clampedProgress, height)
+
+            Capsule()
+                .fill(Color.ftSectionBg)
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(color)
+                        .frame(width: clampedProgress == 0 ? 0 : width)
+                        .animation(Motion.standard, value: clampedProgress)
+                }
+        }
+        .frame(height: height)
+    }
+}
+
+private struct ActiveGlowModifier: ViewModifier {
+    let isActive: Bool
+    let color: Color
+
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: isActive ? color.opacity(0.28) : .clear, radius: 10)
+            .shadow(color: isActive ? color.opacity(0.18) : .clear, radius: 18)
+            .animation(Motion.quick, value: isActive)
+    }
+}
+
+extension View {
+    func activeGlow(_ isActive: Bool, color: Color = .ftBlue) -> some View {
+        modifier(ActiveGlowModifier(isActive: isActive, color: color))
     }
 }
 
@@ -309,7 +407,7 @@ struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color(.systemGray5))
+            .fill(Color.ftSectionBg.opacity(0.5))
             .frame(width: width, height: height)
             .shimmer()
     }
@@ -346,7 +444,7 @@ struct StatCardSkeleton: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(Color.ftCardBg)
         .cornerRadius(12)
     }
 }
@@ -435,6 +533,45 @@ struct SectionHeader: View {
     }
 }
 
+struct PerformanceBreakdownCard: View {
+    let title: String
+    let value: String
+    let category: String
+    let icon: String
+    let color: Color
+    var info: StatInfoEntry? = nil
+
+    var body: some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(color)
+                        .font(.title3)
+                    Spacer()
+                    if let info { StatInfoButton(entry: info) }
+                }
+
+                Text(value)
+                    .font(.headline)
+                    .fontWeight(.bold)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(category)
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.2))
+                    .foregroundColor(color)
+                    .cornerRadius(4)
+            }
+        }
+    }
+}
+
 // MARK: - Speech Bubble
 
 /// A rounded-rectangle bubble with a small triangular tail at the bottom
@@ -502,3 +639,4 @@ struct SpeechBubble: Shape {
         return p
     }
 }
+

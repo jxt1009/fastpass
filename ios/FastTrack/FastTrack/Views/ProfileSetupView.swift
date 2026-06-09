@@ -91,7 +91,7 @@ struct ProfileSetupView: View {
             .fullScreenCover(item: $croppingImage, onDismiss: {
                 selectedPhoto = nil
             }) { source in
-                PhotoCropView(image: source.image) { cropped in
+                PhotoCropView(image: source.image, context: source.context) { cropped in
                     avatarImage = cropped.resizedForAvatar(maxDimension: 800)
                 }
             }
@@ -115,7 +115,7 @@ struct ProfileSetupView: View {
             return
         }
         let resized = img.resizedForAvatar(maxDimension: 2048)
-        croppingImage = CropImageSource(image: resized)
+        croppingImage = CropImageSource(image: resized, context: .avatar)
     }
 
     private func validateUsername(_ val: String) {
@@ -130,14 +130,16 @@ struct ProfileSetupView: View {
         guard isValid else { return }
         isSaving = true
         
-        // Preserve existing id, garage, and car selection so editing the
-        // profile doesn't clobber the leaderboard "You" marker or garage.
+        // Preserve existing id, garage, car selection, and privacy so editing
+        // the profile doesn't clobber the leaderboard "You" marker, garage, or
+        // the user's privacy choice.
         var updatedProfile = UserProfile(
             id: profileManager.profile?.id,
             username: username,
             country: country,
             garage: profileManager.profile?.garage ?? [],
-            selectedCarId: profileManager.profile?.selectedCarId
+            selectedCarId: profileManager.profile?.selectedCarId,
+            isPublic: profileManager.profile?.isPublic ?? true
         )
         
         profileManager.saveProfile(updatedProfile)

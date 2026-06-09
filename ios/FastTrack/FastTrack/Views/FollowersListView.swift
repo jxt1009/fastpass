@@ -67,6 +67,8 @@ private struct FollowListView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .background(Color.ftSurfaceBg.ignoresSafeArea())
             }
         }
         .navigationTitle(title)
@@ -94,7 +96,7 @@ private struct FollowUserRow: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [.blue, .purple],
+                        colors: [.ftBlue, .purple],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))

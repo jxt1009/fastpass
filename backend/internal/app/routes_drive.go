@@ -11,5 +11,6 @@ func registerDriveRoutes(r *gin.Engine) {
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)
 		api.PUT("/drives/:id", updateDrive)
+		api.DELETE("/drives/:id", deleteDrive)
 	}
 }

@@ -50,6 +50,7 @@ func makeAuthRouter() *gin.Engine {
 		api.GET("/drives", listDrives)
 		api.GET("/drives/:id", getDrive)
 		api.PUT("/drives/:id", updateDrive)
+		api.DELETE("/drives/:id", deleteDrive)
 		api.DELETE("/me", deleteCurrentUser)
 		api.GET("/me/achievements", getMyAchievements)
 	}
@@ -1347,6 +1348,55 @@ func TestDeleteCarPhoto_RemovesFileAndField(t *testing.T) {
 	}
 }
 
+// ─── Public profile tests ──────────────────────────────────────────────────
+
+// makeProfileRouter returns a router exposing GET /api/v1/users/:username with
+// the optional-auth middleware that mirrors the production setup.
+func makeProfileRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	api := r.Group("/api/v1")
+	api.Use(optionalAuthMiddleware())
+	api.GET("/users/:username", getPublicProfile)
+	return r
+}
+
+func TestPublicProfile_IncludesCarStatsData(t *testing.T) {
+	jwtSecret = []byte("profile-stats-test-secret-32-bytes!")
+	setupTestDB(t)
+
+	user := User{
+		Email:        "statsuser@test.com",
+		Username:     "statsuser",
+		AuthProvider: "google",
+		IsPublic:     true,
+		Garage:       `[{"id":"c1","make":"Toyota","model":"Supra","year":2020}]`,
+		CarStatsData: `{"c1":{"carId":"c1","totalDrives":5,"bestTopSpeed":60.0}}`,
+	}
+	db.Create(&user)
+
+	router := makeProfileRouter()
+	req, _ := http.NewRequest("GET", "/api/v1/users/statsuser", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	carStatsData, ok := resp["car_stats_data"]
+	if !ok {
+		t.Fatalf("expected car_stats_data field in public profile response, got keys: %v", resp)
+	}
+	if carStatsData != user.CarStatsData {
+		t.Errorf("expected car_stats_data=%q, got %q", user.CarStatsData, carStatsData)
+	}
+}
+
 func TestResolveBaseURL_TrimsTrailingSlash(t *testing.T) {
 	cases := []struct {
 		in, want string
@@ -1362,5 +1412,152 @@ func TestResolveBaseURL_TrimsTrailingSlash(t *testing.T) {
 		if got := resolveBaseURL(); got != tc.want {
 			t.Errorf("resolveBaseURL() with BASE_URL=%q = %q, want %q", tc.in, got, tc.want)
 		}
+	}
+}
+
+// ─── deleteDrive tests ─────────────────────────────────────────────────────
+
+func TestDeleteDrive_Unauthorized(t *testing.T) {
+	jwtSecret = []byte("delete-drive-401-test-secret-32-by!")
+	setupTestDB(t)
+	r := makeAuthRouter()
+	req := httptest.NewRequest("DELETE", "/api/v1/drives/1", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestDeleteDrive_BadID(t *testing.T) {
+	jwtSecret = []byte("delete-drive-400-test-secret-32-by!")
+	setupTestDB(t)
+	r := makeAuthRouter()
+	user := User{Email: "dd400@test.com", Username: "dd400", AuthProvider: "google"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	token := tokenForUser(t, user)
+	req := httptest.NewRequest("DELETE", "/api/v1/drives/notanint", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestDeleteDrive_NotFound(t *testing.T) {
+	jwtSecret = []byte("delete-drive-404-test-secret-32-by!")
+	setupTestDB(t)
+	r := makeAuthRouter()
+	user := User{Email: "dd404@test.com", Username: "dd404", AuthProvider: "google"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	token := tokenForUser(t, user)
+	req := httptest.NewRequest("DELETE", "/api/v1/drives/999", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestDeleteDrive_WrongOwner(t *testing.T) {
+	jwtSecret = []byte("delete-drive-wng-test-secret-32-by!")
+	setupTestDB(t)
+	r := makeAuthRouter()
+	// Owner user, drive belongs to owner.
+	owner := User{Email: "ddowner@test.com", Username: "ddowner", AuthProvider: "google"}
+	if err := db.Create(&owner).Error; err != nil {
+		t.Fatalf("seed owner: %v", err)
+	}
+	drive := Drive{UserID: owner.ID, StartTime: time.Now(), EndTime: time.Now(), MaxSpeed: 30}
+	if err := db.Create(&drive).Error; err != nil {
+		t.Fatalf("seed drive: %v", err)
+	}
+	// Requesting user is someone else.
+	intruder := User{Email: "ddintruder@test.com", Username: "ddintruder", AuthProvider: "google"}
+	if err := db.Create(&intruder).Error; err != nil {
+		t.Fatalf("seed intruder: %v", err)
+	}
+	token := tokenForUser(t, intruder)
+	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/drives/%d", drive.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 (no leak), got %d", w.Code)
+	}
+	if err := db.First(&Drive{}, drive.ID).Error; err != nil {
+		t.Fatalf("drive should still exist after wrong-owner delete attempt, got err=%v", err)
+	}
+}
+
+func TestDeleteDrive_HappyPath(t *testing.T) {
+	jwtSecret = []byte("delete-drive-ok-test-secret-32-by!!")
+	setupTestDB(t)
+	r := makeAuthRouter()
+	user := User{Email: "ddok@test.com", Username: "ddok", AuthProvider: "google"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	drive := Drive{UserID: user.ID, StartTime: time.Now(), EndTime: time.Now(), MaxSpeed: 30}
+	if err := db.Create(&drive).Error; err != nil {
+		t.Fatalf("seed drive: %v", err)
+	}
+	token := tokenForUser(t, user)
+	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/drives/%d", drive.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), `"ok":true`) {
+		t.Fatalf("expected ok:true in body, got %s", w.Body.String())
+	}
+	if err := db.First(&Drive{}, drive.ID).Error; err == nil {
+		t.Fatalf("drive should be gone after delete")
+	}
+}
+
+func TestDeleteDrive_NullsAchievementSource(t *testing.T) {
+	jwtSecret = []byte("delete-drive-ach-test-secret-32-by!")
+	setupTestDB(t)
+	r := makeAuthRouter()
+	user := User{Email: "ddach@test.com", Username: "ddach", AuthProvider: "google"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	drive := Drive{UserID: user.ID, StartTime: time.Now(), EndTime: time.Now(), MaxSpeed: 30}
+	if err := db.Create(&drive).Error; err != nil {
+		t.Fatalf("seed drive: %v", err)
+	}
+	driveID := drive.ID
+	ua := UserAchievement{
+		UserID:        user.ID,
+		AchievementID: "test",
+		SourceDriveID: &driveID,
+	}
+	if err := db.Create(&ua).Error; err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	token := tokenForUser(t, user)
+	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/drives/%d", driveID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var got UserAchievement
+	if err := db.First(&got, ua.ID).Error; err != nil {
+		t.Fatalf("achievement row missing: %v", err)
+	}
+	if got.SourceDriveID != nil {
+		t.Fatalf("expected SourceDriveID nil, got %v", *got.SourceDriveID)
 	}
 }

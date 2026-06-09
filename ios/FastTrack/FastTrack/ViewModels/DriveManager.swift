@@ -317,6 +317,25 @@ class DriveManager: ObservableObject {
         }
     }
 
+    /// Deletes a drive the user owns. Network first; on success the drive is
+    /// removed from the local array, per-car stats are rebuilt, and the
+    /// server-authoritative achievement cache is refreshed so any
+    /// `sourceDriveId` that was NULL-ed server-side is reflected locally.
+    /// A 404 is treated as success: the goal state (drive gone) is already
+    /// achieved, and the local array is updated unconditionally.
+    @MainActor
+    func deleteDrive(id: Int) async throws {
+        do {
+            try await apiService.deleteDrive(id: id)
+        } catch let error as APIError {
+            if case .serverError(404) = error { /* treat as success */ }
+            else { throw error }
+        }
+        drives.removeAll { $0.id == id }
+        CarStatsManager.shared.rebuildStats(from: drives)
+        await refreshAchievementsFromServer()
+    }
+
     // MARK: - Achievements
 
     /// Pulls the server-authoritative achievements list. Safe to call from

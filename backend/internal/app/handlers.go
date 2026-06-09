@@ -1,10 +1,12 @@
 package app
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func createDrive(c *gin.Context) {
@@ -154,4 +156,56 @@ func updateDrive(c *gin.Context) {
 		"drive":                 drive,
 		"unlocked_achievements": unlocked,
 	})
+}
+
+// deleteDrive removes a drive owned by the authenticated user. We NULL-out
+// any UserAchievement.source_drive_id rows pointing at the drive and delete
+// the drive in a single transaction. After commit we re-evaluate the user's
+// achievements so PB events stay consistent; if evaluation fails the drive is
+// still gone and the unlocks will be recomputed on the next save.
+func deleteDrive(c *gin.Context) {
+	userID, exists := getUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	var drive Drive
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&drive).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Drive not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load drive"})
+		return
+	}
+
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&UserAchievement{}).
+			Where("source_drive_id = ?", id).
+			Update("source_drive_id", nil).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&drive).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete drive"})
+		return
+	}
+
+	// Re-evaluate achievements after commit (mirrors createDrive/updateDrive).
+	// Best-effort: don't fail the delete if evaluation errors out.
+	if _, _, evalErr := evaluateForUser(userID); evalErr != nil {
+		logWithRequestID(c).Warn("achievement evaluation failed", "user_id", userID, "error", evalErr.Error())
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

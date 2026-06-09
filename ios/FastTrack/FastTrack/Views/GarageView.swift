@@ -14,9 +14,13 @@ import SwiftUI
 // the same wording they saw on the profile.
 
 struct GarageView: View {
+    @EnvironmentObject var driveManager: DriveManager
     @StateObject private var profileManager = ProfileManager.shared
     @StateObject private var carStatsManager = CarStatsManager.shared
+    @ObservedObject private var settings = AppSettings.shared
     @State private var showingAddCar = false
+    @State private var drivePendingDelete: Drive?
+    @State private var deleteError: String?
 
     private var cars: [UserCar] {
         profileManager.profile?.garage ?? []
@@ -29,42 +33,144 @@ struct GarageView: View {
         [GridItem(.adaptive(minimum: 160), spacing: 12)]
     }
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                if cars.isEmpty {
-                    emptyState
-                        .padding(.top, 60)
-                } else {
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(cars) { car in
-                            GarageCarCard(
-                                car: car,
-                                stats: carStatsManager.getStats(for: car.id)
-                            )
+    private var allCarsStats: (totalDrives: Int, totalDistance: Double, topSpeed: Double, best060: Double?) {
+        let allStats = carStatsManager.getAllStats()
+        let totalDrives = allStats.reduce(0) { $0 + $1.totalDrives }
+        let totalDistance = allStats.reduce(0.0) { $0 + $1.totalDistance }
+        let topSpeed = allStats.map(\.bestTopSpeed).max() ?? 0
+        let best060 = allStats.compactMap(\.bestZeroToSixty).min()
+        return (totalDrives, totalDistance, topSpeed, best060)
+    }
+
+    private var allCarsSummary: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            InstrumentStatCell(
+                icon: "flag.fill", iconColor: .ftGreen,
+                label: "Total Drives",
+                value: "\(allCarsStats.totalDrives)",
+                unit: ""
+            )
+            InstrumentStatCell(
+                icon: "map.fill", iconColor: .ftBlue,
+                label: "Total Distance",
+                value: String(format: "%.1f", settings.distanceValue(allCarsStats.totalDistance)),
+                unit: settings.distanceUnit
+            )
+            InstrumentStatCell(
+                icon: "bolt.fill", iconColor: .ftGold,
+                label: "Top Speed",
+                value: String(format: "%.0f", settings.speedValue(allCarsStats.topSpeed)),
+                unit: settings.speedUnit
+            )
+            InstrumentStatCell(
+                icon: "timer", iconColor: .ftAmber,
+                label: "Best 0-60",
+                value: allCarsStats.best060.map { String(format: "%.2f", $0) } ?? "—",
+                unit: allCarsStats.best060 != nil ? "sec" : ""
+            )
+        }
+    }
+
+    private var recentDrivesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            let recent = driveManager.drives
+                .sorted { $0.startTime > $1.startTime }
+                .prefix(5)
+
+            if !recent.isEmpty {
+                SectionHeader(title: "Recent Drives")
+                ForEach(Array(recent)) { drive in
+                    NavigationLink {
+                        DriveDetailView(drive: drive)
+                    } label: {
+                        GarageDriveRow(drive: drive)
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing) {
+                        if drive.userID == AuthManager.shared.getUser()?.id {
+                            Button(role: .destructive) {
+                                drivePendingDelete = drive
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                 }
             }
-            .padding()
-        }
-        .background(Color.ftSurfaceBg.ignoresSafeArea())
-        .navigationTitle("Your Garage")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingAddCar = true
+            if driveManager.drives.count > 5 {
+                NavigationLink {
+                    DriveHistoryView()
                 } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.ftBlue)
-                        .font(.title3)
+                    HStack {
+                        Text("See All Drives")
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.ftBlue)
                 }
-                .accessibilityLabel("Add Car")
             }
         }
-        .sheet(isPresented: $showingAddCar) {
-            AddCarView()
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    allCarsSummary
+                    if cars.isEmpty {
+                        emptyState
+                            .padding(.top, 60)
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(cars) { car in
+                                GarageCarCard(
+                                    car: car,
+                                    stats: carStatsManager.getStats(for: car.id)
+                                )
+                            }
+                        }
+                        recentDrivesSection
+                    }
+                }
+                .padding()
+            }
+            .background(Color.ftSurfaceBg.ignoresSafeArea())
+            .navigationTitle("Your Garage")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingAddCar = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.ftBlue)
+                            .font(.title3)
+                    }
+                    .accessibilityLabel("Add Car")
+                }
+            }
+            .sheet(isPresented: $showingAddCar) {
+                AddCarView()
+            }
+            .alert("Delete Drive?", isPresented: Binding(
+                get: { drivePendingDelete != nil },
+                set: { if !$0 { drivePendingDelete = nil } }
+            )) {
+                Button("Cancel", role: .cancel) { drivePendingDelete = nil }
+                Button("Delete", role: .destructive) {
+                    Task { await performDelete() }
+                }
+            } message: {
+                Text("This permanently removes the drive from your history. This can't be undone.")
+            }
+            .alert("Unable to Delete Drive", isPresented: Binding(
+                get: { deleteError != nil },
+                set: { if !$0 { deleteError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deleteError ?? "Unknown error")
+            }
         }
     }
 
@@ -97,6 +203,18 @@ struct GarageView: View {
             .padding(.vertical, 12)
         }
     }
+
+    @MainActor
+    private func performDelete() async {
+        guard let drive = drivePendingDelete, let id = drive.id else { return }
+        do {
+            try await driveManager.deleteDrive(id: id)
+            drivePendingDelete = nil
+        } catch {
+            deleteError = error.localizedDescription
+            drivePendingDelete = nil
+        }
+    }
 }
 
 // MARK: - Garage Car Card
@@ -122,6 +240,7 @@ struct GarageCarCard: View {
     @ObservedObject private var profileManager = ProfileManager.shared
     @ObservedObject private var settings = AppSettings.shared
     @State private var editingCar: EditingCarTarget?
+    @State private var showingRemoveAlert = false
 
     private var isSelected: Bool {
         profileManager.profile?.selectedCarId == car.id
@@ -129,7 +248,7 @@ struct GarageCarCard: View {
 
     var body: some View {
         NavigationLink {
-            CarDetailView(car: car)
+            CarDetailView(carId: car.id)
         } label: {
             card
         }
@@ -147,6 +266,19 @@ struct GarageCarCard: View {
                     Label("Select as Active", systemImage: "checkmark.circle")
                 }
             }
+            Button(role: .destructive) {
+                showingRemoveAlert = true
+            } label: {
+                Label("Remove Car", systemImage: "trash")
+            }
+        }
+        .alert("Remove Car", isPresented: $showingRemoveAlert) {
+            Button("Remove", role: .destructive) {
+                removeCar()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Remove this car from your garage? Its recorded drives and stats will remain in your history.")
         }
         .sheet(item: $editingCar) { target in
             EditCarView(carId: target.id)
@@ -207,40 +339,12 @@ struct GarageCarCard: View {
         )
     }
 
-    @ViewBuilder
     private var photo: some View {
-        if let urlString = car.photoUrl, !urlString.isEmpty,
-           let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    photoPlaceholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure:
-                    photoPlaceholder
-                @unknown default:
-                    photoPlaceholder
-                }
-            }
-        } else {
-            photoPlaceholder
-        }
-    }
-
-    private var photoPlaceholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [.ftBlue.opacity(0.5), .purple.opacity(0.4)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Text(initials(for: car))
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.9))
-        }
+        CarPhotoView(
+            car: car,
+            url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+            cornerRadius: 0
+        )
     }
 
     private var statsGrid: some View {
@@ -257,7 +361,7 @@ struct GarageCarCard: View {
                 )
             )
             StatMini(
-                title: "Top",
+                title: "Top Speed",
                 value: stats.map {
                     String(format: "%.0f", settings.speedValue($0.bestTopSpeed))
                 } ?? "—"
@@ -271,17 +375,131 @@ struct GarageCarCard: View {
         }
     }
 
-    private func initials(for car: UserCar) -> String {
-        let first = car.make.first.map(String.init) ?? ""
-        let second = car.model.first.map(String.init) ?? ""
-        let combined = (first + second).uppercased()
-        return combined.isEmpty ? "?" : combined
-    }
-
     private func selectCar() {
         guard var profile = profileManager.profile else { return }
         profile.selectCar(id: car.id)
         profileManager.saveProfile(profile)
+    }
+
+    private func removeCar() {
+        guard var profile = profileManager.profile else { return }
+        profile.removeCarFromGarage(id: car.id)
+        profileManager.saveProfile(profile)
+    }
+}
+
+// MARK: - Garage Drive Row
+
+struct GarageDriveRow: View {
+    let drive: Drive
+    var badge: GarageDriveBadge? = nil
+    @EnvironmentObject var settings: AppSettings
+
+    var body: some View {
+        InstrumentCard {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Text(drive.startTime, style: .date)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
+                            Text(drive.carDisplayString)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.ftBlue.opacity(0.8))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    HStack(spacing: 12) {
+                        Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
+                        Label(settings.distanceDisplay(drive.distance, decimals: 1), systemImage: "map")
+                        Label(drive.durationString, systemImage: "clock")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 8) {
+                    if let badge {
+                        HStack(spacing: 3) {
+                            Image(systemName: badge.icon)
+                                .font(.system(size: 9, weight: .bold))
+                            Text(badge.text)
+                                .font(.caption2.weight(.bold))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(badge.background)
+                        .foregroundColor(badge.foreground)
+                        .clipShape(Capsule())
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(Color.secondary.opacity(0.5))
+                }
+            }
+        }
+    }
+}
+
+struct GarageDriveBadge {
+    let text: String
+    let icon: String
+    let background: Color
+    let foreground: Color
+}
+
+// MARK: - Analytics Card (hoisted from AnalyticsView)
+
+struct AnalyticsCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let iconColor: Color
+    let trend: TrendDirection?
+    var info: StatInfoEntry? = nil
+
+    var body: some View {
+        InstrumentCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(iconColor)
+                        .font(.title3)
+                    Spacer()
+                    if let trend = trend {
+                        TrendIndicator(trend: trend)
+                    }
+                    if let info { StatInfoButton(entry: info) }
+                }
+
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+struct TrendIndicator: View {
+    let trend: TrendDirection
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: trend.icon)
+                .font(.caption)
+            Text(trend.label)
+                .font(.caption2)
+        }
+        .foregroundColor(trend.color)
     }
 }
 

@@ -181,6 +181,10 @@ class APIService {
         return try await put(endpoint: "/drives/\(driveId)", body: req)
     }
 
+    func deleteDrive(id: Int) async throws {
+        try await delete(endpoint: "/drives/\(id)")
+    }
+
     // MARK: - Profile Methods
 
     func updateProfile(_ profile: UserProfile) async throws {
@@ -235,7 +239,7 @@ class APIService {
     }
 
     func fetchUserAchievements(username: String) async throws -> UserAchievementsResponse {
-        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username
+        let encoded = Self.percentEncodePathSegment(username)
         return try await get(endpoint: "/users/\(encoded)/achievements")
     }
 
@@ -297,16 +301,19 @@ class APIService {
     }
 
     func fetchPublicProfile(username: String) async throws -> PublicProfile {
-        return try await get(endpoint: "/users/\(username)")
+        let encoded = Self.percentEncodePathSegment(username)
+        return try await get(endpoint: "/users/\(encoded)")
     }
 
     func followUser(username: String) async throws {
         struct Empty: Decodable {}
-        let _: Empty = try await post(endpoint: "/users/\(username)/follow", body: _EmptyBody())
+        let encoded = Self.percentEncodePathSegment(username)
+        let _: Empty = try await post(endpoint: "/users/\(encoded)/follow", body: _EmptyBody())
     }
 
     func unfollowUser(username: String) async throws {
-        try await delete(endpoint: "/users/\(username)/follow")
+        let encoded = Self.percentEncodePathSegment(username)
+        try await delete(endpoint: "/users/\(encoded)/follow")
     }
 
     func fetchFollowers(username: String) async throws -> [FollowUserEntry] {
@@ -322,10 +329,17 @@ class APIService {
     /// Percent-encodes a value for use as a single URL path segment, so
     /// `/` (and other path-significant characters) become `%2F` instead
     /// of splitting the URL into multiple segments.
-    private static func percentEncodePathSegment(_ value: String) -> String {
+    static func percentEncodePathSegment(_ value: String) -> String {
         var set = CharacterSet.urlPathAllowed
         set.remove(charactersIn: "/")
         return value.addingPercentEncoding(withAllowedCharacters: set) ?? value
+    }
+
+    /// Test-visible alias for `percentEncodePathSegment`. Internal
+    /// so `@testable import FastTrack` can call it without exposing it
+    /// as part of the public API surface.
+    static func percentEncodePathSegmentForTest(_ value: String) -> String {
+        percentEncodePathSegment(value)
     }
 
     func searchUsers(query: String) async throws -> [UserSearchResult] {
