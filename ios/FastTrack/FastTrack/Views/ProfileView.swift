@@ -76,12 +76,12 @@ struct ProfileView: View {
                     onEdit: { image in
                         zoomedAvatar = nil
                         let resized = image.resizedForAvatar(maxDimension: 2048)
-                        croppingAvatar = CropImageSource(image: resized)
+                        croppingAvatar = CropImageSource(image: resized, context: .avatar)
                     }
                 )
             }
             .fullScreenCover(item: $croppingAvatar) { source in
-                PhotoCropView(image: source.image) { cropped in
+                PhotoCropView(image: source.image, context: source.context) { cropped in
                     profileManager.saveAvatar(cropped.resizedForAvatar(maxDimension: 800))
                 }
             }
