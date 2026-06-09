@@ -88,42 +88,12 @@ struct PublicCarDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    @ViewBuilder
     private var heroBackground: some View {
-        if car.hasPhoto, let url = URL(string: car.photoUrl ?? "") {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                default:
-                    heroPlaceholder
-                }
-            }
-        } else {
-            heroPlaceholder
-        }
-    }
-
-    private var heroPlaceholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [.blue, .purple],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Text(initials(for: car))
-                .font(.system(size: 64, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
-        }
-    }
-
-    private func initials(for car: UserCar) -> String {
-        let first = car.make.first.map(String.init) ?? ""
-        let second = car.model.first.map(String.init) ?? ""
-        let combined = (first + second).uppercased()
-        return combined.isEmpty ? "?" : combined
+        CarPhotoView(
+            car: car,
+            url: car.hasPhoto ? URL(string: car.photoUrl ?? "") : nil,
+            cornerRadius: 0
+        )
     }
 
     // MARK: - PB gauges

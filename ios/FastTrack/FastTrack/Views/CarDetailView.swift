@@ -142,40 +142,12 @@ struct CarDetailView: View {
         .onTapGesture { presentPhotoZoom() }
     }
 
-    @ViewBuilder
     private var photo: some View {
-        if let urlString = car.photoUrl, !urlString.isEmpty,
-           let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    heroPlaceholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure:
-                    heroPlaceholder
-                @unknown default:
-                    heroPlaceholder
-                }
-            }
-        } else {
-            heroPlaceholder
-        }
-    }
-
-    private var heroPlaceholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [.ftBlue.opacity(0.6), .purple.opacity(0.5)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Text(initials(for: car))
-                .font(.system(size: 96, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.9))
-        }
+        CarPhotoView(
+            car: car,
+            url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+            cornerRadius: 0
+        )
     }
 
     // MARK: - PB gauges
@@ -429,13 +401,6 @@ struct CarDetailView: View {
         AvatarZoomView(url: target.url, image: target.image) {
             zoomedPhoto = nil
         }
-    }
-
-    private func initials(for car: UserCar) -> String {
-        let first = car.make.first.map(String.init) ?? ""
-        let second = car.model.first.map(String.init) ?? ""
-        let combined = (first + second).uppercased()
-        return combined.isEmpty ? "?" : combined
     }
 
     private func presentPhotoZoom() {

@@ -10,9 +10,7 @@ struct EditCarView: View {
     @State private var nickname: String = ""
     @State private var originalPhotoUrl: String?
     @State private var workingPhotoUrl: String?
-    @State private var pickedPhoto: PhotosPickerItem?
     @State private var pickedImage: UIImage?
-    @State private var croppingImage: CropImageSource?
     @State private var isUploadingPhoto = false
     @State private var photoError: String?
     @State private var isSaving = false
@@ -42,7 +40,13 @@ struct EditCarView: View {
                     }
 
                     Section("Photo") {
-                        photoSection
+                        CarPhotoEditorSection(
+                            pickedImage: $pickedImage,
+                            existingPhotoURL: workingPhotoUrl,
+                            isUploading: isUploadingPhoto,
+                            errorMessage: photoError,
+                            onRemove: removePhoto
+                        )
                     }
                 } else {
                     Section {
@@ -68,91 +72,7 @@ struct EditCarView: View {
                 }
             }
             .onAppear { loadInitialStateIfNeeded() }
-            .onChange(of: pickedPhoto) { _, item in
-                Task { await loadPickedPhoto(item) }
-            }
-            .fullScreenCover(item: $croppingImage, onDismiss: {
-                pickedPhoto = nil
-            }) { source in
-                PhotoCropView(image: source.image) { cropped in
-                    pickedImage = cropped.resizedForAvatar(maxDimension: 800)
-                }
-            }
         }
-    }
-
-    // MARK: - Photo section
-
-    @ViewBuilder
-    private var photoSection: some View {
-        HStack(spacing: 12) {
-            Group {
-                if let pickedImage {
-                    Image(uiImage: pickedImage)
-                        .resizable()
-                        .scaledToFill()
-                } else if let url = workingPhotoUrl, !url.isEmpty,
-                          let photoURL = URL(string: url) {
-                    AsyncImage(url: photoURL) { phase in
-                        switch phase {
-                        case .empty:
-                            photoPlaceholder
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        case .failure:
-                            photoPlaceholder
-                        @unknown default:
-                            photoPlaceholder
-                        }
-                    }
-                } else {
-                    photoPlaceholder
-                }
-            }
-            .frame(width: 64, height: 64)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            VStack(alignment: .leading, spacing: 6) {
-                PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                    Text(photoButtonTitle)
-                }
-                .disabled(isUploadingPhoto)
-
-                if pickedImage != nil || workingPhotoUrl != nil {
-                    Button(role: .destructive) {
-                        removePhoto()
-                    } label: {
-                        Text("Remove Photo")
-                    }
-                    .disabled(isUploadingPhoto)
-                }
-
-                if isUploadingPhoto {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-                if let photoError {
-                    Text(photoError)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-            }
-        }
-    }
-
-    private var photoPlaceholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.blue.opacity(0.15))
-            Image(systemName: "car.fill")
-                .foregroundColor(.blue)
-        }
-    }
-
-    private var photoButtonTitle: String {
-        if pickedImage != nil { return "Change Photo" }
-        if workingPhotoUrl != nil && !workingPhotoUrl!.isEmpty { return "Change Photo" }
-        return "Set Photo"
     }
 
     // MARK: - State management
@@ -165,25 +85,7 @@ struct EditCarView: View {
         workingPhotoUrl = car.photoUrl
     }
 
-    @MainActor
-    private func loadPickedPhoto(_ item: PhotosPickerItem?) async {
-        guard let item else { return }
-        photoError = nil
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                  let img = UIImage(data: data) else {
-                photoError = "Could not load photo"
-                return
-            }
-            let resized = img.resizedForAvatar(maxDimension: 2048)
-            croppingImage = CropImageSource(image: resized)
-        } catch {
-            photoError = "Failed to load photo"
-        }
-    }
-
     private func removePhoto() {
-        pickedPhoto = nil
         pickedImage = nil
         workingPhotoUrl = nil
         photoError = nil

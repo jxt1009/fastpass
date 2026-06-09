@@ -71,9 +71,7 @@ struct AddCarView: View {
     @State private var nickname = ""
     @State private var showingCarPicker = false
 
-    @State private var pickedPhoto: PhotosPickerItem?
     @State private var pickedImage: UIImage?
-    @State private var croppingImage: CropImageSource?
     @State private var uploadedPhotoURL: String?
     @State private var isUploadingPhoto = false
     @State private var isSavingProfile = false
@@ -105,50 +103,13 @@ struct AddCarView: View {
                 }
 
                 Section("Photo") {
-                    HStack(spacing: 12) {
-                        Group {
-                            if let pickedImage {
-                                Image(uiImage: pickedImage)
-                                    .resizable()
-                                    .scaledToFill()
-                            } else {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.blue.opacity(0.15))
-                                    Image(systemName: "car.fill")
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                        }
-                        .frame(width: 64, height: 64)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                                Text(pickedImage == nil ? "Set Photo" : "Change Photo")
-                            }
-                            .disabled(isUploadingPhoto)
-
-                            if pickedImage != nil || uploadedPhotoURL != nil {
-                                Button(role: .destructive) {
-                                    removePhoto()
-                                } label: {
-                                    Text("Remove Photo")
-                                }
-                                .disabled(isUploadingPhoto)
-                            }
-
-                            if isUploadingPhoto || isSavingProfile {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
-                            if let photoError {
-                                Text(photoError)
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                            }
-                        }
-                    }
+                    CarPhotoEditorSection(
+                        pickedImage: $pickedImage,
+                        existingPhotoURL: uploadedPhotoURL,
+                        isUploading: isUploadingPhoto || isSavingProfile,
+                        errorMessage: photoError,
+                        onRemove: removePhoto
+                    )
                 }
             }
             .navigationTitle("Add Car")
@@ -167,38 +128,10 @@ struct AddCarView: View {
             .sheet(isPresented: $showingCarPicker) {
                 CarPickerView(selection: $carSelection)
             }
-            .onChange(of: pickedPhoto) { _, item in
-                Task { await loadPickedPhoto(item) }
-            }
-            .fullScreenCover(item: $croppingImage, onDismiss: {
-                pickedPhoto = nil
-            }) { source in
-                PhotoCropView(image: source.image) { cropped in
-                    pickedImage = cropped.resizedForAvatar(maxDimension: 800)
-                }
-            }
-        }
-    }
-
-    @MainActor
-    private func loadPickedPhoto(_ item: PhotosPickerItem?) async {
-        guard let item else { return }
-        photoError = nil
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                  let img = UIImage(data: data) else {
-                photoError = "Could not load photo"
-                return
-            }
-            let resized = img.resizedForAvatar(maxDimension: 2048)
-            croppingImage = CropImageSource(image: resized)
-        } catch {
-            photoError = "Failed to load photo"
         }
     }
 
     private func removePhoto() {
-        pickedPhoto = nil
         pickedImage = nil
         uploadedPhotoURL = nil
         photoError = nil

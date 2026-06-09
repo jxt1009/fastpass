@@ -207,40 +207,12 @@ struct GarageCarCard: View {
         )
     }
 
-    @ViewBuilder
     private var photo: some View {
-        if let urlString = car.photoUrl, !urlString.isEmpty,
-           let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    photoPlaceholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .failure:
-                    photoPlaceholder
-                @unknown default:
-                    photoPlaceholder
-                }
-            }
-        } else {
-            photoPlaceholder
-        }
-    }
-
-    private var photoPlaceholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [.ftBlue.opacity(0.5), .purple.opacity(0.4)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Text(initials(for: car))
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.9))
-        }
+        CarPhotoView(
+            car: car,
+            url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+            cornerRadius: 0
+        )
     }
 
     private var statsGrid: some View {
@@ -269,13 +241,6 @@ struct GarageCarCard: View {
                 } ?? "—"
             )
         }
-    }
-
-    private func initials(for car: UserCar) -> String {
-        let first = car.make.first.map(String.init) ?? ""
-        let second = car.model.first.map(String.init) ?? ""
-        let combined = (first + second).uppercased()
-        return combined.isEmpty ? "?" : combined
     }
 
     private func selectCar() {
