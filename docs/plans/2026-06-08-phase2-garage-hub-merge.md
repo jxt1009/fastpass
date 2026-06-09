@@ -9,56 +9,64 @@
 
 This is the structural change: the Analytics tab becomes the Garage tab, per-car analytics move into CarDetailView, cross-car aggregates move to GarageView, and the full Analytics chart is deprecated.
 
-**Key decisions already made:**
+**Key decisions:**
 - Driving Score is dropped from all-cars summary (driving style is per-car in CarDetailView)
 - Period comparison is fixed "vs last month" — no time-frame picker
 - 3 mini sparklines per car: max speed, distance, smoothness
 - The full performance chart (AnalyticsView with metric picker) is deleted, not preserved anywhere
+- **History tab is removed.** Its full drive list moves into GarageView as a "See All Drives" sub-page. This drops the tab count from 5 to 4.
+- **PB drives are highlighted.** The drive that set a car's top speed PB and/or 0-60 PB is called out in CarDetailView's recent drives list with a distinctive badge (yellow for 0-60, red for top speed), mirroring the PB pills already used in DriveHistoryView.
 
 ---
 
-## 2.1 Replace Analytics tab with Garage tab
+## 2.1 Replace Analytics and History tabs with Garage tab
 
-**Goal:** The tab bar changes from Track/Social/History/Analytics/Profile to Track/Social/History/Garage/Profile. The `GarageView` replaces `AnalyticsView` as tab 3.
+**Goal:** The tab bar changes from Track/Social/History/Analytics/Profile (5 tabs) to Track/Social/Garage/Profile (4 tabs). The `GarageView` replaces both `AnalyticsView` and `DriveHistoryView`. The full drive list becomes a sub-page pushed from GarageView.
 
-**Commit:** `refactor(ios): replace Analytics tab with Garage tab`
+**Commit:** `refactor(ios): replace Analytics and History tabs with Garage tab`
 
 ### What to change
 
 **File:** `ios/FastTrack/FastTrack/FastTrackApp.swift`
 
-1. In the `TabView`, replace:
+1. Remove the History tab (tab 2) and Analytics tab (tab 3). Replace with a single Garage tab:
    ```swift
-   AnalyticsView()
-       .id(tabResetIDs[3])
-       .tabItem { Label("Analytics", systemImage: "chart.line.uptrend.xyaxis") }.tag(3)
-   ```
-   with:
-   ```swift
-   GarageView()
-       .id(tabResetIDs[3])
-       .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(3)
+   TabView(selection: $selectedTab) {
+       ContentView()
+           .tabItem { Label("Track", systemImage: "location.fill") }.tag(0)
+       SocialView()
+           .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(socialTabTag)
+       GarageView()
+           .id(tabResetIDs[3])
+           .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(3)
+       ProfileView()
+           .id(tabResetIDs[4])
+           .tabItem { Label("Profile", systemImage: "person.fill") }.tag(4)
+   }
    ```
 
-2. Import is not needed because both `AnalyticsView` and `GarageView` are in the same module.
+2. Remove the `DriveHistoryView()` tab entry entirely.
+
+3. Fix `tabResetIDs` — the array was `0..<5` for 5 tabs, now it's 4 tabs. But since we're keeping tags 0, socialTabTag(1), 3, 4, we need the array to cover indices 0–4 still. The `tabResetIDs` array can stay at `0..<5` — SwiftUI only resets the tab being left, and the indices that don't correspond to visible tabs are harmless.
+
+4. **Tag numbering:** Keep the existing tag numbers (0, 1, 3, 4) so that any saved `selectedTab` state or deep link referencing these numbers still works. The gap at tag 2 is fine.
 
 **File:** `ios/FastTrack/FastTrack/AppStoreScreenshotMode.swift`
 
-1. Replace the `.analytics` case:
+1. Replace both `.history` and `.analytics` cases with `.garage`:
    ```swift
-   case .analytics:
-       GarageView()  // was AnalyticsView()
+   case .garage:
+       GarageView()
    ```
-   (The enum case name `.analytics` can be renamed to `.garage` for clarity, but this is optional — the `Screen` enum is only used for screenshot mode and doesn't affect production.)
-
-2. If renaming the enum case, also update the `Screen.allScreens` array and the `Screen.current` parser.
+   Remove the `.history` and `.analytics` cases. Update `Screen.allScreens` and the `Screen` enum accordingly.
 
 ### Verification
 
 - Build succeeds
-- Tab bar shows Track, Social, History, Garage, Profile
-- Tapping the Garage tab shows GarageView with the car grid
-- Tab switching still resets navigation state on non-Track, non-Social tabs
+- Tab bar shows 4 tabs: Track, Social, Garage, Profile
+- Tapping Garage shows GarageView with car grid
+- No History or Analytics tab appears
+- Deep link to `selectedTab = 2` doesn't crash (it just doesn't match a tab)
 
 ---
 
@@ -88,12 +96,12 @@ This is the structural change: the Analytics tab becomes the Garage tab, per-car
    }
    ```
 
-4. Add a summary section above the car grid (between the `VStack(alignment: .leading)` opening and the `if cars.isEmpty` check):
+6. Add a summary section above the car grid (between the `VStack(alignment: .leading)` opening and the `if cars.isEmpty` check):
    ```swift
    allCarsSummary
    ```
 
-5. The `allCarsSummary` view should be a `LazyVGrid` with 2 columns using `InstrumentStatCell`:
+7. The `allCarsSummary` view should be a `LazyVGrid` with 2 columns using `InstrumentStatCell`:
    ```swift
    private var allCarsSummary: some View {
        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -162,6 +170,22 @@ This is the structural change: the Analytics tab becomes the Garage tab, per-car
        }
    }
    recentDrivesSection  // ADD THIS
+   ```
+
+9. **Add "See All Drives" link** at the bottom of `recentDrivesSection`. This replaces the old History tab — tapping it pushes `DriveHistoryView()`:
+   ```swift
+   if driveManager.drives.count > 5 {
+       NavigationLink {
+           DriveHistoryView()
+       } label: {
+           HStack {
+               Text("See All Drives")
+               Image(systemName: "chevron.right")
+           }
+           .font(.subheadline)
+           .foregroundColor(.ftBlue)
+       }
+   }
    ```
 
 ### What NOT to change
@@ -240,6 +264,19 @@ Extend `derive()` to compute the new fields:
 8. `prevPeriodAvgMaxSpeed`: Filter drives from the previous equivalent period (e.g., if showing last month, the month before that). Compute avg max speed for those drives. Nil if no prior drives.
 
 The view layer will do unit conversion.
+
+**PB drive callouts in PB gauges:** The existing `pbGauges` section shows top speed and best 0-60 values. The `CarDetailData` already provides `topSpeedPBDate` and `zeroSixtyPBDate`. Add a subtitle under each gauge showing "Set on [date]" when the date is available, and add a small "PB" indicator using a `StatInfoButton` if desired. This makes it clear *which drive* earned each PB without navigating away.
+
+For example, under the top speed gauge:
+```swift
+if let date = data?.topSpeedPBDate {
+    Text("Set \(date.formatted(date: .abbreviated, time: .omitted))")
+        .font(.caption2)
+        .foregroundColor(.secondary)
+}
+```
+
+Same pattern for the best 0-60 gauge using `data?.zeroSixtyPBDate`.
 
 **File:** `ios/FastTrack/FastTrack/Views/CarDetailView.swift`
 
@@ -471,23 +508,39 @@ private func sparklineCard(title: String, values: [Double], unit: String, format
 }
 ```
 
-**4. recentDrivesSection** — list of last 5 drives for this car:
+**4. recentDrivesSection** — list of last 5 drives for this car, with PB drive callouts:
+
+The existing `DriveRowView` in `DriveHistoryView` already supports `isPersonalBest060` and `isPersonalBestTopSpeed` parameters that show yellow/red PB pills. Use `PersonalBests.trueTopSpeed` and `PersonalBests.trueZeroToSixty` (from Track C, already in CarDetailData+Derive.swift) to identify which drives set the car's PBs, and pass those flags to `DriveRowView`.
 
 ```swift
 private var recentDrivesSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-        let drives = data.map { driveManager.drives.filter { $0.carId == $0.car.id }
-            .sorted { $0.startTime > $1.startTime }
-            .prefix(5) } ?? []
-        
-        if !drives.isEmpty {
+    let carRecentDrives = data.map { driveManager.drives.filter { $0.carId == $0.car.id }
+        .sorted { $0.startTime > $1.startTime }
+        .prefix(5) } ?? []
+    
+    // Identify the drives that set this car's PBs
+    let topSpeedPBDriveId = data.flatMap { d in
+        let (_, drive) = PersonalBests.trueTopSpeed(carId: d.car.id, drives: driveManager.drives)
+        return drive?.id
+    }
+    let zeroSixtyPBDriveId = data.flatMap { d in
+        let (_, drive) = PersonalBests.trueZeroToSixty(carId: d.car.id, drives: driveManager.drives)
+        return drive?.id
+    }
+
+    if !carRecentDrives.isEmpty {
+        VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Recent Drives")
             
-            ForEach(Array(drives)) { drive in
+            ForEach(Array(carRecentDrives)) { drive in
                 NavigationLink {
                     DriveDetailView(drive: drive)
                 } label: {
-                    DriveRowView(drive: drive)
+                    DriveRowView(
+                        drive: drive,
+                        isPersonalBest060: drive.id == zeroSixtyPBDriveId,
+                        isPersonalBestTopSpeed: drive.id == topSpeedPBDriveId
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -501,21 +554,21 @@ Note: `DriveRowView` and `DriveDetailView` are in `DriveHistoryView.swift`. `Sec
 ### Verification
 
 - Build succeeds
-- CarDetailView shows: hero → PB gauges → performance breakdown (4 cards) → vs Last Month → Trend sparklines (3 cards) → sparkline chart → driving style → stats grid → achievements → recent drives
+- CarDetailView shows: hero → PB gauges (with "Set on" date) → performance breakdown (4 cards) → vs Last Month → Trend sparklines (3 cards) → sparkline chart → driving style → stats grid → achievements → recent drives (with PB pills)
 - Each performance breakdown card has an ℹ️ button that shows the StatInfo popover
 - "vs Last Month" shows the speed delta for this car's drives
 - Sparkline trend cards render correctly for cars with 2+ drives
-- Recent drives section shows up to 5 drives for the current car
+- Recent drives section shows up to 5 drives for the current car, with yellow/red PB pills on the drives that set the car's top speed or 0-60 PB
 - All sections handle the empty/nil state gracefully (show "—" or "Need more drives")
 - CarDetailView toolbar shows Edit (pencil) button from Phase 1.1
 
 ---
 
-## 2.4 Remove AnalyticsView, hoist shared types
+## 2.4 Remove AnalyticsView and DriveHistoryView tabs, hoist shared types
 
-**Goal:** Delete `AnalyticsView.swift` and `AnalyticsModels.swift`. Move still-needed types to their new homes. Remove the Analytics tab from `FastTrackApp.swift` (already done in 2.1, but this commit removes the dead code).
+**Goal:** Delete `AnalyticsView.swift` and `AnalyticsModels.swift`. Remove `DriveHistoryView` as a tab (it becomes a sub-page pushed from GarageView's "See All Drives" link). Move still-needed types to their new homes.
 
-**Commit:** `refactor(ios): remove AnalyticsView and hoist shared types`
+**Commit:** `refactor(ios): remove Analytics and History tabs, hoist shared types`
 
 ### What to move before deleting
 
@@ -573,11 +626,13 @@ Note: `DriveRowView` and `DriveDetailView` are in `DriveHistoryView.swift`. `Sec
    - `AnalyticsData` (struct) — delete after moving `smoothnessScore`
    - Any `#Preview` blocks referencing `AnalyticsView`
 
-6. **Delete the files**:
+6. **Keep `DriveHistoryView.swift`** — it's no longer a tab but is now pushed from GarageView's "See All Drives" link and from CarDetailView's recent drives. Do NOT delete it. Only remove it from the tab bar in `FastTrackApp.swift` (done in 2.1).
+
+7. **Delete the Analytics files**:
    - `rm ios/FastTrack/FastTrack/Views/AnalyticsView.swift`
    - `rm ios/FastTrack/FastTrack/Views/AnalyticsModels.swift`
 
-7. **Remove AnalyticsView from AppStoreScreenshotMode.swift** — if not already done in 2.1, update the `.analytics` case and remove `AnalyticsView` import.
+8. **Remove AnalyticsView and DriveHistoryView from AppStoreScreenshotMode.swift** — update the `.analytics` and `.history` cases. `DriveHistoryView` stays as a push destination, just not a tab. The `.history` screenshot case can map to `GarageView()` or to a `NavigationStack { DriveHistoryView() }` depending on what screenshots need.
 
 ### Verification
 
@@ -612,9 +667,8 @@ CGO_ENABLED=1 go build ./... && CGO_ENABLED=1 go vet ./... && go test ./... -v -
 ```
 Track (0)     → ContentView (unchanged)
 Social (1)    → SocialView (unchanged)
-History (2)   → DriveHistoryView (unchanged)
-Garage (3)    → GarageView (expanded with summary + recent drives)
+Garage (3)    → GarageView (all-cars summary + car grid + recent drives + "See All" → DriveHistoryView)
 Profile (4)   → ProfileView (slimmed, "Your Garage" link)
 ```
 
-No Analytics tab. Per-car depth is in CarDetailView.
+4 tabs. No Analytics tab. No History tab. Per-car depth is in CarDetailView. Full drive list is accessible from GarageView via "See All Drives".
