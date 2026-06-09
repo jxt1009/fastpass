@@ -116,11 +116,11 @@ struct DashboardGauge: View {
             .padding(.horizontal, 12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(.systemGray4).opacity(0.3), lineWidth: 1)
+                    .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray6))
+                    .fill(Color.ftCardBg)
             )
         } else {
             VStack(spacing: 8) {
@@ -149,11 +149,11 @@ struct DashboardGauge: View {
             .padding(.horizontal, 8)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(.systemGray4).opacity(0.3), lineWidth: 1)
+                    .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
+                    .fill(Color.ftCardBg)
             )
         }
     }
