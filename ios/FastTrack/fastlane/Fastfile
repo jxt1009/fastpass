@@ -54,7 +54,9 @@ platform :ios do
     marketing_version = ENV["FL_VERSION_NUMBER"]
 
     # Build the app
-    xcargs = "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution'"
+    # DEVELOPMENT_TEAM is propagated to SPM product targets (e.g. TOCropViewController)
+    # so the archive can sign them with the distribution identity.
+    xcargs = "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution' DEVELOPMENT_TEAM=#{ENV['TEAM_ID']}"
     xcargs += " CURRENT_PROJECT_VERSION=#{build_number}"
     xcargs += " MARKETING_VERSION=#{marketing_version}" if marketing_version
 
@@ -98,7 +100,7 @@ platform :ios do
       configuration: "Release",
       export_method: "app-store",
       codesigning_identity: "Apple Distribution",
-      xcargs: "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution'",
+      xcargs: "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution' DEVELOPMENT_TEAM=#{ENV['TEAM_ID']}",
       skip_profile_detection: true,
       export_options: {
         method: "app-store",
