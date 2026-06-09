@@ -34,6 +34,7 @@ struct CarDetailView: View {
     @State private var showConfetti = false
     @State private var confettiTask: Task<Void, Never>?
     @State private var showingEditCar = false
+    @State private var showingDrivingStyleGuide = false
     @State private var lastPresentedConfettiToken: String?
 
     /// Snapshot of the data the view is rendering. Rebuilt whenever
@@ -59,6 +60,9 @@ struct CarDetailView: View {
                     .fullScreenCover(item: $zoomedPhoto, content: photoZoomCover)
                     .sheet(isPresented: $showingEditCar) {
                         EditCarView(carId: carId)
+                    }
+                    .sheet(isPresented: $showingDrivingStyleGuide) {
+                        drivingStyleGuideSheet
                     }
                     .overlay(alignment: .top, content: confettiOverlay)
                     .modifier(LifecycleModifier(
@@ -115,11 +119,11 @@ struct CarDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 hero
                 pbGauges
+                topSummaryRow
                 performanceBreakdown
                 periodComparison
                 trendSparklines
                 sparklineSection
-                drivingStyleRow
                 statsGrid
                 perCarAchievementsSection
                 recentDrivesSection
@@ -322,23 +326,37 @@ struct CarDetailView: View {
         .frame(height: 120)
     }
 
-    // MARK: - Driving style
+    // MARK: - Top summary
 
-    @ViewBuilder
-    private var drivingStyleRow: some View {
+    private var totalDrivesCount: Int {
+        if let count = data?.stats?.totalDrives {
+            return count
+        }
+        return driveManager.drives.filter { $0.carId == carId }.count
+    }
+
+    private var topSummaryRow: some View {
         InstrumentCard {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(spacing: 12) {
                 DrivingStyleBadge(style: data?.drivingStyle ?? .unknown)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Driving Style")
+                    Text("Total Drives")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(data?.drivingStyle.explanation ?? DrivingStyle.unknown.explanation)
+                    Text("\(totalDrivesCount)")
                         .font(.subheadline)
-                        .fontWeight(.medium)
+                        .fontWeight(.semibold)
                         .foregroundColor(.primary)
                 }
                 Spacer()
+                Button {
+                    showingDrivingStyleGuide = true
+                } label: {
+                    Label("Style Guide", systemImage: "info.circle")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.ftBlue)
             }
         }
     }
@@ -461,15 +479,6 @@ struct CarDetailView: View {
         }
     }
 
-    private var consistencyCategory: String {
-        switch data?.consistencyScore ?? 0 {
-        case 90...: return "Exceptional"
-        case 80..<90: return "Excellent"
-        case 70..<80: return "Good"
-        default: return "Average"
-        }
-    }
-
     private var performanceBreakdown: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Performance")
@@ -489,20 +498,6 @@ struct CarDetailView: View {
                     category: corneringCategory,
                     icon: "arrow.triangle.turn.up.right.circle.fill",
                     color: .purple
-                )
-                PerformanceBreakdownCard(
-                    title: "Driving Style",
-                    value: String(format: "%.0f%%", data?.smoothnessScore ?? 0),
-                    category: data?.drivingStyle.title ?? DrivingStyle.unknown.title,
-                    icon: "waveform.path",
-                    color: .cyan
-                )
-                PerformanceBreakdownCard(
-                    title: "Consistency",
-                    value: String(format: "%.0f%%", data?.consistencyScore ?? 0),
-                    category: consistencyCategory,
-                    icon: "target",
-                    color: .mint
                 )
             }
         }
@@ -578,12 +573,6 @@ struct CarDetailView: View {
                         values: data?.distanceTrendPoints ?? [],
                         unit: settings.distanceUnit,
                         formatValue: { String(format: "%.1f", settings.distanceValue($0)) }
-                    )
-                    sparklineCard(
-                        title: "Smoothness",
-                        values: data?.smoothnessTrendPoints ?? [],
-                        unit: "%",
-                        formatValue: { String(format: "%.0f", $0) }
                     )
                 }
             } else {
@@ -705,6 +694,37 @@ struct CarDetailView: View {
         let count = data?.recentPBCount ?? 0
         guard count > 0 else { return nil }
         return count == 1 ? "Recent PB" : "\(count) recent PBs"
+    }
+
+    private var drivingStyleGuideSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(DrivingStyle.guideStyles, id: \.self) { style in
+                    HStack(alignment: .top, spacing: 12) {
+                        DrivingStyleBadge(style: style)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(style.title)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text(style.detailedExplanation)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            .navigationTitle("Driving Style Guide")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        showingDrivingStyleGuide = false
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder

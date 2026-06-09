@@ -10,7 +10,7 @@ import SwiftUI
 // high top speed *and* a very low brake-per-mile ratio is still
 // classified rather than falling through to `.balanced` silently.
 
-enum DrivingStyle: Equatable, Hashable {
+enum DrivingStyle: Equatable, Hashable, CaseIterable {
     case sporty
     case smooth
     case balanced
@@ -35,6 +35,24 @@ enum DrivingStyle: Equatable, Hashable {
         case .balanced:  return "Mixed driving pattern"
         case .unknown:   return "Not enough data yet"
         }
+    }
+
+    /// Longer explanation used in the style guide sheet.
+    var detailedExplanation: String {
+        switch self {
+        case .sporty:
+            return "Higher brake-event frequency with higher top-speed tendency. Usually indicates aggressive acceleration/braking patterns."
+        case .smooth:
+            return "Lower brake-event frequency with steady pace changes. Inputs are controlled and measured across most drives."
+        case .balanced:
+            return "Mix of calm and aggressive sessions. Not strongly biased toward either sporty or smooth behavior."
+        case .unknown:
+            return "Not enough recorded drives for a reliable classification yet."
+        }
+    }
+
+    static var guideStyles: [DrivingStyle] {
+        [.smooth, .balanced, .sporty, .unknown]
     }
 
     /// Color for the badge — green for safe, amber for moderate, red for

@@ -84,6 +84,17 @@ final class CarDetailDataTests: XCTestCase {
         XCTAssertEqual(data.drivingStyle, .unknown)
     }
 
+    func testDrivingStyle_GuideStyles_OrderAndCoverage() {
+        XCTAssertEqual(DrivingStyle.guideStyles, [.smooth, .balanced, .sporty, .unknown])
+    }
+
+    func testDrivingStyle_DetailedExplanation_IsNonEmpty() {
+        for style in DrivingStyle.guideStyles {
+            XCTAssertFalse(style.detailedExplanation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        XCTAssertTrue(DrivingStyle.smooth.detailedExplanation.localizedCaseInsensitiveContains("measured"))
+    }
+
     // MARK: - Sparkline
 
     /// Drives supplied out of order come back ordered by `startTime`
