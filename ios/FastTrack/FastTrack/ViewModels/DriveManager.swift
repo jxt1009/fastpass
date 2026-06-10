@@ -250,31 +250,15 @@ class DriveManager: ObservableObject {
             return resolved
         }
 
-        // Serialize route as v2 format: {v:2, points:[{lat,lng,speed,ts}], events:[{type,lat,lng,ts}]}
-        // Emit one zero_to_sixty event per attempt so legacy clients can still
-        // show the bubble; new clients should read Drive.zeroToSixtyAttempts.
-        let pointDicts = richRoutePoints.map { p -> [String: Any] in
-            ["lat": p.lat, "lng": p.lng, "speed": p.speed, "ts": p.ts]
-        }
-        var eventDicts = recordedRouteEvents.map { e -> [String: Any] in
-            ["type": e.type, "lat": e.lat, "lng": e.lng, "ts": e.ts]
-        }
-        for attempt in attemptsResolved {
-            eventDicts.append([
-                "type": "zero_to_sixty",
-                "lat": attempt.startLatitude,
-                "lng": attempt.startLongitude,
-                "ts": attempt.endTimestamp,
-                "start_ts": attempt.startTimestamp,
-                "end_ts": attempt.endTimestamp,
-                "start_index": attempt.startIndex,
-                "end_index": attempt.endIndex,
-                "time_seconds": attempt.elapsedSeconds
-            ])
-        }
-        let routePayload: [String: Any] = ["v": 2, "points": pointDicts, "events": eventDicts]
-        if let data = try? JSONSerialization.data(withJSONObject: routePayload),
-           let json = String(data: data, encoding: .utf8) {
+        // Snapshot the route inputs on main, then build the JSON off
+        // main so the user's "Stop" tap doesn't hitch on serialization
+        // of 600+ route points and events.
+        let routeSnapshot = RouteSerializationSnapshot(
+            richRoutePoints: richRoutePoints,
+            recordedRouteEvents: recordedRouteEvents,
+            attempts: attemptsResolved
+        )
+        if let json = RouteSerializer.encodeV2(snapshot: routeSnapshot) {
             drive.routeData = json
         }
 
