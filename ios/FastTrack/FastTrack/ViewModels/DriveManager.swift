@@ -273,7 +273,7 @@ class DriveManager: ObservableObject {
         drive.best060Time = best060Time
         drive.zeroToSixtyAttempts = attemptsResolved
 
-<        // Reset actor state for the next drive.
+        // Reset actor state for the next drive.
         await RecordingActor.shared.reset()
 
         var bgTaskID = UIBackgroundTaskIdentifier.invalid

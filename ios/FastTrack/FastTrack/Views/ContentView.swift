@@ -369,6 +369,8 @@ struct LiveMapView: View {
     let useFlatElevation: Bool
 
     @State private var cameraPosition: MapCameraPosition
+    @State private var cachedDecimated: [CLLocationCoordinate2D] = []
+    @State private var cachedInputCount: Int = 0
 
     init(
         userLocation: CLLocationCoordinate2D,
@@ -382,18 +384,30 @@ struct LiveMapView: View {
             center: userLocation,
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         )))
+        let initial = routeCoordinates.count <= 500
+            ? routeCoordinates
+            : RouteDecimator.decimate(routeCoordinates, toleranceMeters: 5, maxOutput: 500)
+        _cachedDecimated = State(initialValue: initial)
+        _cachedInputCount = State(initialValue: routeCoordinates.count)
     }
 
-    /// Decimate to ≤500 points before handing to MapKit. MapKit has
-    /// no incremental polyline update; redrawing 600+ points on
-    /// every GPS tick with realistic elevation was the GPU hot spot.
-    private var displayCoordinates: [CLLocationCoordinate2D] {
-        if routeCoordinates.count <= 500 { return routeCoordinates }
-        return RouteDecimator.decimate(routeCoordinates, toleranceMeters: 5, maxOutput: 500)
+    /// Recompute the decimated polyline only when the input has
+    /// changed by a meaningful amount (≥10 new points). During
+    /// recording, `routeCoordinates` updates ~1 Hz, so this drops
+    /// the per-tick RDP pass from O(n log n) to O(1) in steady state.
+    private func recomputeDecimationIfNeeded() {
+        let count = routeCoordinates.count
+        if count == cachedInputCount { return }
+        if count > cachedInputCount && count - cachedInputCount < 10 { return }
+        cachedDecimated = count <= 500
+            ? routeCoordinates
+            : RouteDecimator.decimate(routeCoordinates, toleranceMeters: 5, maxOutput: 500)
+        cachedInputCount = count
     }
 
     var body: some View {
-        Map(position: $cameraPosition) {
+        recomputeDecimationIfNeeded()
+        return Map(position: $cameraPosition) {
             Annotation("", coordinate: userLocation) {
                 ZStack {
                     Circle()
@@ -405,7 +419,7 @@ struct LiveMapView: View {
                 }
             }
 
-            let coords = displayCoordinates
+            let coords = cachedDecimated
             if coords.count > 1 {
                 MapPolyline(coordinates: coords)
                     .stroke(Color.ftAmber, lineWidth: 4)
