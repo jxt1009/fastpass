@@ -235,6 +235,13 @@ func getLeaderboard(c *gin.Context) {
 		}
 	}
 
+	// Populate car_photo_url from each row's user's Garage JSON. The
+	// per-user garage is opaque text, so we batch-load the unique
+	// userIDs in the page and parse once per user. A malformed garage
+	// for one user does not poison the rest of the response — we
+	// simply skip that user's photo.
+	populateLeaderboardCarPhotos(&entries)
+
 	c.JSON(http.StatusOK, entries)
 }
 
@@ -479,4 +486,72 @@ func lookupPublicUser(c *gin.Context) (User, bool) {
 		return User{}, false
 	}
 	return user, true
+}
+
+// populateLeaderboardCarPhotos does a single batched SELECT for the
+// unique userIDs present in `entries`, parses each user's garage JSON
+// blob, and writes the matching car.photo_url onto every entry that
+// references that user. It is safe to call on an empty entries slice.
+func populateLeaderboardCarPhotos(entries *[]LeaderboardEntry) {
+	if entries == nil || len(*entries) == 0 {
+		return
+	}
+
+	// Collect unique userIDs that have a carID (we only need garages
+	// for rows that could carry a photo).
+	seen := make(map[uint]struct{}, len(*entries))
+	userIDs := make([]uint, 0, len(*entries))
+	for _, e := range *entries {
+		if e.CarID == nil || *e.CarID == "" {
+			continue
+		}
+		if _, ok := seen[e.UserID]; ok {
+			continue
+		}
+		seen[e.UserID] = struct{}{}
+		userIDs = append(userIDs, e.UserID)
+	}
+	if len(userIDs) == 0 {
+		return
+	}
+
+	// Single batched SELECT — limit is the leaderboard page size (50)
+	// and a user appears up to 3 times, so this is at most 50 IDs.
+	type userGarageRow struct {
+		ID     uint   `gorm:"column:id"`
+		Garage string `gorm:"column:garage"`
+	}
+	var rows []userGarageRow
+	db.Table("users").Select("id, garage").Where("id IN ?", userIDs).Scan(&rows)
+
+	// Build userID -> carID -> photoURL index.
+	photoIndex := make(map[uint]map[string]string, len(rows))
+	for _, r := range rows {
+		idx, err := BuildUserGarageIndex(r.Garage)
+		if err != nil {
+			// Malformed garage: skip this user. Don't poison the
+			// whole response — other users still get photos.
+			continue
+		}
+		photoIndex[r.ID] = idx
+	}
+
+	// Stamp the field on every matching entry. We use a local
+	// variable so we can take its address; the response only emits
+	// the field when non-nil, preserving the existing null vs. URL
+	// behavior the iOS app already handles.
+	for i, e := range *entries {
+		if e.CarID == nil {
+			continue
+		}
+		idx, ok := photoIndex[e.UserID]
+		if !ok {
+			continue
+		}
+		url, ok := idx[*e.CarID]
+		if !ok || url == "" {
+			continue
+		}
+		(*entries)[i].CarPhotoURL = &url
+	}
 }
