@@ -85,13 +85,13 @@ class CarStatsManager: ObservableObject {
         }
         
         // Update performance metrics
-        stats.bestAcceleration = max(stats.bestAcceleration, drive.maxAcceleration ?? 0)
-        stats.bestDeceleration = max(stats.bestDeceleration, drive.maxDeceleration ?? 0)
-        stats.bestLateralG = max(stats.bestLateralG, drive.peakGForce ?? 0)
-        
+        stats.bestAcceleration = max(stats.bestAcceleration, drive.maxAcceleration)
+        stats.bestDeceleration = max(stats.bestDeceleration, drive.maxDeceleration)
+        stats.bestLateralG = max(stats.bestLateralG, drive.peakGForce)
+
         // Update aggregate stats
-        stats.totalBrakeEvents += drive.brakeEvents ?? 0
-        stats.totalTurns += (drive.leftTurns ?? 0) + (drive.rightTurns ?? 0)
+        stats.totalBrakeEvents += drive.brakeEvents
+        stats.totalTurns += drive.leftTurns + drive.rightTurns
         
         // Calculate average speed
         stats.avgSpeed = stats.totalDistance / max(1, stats.totalTime)
