@@ -23,7 +23,16 @@ class DriveManager: ObservableObject {
     private var locationManager: LocationManager?
     private var cancellables = Set<AnyCancellable>()
     var recordingLocations: [CLLocation] = []
-    var speedReadings: [Double] = []
+    /// Bounded ring buffer of the most recent speed samples (default
+    /// capacity: 1500 ≈ 1 min at 25 Hz). Used only for "recent speed"
+    /// UI smoothing during the active drive. Final saved-drive stats
+    /// are computed once at stop from `recordingLocations` /
+    /// `richRoutePoints` (not from this buffer).
+    var speedReadings: RingBuffer<Double> = RingBuffer(capacity: 1500)
+    /// O(1) running min/max/avg/count over every speed sample observed
+    /// during the active drive. Replaces the O(N) `reduce` / `.max` /
+    /// `.min` calls in the old `updateCurrentDrive`.
+    var runningSpeedStats = RunningSpeedStats()
     var latestSpeedSample: SpeedSample?
     private var pollTimer: Timer?
 
@@ -113,7 +122,8 @@ class DriveManager: ObservableObject {
         routeCoordinates = []
         richRoutePoints = []
         recordedRouteEvents = []
-        speedReadings = []
+        speedReadings.removeAll()
+        runningSpeedStats.reset()
         attempts060 = []
 
         #if DEBUG
@@ -448,7 +458,8 @@ class DriveManager: ObservableObject {
         routeCoordinates = []
         recordingStartTime = nil
         recordingLocations = []
-        speedReadings = []
+        speedReadings.removeAll()
+        runningSpeedStats.reset()
         latestSpeedSample = nil
         richRoutePoints = []
         recordedRouteEvents = []
@@ -472,6 +483,59 @@ class DriveManager: ObservableObject {
         headingHistory = []
         userAchievements = []
         achievementsCatalog = []
+    }
+}
+
+// MARK: - RingBuffer
+
+/// Fixed-capacity FIFO ring buffer. When full, the oldest element is
+/// overwritten on the next `append`. Iteration is in insertion order
+/// (oldest → newest). Used for the per-tick speed buffer to keep
+/// memory bounded over a 10+ min drive.
+struct RingBuffer<Element> {
+    let capacity: Int
+    private var storage: [Element?]
+
+    init(capacity: Int) {
+        precondition(capacity > 0, "RingBuffer capacity must be > 0")
+        self.capacity = capacity
+        self.storage = Array(repeating: nil, count: capacity)
+    }
+
+    private(set) var head: Int = 0     // index of the oldest element
+    private(set) var count: Int = 0
+
+    var isEmpty: Bool { count == 0 }
+    var isFull: Bool { count == capacity }
+
+    mutating func append(_ element: Element) {
+        let writeIndex = (head + count) % capacity
+        storage[writeIndex] = element
+        if isFull {
+            head = (head + 1) % capacity
+        } else {
+            count += 1
+        }
+    }
+
+    mutating func removeAll() {
+        storage = Array(repeating: nil, count: capacity)
+        head = 0
+        count = 0
+    }
+
+    /// Iterate in insertion order (oldest → newest). Returns a
+    /// snapshot array so callers can use the values after the buffer
+    /// is mutated.
+    func snapshot() -> [Element] {
+        guard count > 0 else { return [] }
+        var out: [Element] = []
+        out.reserveCapacity(count)
+        for i in 0..<count {
+            let idx = (head + i) % capacity
+            if let v = storage[idx] { out.append(v) }
+        }
+        return out
     }
 }
 

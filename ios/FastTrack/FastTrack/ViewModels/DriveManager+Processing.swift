@@ -58,6 +58,7 @@ extension DriveManager {
     func processSpeedSample(_ sample: SpeedSample) {
         latestSpeedSample = sample
         speedReadings.append(sample.speed)
+        runningSpeedStats.ingest(sample.speed)
         stoppedTimeTracker.ingest(sample)
 
         if sample.speed > currentMaxSpeed {
@@ -328,10 +329,10 @@ extension DriveManager {
             #endif
         }
 
-        if !speedReadings.isEmpty {
-            drive.maxSpeed = speedReadings.max() ?? 0
-            drive.minSpeed = speedReadings.filter { $0 > 0 }.min() ?? 0
-            drive.avgSpeed = speedReadings.reduce(0, +) / Double(speedReadings.count)
+        if runningSpeedStats.count > 0 {
+            drive.maxSpeed = runningSpeedStats.max
+            drive.minSpeed = runningSpeedStats.min
+            drive.avgSpeed = runningSpeedStats.avg
         }
 
         drive.stoppedTime = stoppedTimeTracker.totalStoppedTime(at: Date())
