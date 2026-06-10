@@ -39,7 +39,7 @@ Severity scale: **P0** = blocker / compile error / data corruption / security, *
 
 | ID | Cluster | Issue | Files | Effort |
 |----|---------|-------|-------|--------|
-| P0-1 | Stability | `CarStats.swift:88-94` uses `?? 0` on `Drive.maxAcceleration`, `maxDeceleration`, `peakGForce`, `brakeEvents`, `leftTurns`, `rightTurns`, but those fields are declared **non-optional** in `Models/Drive.swift:32-37` (a drive always has at least a zero value recorded). The `?? 0` is dead code; drop it. If the file currently compiles, the fields may be optional — verify and unify. | `Models/CarStats.swift`, `Models/Drive.swift` | S |
+| P0-1 | Stability | `CarStats.swift:88-94` uses `?? 0` on `Drive.maxAcceleration`, `maxDeceleration`, `peakGForce`, `brakeEvents`, `leftTurns`, `rightTurns`, but those fields are declared **non-optional** in `Models/Drive.swift:32-37`. Either a compile error or a silent zero that corrupts PB lookups. Verify and unify. | `Models/CarStats.swift`, `Models/Drive.swift` | S |
 | P0-2 | Performance | `LiveMapView.displayCoordinates` re-runs the `RouteDecimator` (RDP, `O(n log n)`) on **every SwiftUI body call**. During recording, `routeCoordinates` is `@Published` and updates ~1 Hz, so the decimator runs 600 times for a 10-minute drive. Plus `MapKit` redraws on every pass. | `Views/ContentView.swift:390-393` | S |
 | P0-3 | Security | OAuth `state` parameter is generated (`GoogleSignInManager.swift:24, 34`) but never verified on the callback. An attacker who can open `com.toper.fasttrack:/oauth2callback?code=ATTACKER_CODE&state=ANYTHING` could link the attacker's Google account to the victim's FastTrack user. | `Services/GoogleSignInManager.swift:24, 34` | S |
 
@@ -226,7 +226,7 @@ Implementation is **not** a single PR. The workstreams below are sequenced so ea
 **Items:** B-1, B-2, B-3, B-4.
 **Goal:** Pass App Review and reduce always-on exposure.
 **Design notes:**
-- New permission flow: `requestWhenInUse()` on first launch; `requestAlways()` on first recording start (the first time the user taps Start, not via a separate Settings toggle).
+- New permission flow: `requestWhenInUse()` on first launch; `requestAlways()` on first recording start.
 - `allowsBackgroundLocationUpdates = true` set inside `startUpdatingLocation`, off inside `stopUpdatingLocation`.
 - Privacy manifest: add `NSPrivacyCollectedDataTypeEmail` and `NSPrivacyCollectedDataTypeUserID`.
 - `baseURL` driven by a build configuration (`.xcconfig` or `#if DEBUG` branch) with the existing value as the default.
@@ -265,7 +265,7 @@ Implementation is **not** a single PR. The workstreams below are sequenced so ea
 - Switch `createDrive` to send the inner `routeData` JSON as a single field (additive only — keep the existing field, add `route_data_v2` that the server can ignore if not present).
 - `parseRouteData` runs in a `Task.detached`.
 - Add `Equatable` to row views.
-- D-8 (`processHeadingBackground`) is **kept and wired up**: the drive summary view surfaces left/right turns and lane changes, so the heading detection path must be active. Move heading state into `RecordingActor` (consolidate with the running-speed-stats pattern) and ensure turn/lane-change counts flow into `Drive` on stop.
+- Decide on D-8 (`processHeadingBackground`) before this workstream: either wire it up (heading → turn/lane-change counting) or delete.
 **Verification:** Profile-in-Instruments time-since-start, frame-time instruments trace during a 10-minute drive, network payload size before/after.
 
 ### Workstream 7: Stability & concurrency (1-2 PRs)
@@ -308,7 +308,7 @@ Implementation is **not** a single PR. The workstreams below are sequenced so ea
 - Split `DriveManager` into `DriveRecordingController` + `LiveActivityCoordinator` + `DrivePoller`. Move `RouteSerializer` orchestration to a free function.
 - Split `CarDetailView` and `DriveDetailView` into focused sub-views; keep one public surface area.
 - Move `StatInfo` glossary to a JSON resource.
-- Pick one DI pattern: convert all managers to environment-injected (no singletons). This future-proofs the app for any feature that needs per-screen or per-tab state and makes every manager unit-testable without a global. This bumps Workstream 10 effort from L to XL. The `preview()` instances already in the codebase are a useful starting point.
+- Pick one DI pattern: either make `LocationManager` and `DriveManager` singletons (matching the rest) OR convert all managers to environment-injected. Recommendation: singletons for cross-tab state (`ProfileManager`, `CarStatsManager`, etc.); environment-injected only for `LocationManager` and `DriveManager` (per-tab instances). Document.
 - Extract shared car-stats derive logic.
 - Split `Achievement.swift` into `AchievementModel`, `AchievementManager`, `AchievementCatalog`.
 - Make `RecordingActor` `Sendable` explicit.
@@ -355,13 +355,13 @@ Recommended execution order, each row a "release":
 | R6 | 12: Transport security, 10: Architecture | M + L | Architecture split happens last to avoid premature restructuring. |
 | R7 (continuous) | 11: Test coverage | M-L | Add tests in each PR; catch-up PR for the gap. |
 
-## 7. Resolved Decisions
+## 7. Open Questions
 
-1. **D-8 (`processHeadingBackground`)**: keep and wire up. The drive summary view surfaces left/right turns and lane changes; the heading detection path is a real feature. Heading state moves into `RecordingActor` (consolidate with the running-speed-stats pattern).
-2. **H-5 (DI)**: full environment injection for all managers (no singletons). Future-proofs per-screen/per-tab state needs and makes every manager unit-testable. Bumps Workstream 10 effort from L to XL.
-3. **P0-1 (`?? 0` cleanup)**: confirmed `Drive` fields are non-optional — drop the `?? 0` in `CarStats.swift`. If the file currently compiles, the `Drive` field declarations need a follow-up read in the implementation branch.
-4. **B-1 UX**: prompt for Always on the user's first recording start (not via a separate Settings toggle).
-5. **J-4 (server logout)**: in scope. The `POST /auth/logout` endpoint is in this repo and we own the deployment.
+1. **D-8 (`processHeadingBackground`)**: ship as a feature (heading → turn/lane-change counting) or delete? This affects Workstream 6 scope.
+2. **H-5 (DI)**: confirm the recommended pattern (singletons for cross-tab state, environment-injected for per-tab) is acceptable. If we want full environment injection, the workstream effort goes from L to XL.
+3. **Workstream 1 scope**: P0-1 (the `?? 0` issue) needs the user to verify whether the `Drive` fields are non-optional (then drop `?? 0`) or optional (then `Drive.swift` is wrong). The agent did not have write access to compile and check.
+4. **B-1 UX**: when to prompt for Always. Two options: on first recording start (more contextual) or via a "Enable background tracking" toggle in Settings (more discoverable). Recommend the former.
+5. **J-4**: depends on a backend `POST /auth/logout` endpoint existing or being added. Confirm with the backend team; if not present, this item is deferred to a future spec.
 
 ## 8. What is intentionally not changing
 
