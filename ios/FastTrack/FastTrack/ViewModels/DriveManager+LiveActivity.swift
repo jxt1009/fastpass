@@ -8,6 +8,7 @@ extension DriveManager {
     internal func startLiveActivity() {
         guard ActivityAuthorizationInfo().areActivitiesEnabled,
               let startDate = recordingStartTime else { return }
+        lastLiveActivityUpdate = nil
         let attrs = DriveActivityAttributes(startDate: startDate)
         let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0, maxSpeedMph: 0)
         let content = ActivityContent(state: state, staleDate: nil)
@@ -26,6 +27,13 @@ extension DriveManager {
 
     internal func updateLiveActivity(speedMph: Double, distanceMiles: Double) {
         guard let activity = liveActivity else { return }
+        // 1 Hz cap — Lock Screen widgets render at 1Hz, and the OS
+        // throttles update requests beyond a few per minute anyway.
+        let now = Date()
+        if let last = lastLiveActivityUpdate, now.timeIntervalSince(last) < 1.0 {
+            return
+        }
+        lastLiveActivityUpdate = now
         let state = DriveActivityAttributes.DriveActivityState(
             speedMph: speedMph,
             gForce: currentGForce,
@@ -40,6 +48,7 @@ extension DriveManager {
 
     internal func endLiveActivity() {
         guard let activity = liveActivity else { return }
+        lastLiveActivityUpdate = nil
         let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0, maxSpeedMph: 0)
         let content = ActivityContent(state: state, staleDate: Date())
         Task {

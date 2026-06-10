@@ -73,6 +73,7 @@ class DriveManager: ObservableObject {
 
     // Live Activity
     var liveActivity: Activity<DriveActivityAttributes>?
+    var lastLiveActivityUpdate: Date?
     private let authManager: AuthManager
     private let profileManager: ProfileManager
     private let settings: AppSettings
@@ -271,7 +272,19 @@ class DriveManager: ObservableObject {
         drive.best060Time = best060Time
         drive.zeroToSixtyAttempts = attemptsResolved
 
+        var bgTaskID = UIBackgroundTaskIdentifier.invalid
+        bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "DriveUpload") {
+            // Expiration handler: the OS is about to suspend us.
+            // Nothing useful we can do — just release the identifier
+            // so we don't leak it.
+            UIApplication.shared.endBackgroundTask(bgTaskID)
+        }
         Task {
+            defer {
+                if bgTaskID != UIBackgroundTaskIdentifier.invalid {
+                    UIApplication.shared.endBackgroundTask(bgTaskID)
+                }
+            }
             do {
                 let saved = try await apiService.createDrive(drive)
                 await MainActor.run {
