@@ -13,6 +13,27 @@ struct DriveStatsSnapshot: Sendable, Equatable {
     let publishedAt: Date
 }
 
+/// A per-tick update handed to the actor. All fields except the
+/// coordinate and timestamp are optional so callers can decide
+/// which events to surface (e.g. brake events are rare).
+struct RecordingActorUpdate: Sendable {
+    let coordinate: CLLocationCoordinate2D
+    let speed: Double
+    let timestamp: TimeInterval
+    let acceleration: Double?
+    let deceleration: Double?
+    let brakeDetected: Bool
+    let gForce: Double?
+    let cornerSpeed: Double?
+}
+
+/// Returns the previous route point + its recorded speed, used by
+/// the per-tick accel/G-force math. Nil on the first sample.
+struct PreviousRoutePoint: Sendable {
+    let location: CLLocation?
+    let speed: Double
+}
+
 /// Owns all the recording-path state that was previously mutated on
 /// the main actor (route points, extended tracking scalars, running
 /// stats). All `ingest*` methods are O(1). `snapshot()` returns a
@@ -31,6 +52,13 @@ actor RecordingActor {
     private var lastPublishedAt: Date = .distantPast
     private let publishInterval: TimeInterval = 0.1
 
+    private var lastIngestedLocation: CLLocation?
+    private var lastIngestedSpeed: Double = 0
+
+    func previousRoutePoint() -> PreviousRoutePoint {
+        PreviousRoutePoint(location: lastIngestedLocation, speed: lastIngestedSpeed)
+    }
+
     func ingestRoutePoint(_ coord: CLLocationCoordinate2D, speed: Double, timestamp: TimeInterval) {
         routePointCount += 1
         lastCoordinate = coord
@@ -42,6 +70,29 @@ actor RecordingActor {
             if speed > runningMaxSpeed { runningMaxSpeed = speed }
         }
         runningSumSpeed += speed
+    }
+
+    func ingest(_ update: RecordingActorUpdate) {
+        routePointCount += 1
+        lastCoordinate = update.coordinate
+        lastIngestedLocation = CLLocation(
+            coordinate: update.coordinate,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0,
+            course: 0,
+            speed: update.speed,
+            timestamp: Date(timeIntervalSince1970: update.timestamp)
+        )
+        lastIngestedSpeed = update.speed
+        if routePointCount == 1 {
+            runningMinSpeed = update.speed
+            runningMaxSpeed = update.speed
+        } else {
+            if update.speed < runningMinSpeed { runningMinSpeed = update.speed }
+            if update.speed > runningMaxSpeed { runningMaxSpeed = update.speed }
+        }
+        runningSumSpeed += update.speed
     }
 
     /// Returns a coalesced snapshot. If `now` is within
@@ -78,5 +129,7 @@ actor RecordingActor {
         runningSumSpeed = 0
         lastCoordinate = nil
         lastPublishedAt = .distantPast
+        lastIngestedLocation = nil
+        lastIngestedSpeed = 0
     }
 }

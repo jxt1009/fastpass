@@ -101,139 +101,34 @@ extension DriveManager {
     func processLocationHeavy(_ location: CLLocation, speed: Double, speedMph: Double) async {
         let ts = location.timestamp
 
-        // Perform heavy calculations on background thread
-        var updates: (
-            acceleration: Double?,
-            deceleration: Double?,
-            brakeCount: Int,
-            gForce: Double?,
-            cornerSpeed: Double?,
-            turnData: (left: Int, right: Int, lanes: Int)?
-        ) = (nil, nil, 0, nil, nil, nil)
-
-        // Get recording data safely
-        let recordingCount = await MainActor.run { self.recordingLocations.count }
-        guard recordingCount >= 2 else {
-            return
-        }
-
-        let (prev, prevRecordedSpeed) = await MainActor.run {
-            (
-                self.recordingLocations[recordingCount - 2],
-                self.richRoutePoints[recordingCount - 2].speed
-            )
-        }
+        // Read prev from the actor — single hop, not seven.
+        let prevRecord = await RecordingActor.shared.previousRoutePoint()
+        guard let prev = prevRecord.location else { return }
+        let prevSpeed = prevRecord.speed
 
         let dt = ts.timeIntervalSince(prev.timestamp)
-        let prevSpeed = prevRecordedSpeed
+        guard dt > 0 && dt < 5 else { return }
 
-        // Only process if time delta is reasonable (background calculation)
-        guard dt > 0 && dt < 5 else {
-            return
-        }
-
-        // Skip acceleration/G-force calculation if either GPS reading has poor speed accuracy.
-        // speedAccuracy is in m/s std dev; -1 means unavailable. Threshold: 2 m/s (~4.5 mph).
         let speedAccuracyOK = location.speedAccuracy > 0 && location.speedAccuracy < 2.0
                            && prev.speedAccuracy > 0 && prev.speedAccuracy < 2.0
 
-        // Heavy calculations on background thread
+        // All math runs on the detached task's thread.
         let rawAccel = (speed - prevSpeed) / dt
-        // Physical sanity cap: > 5G is impossible on a public road; clamp to prevent GPS spikes
-        let maxPhysicalAccelMS2 = 5.0 * 9.81  // ~49 m/s²
+        let maxPhysicalAccelMS2 = 5.0 * 9.81
         let accel = max(-maxPhysicalAccelMS2, min(maxPhysicalAccelMS2, rawAccel))
-        let currentMaxAccel = await MainActor.run { self.maxAcceleration }
-        let currentMaxDecel = await MainActor.run { self.maxDeceleration }
 
-        if speedAccuracyOK {
-            updates.acceleration = accel > currentMaxAccel ? accel : nil
-            updates.deceleration = -accel > currentMaxDecel ? -accel : nil
-        }
-
-        // Brake event detection (uses raw accel; doesn't need accuracy gate — threshold is high enough)
-        if accel < -2.5 {
-            let lastBrake = await MainActor.run { self.lastBrakeTime }
-            let gap = lastBrake.map { ts.timeIntervalSince($0) } ?? 100
-            if gap > 3 {
-                updates.brakeCount = 1
-            }
-        }
-
-        // G-force calculation — only when GPS accuracy is reliable
-        let currentTopCornerSpeed = await MainActor.run { self.topCornerSpeed }
-        if speedAccuracyOK {
-            var latAccel = 0.0
-            if location.course >= 0 && prev.course >= 0 && speed > 1 {
-                var dh = location.course - prev.course
-                if dh > 180 { dh -= 360 }
-                if dh < -180 { dh += 360 }
-                let omega = (dh * .pi / 180) / dt
-                latAccel = speed * omega
-            }
-
-            let lonG = accel / 9.81
-            let latG = abs(latAccel) / 9.81
-            let totalG = (lonG * lonG + latG * latG).squareRoot()
-
-            updates.gForce = totalG
-            if latG > 0.15 && speed > currentTopCornerSpeed {
-                updates.cornerSpeed = speed
-            }
-        }
-
-        // Turn detection (background processing)
-        if location.course >= 0 && speed > 2.2 {
-            updates.turnData = await processHeadingBackground(course: location.course, speed: speed, timestamp: ts)
-        }
-
-        // Apply all updates atomically on main thread
-        await MainActor.run {
-            // Performance metrics
-            if let accel = updates.acceleration {
-                self.maxAcceleration = accel
-            }
-            if let decel = updates.deceleration {
-                self.maxDeceleration = decel
-            }
-            if updates.brakeCount > 0 {
-                self.brakeEvents += 1
-                self.lastBrakeTime = ts
-                self.recordedRouteEvents.append((
-                    type: "brake",
-                    lat: location.coordinate.latitude,
-                    lng: location.coordinate.longitude,
-                    ts: ts.timeIntervalSince1970
-                ))
-            }
-            if let gForce = updates.gForce {
-                if gForce > self.peakGForce { self.peakGForce = gForce }
-                self.currentGForce = gForce
-            }
-            if let cornerSpeed = updates.cornerSpeed {
-                self.topCornerSpeed = cornerSpeed
-            }
-
-            // Turns
-            if let turnData = updates.turnData {
-                self.leftTurns += turnData.left
-                self.rightTurns += turnData.right
-                self.laneChanges += turnData.lanes
-                if turnData.left > 0 {
-                    self.recordedRouteEvents.append((type: "turn_left", lat: location.coordinate.latitude, lng: location.coordinate.longitude, ts: ts.timeIntervalSince1970))
-                }
-                if turnData.right > 0 {
-                    self.recordedRouteEvents.append((type: "turn_right", lat: location.coordinate.latitude, lng: location.coordinate.longitude, ts: ts.timeIntervalSince1970))
-                }
-                if turnData.lanes > 0 {
-                    self.recordedRouteEvents.append((type: "lane_change", lat: location.coordinate.latitude, lng: location.coordinate.longitude, ts: ts.timeIntervalSince1970))
-                }
-                if turnData.left > 0 || turnData.right > 0 || turnData.lanes > 0 {
-                    self.lastTurnOrLaneTime = ts
-                }
-            } else if speed < 0.5 {
-                self.headingWindow = nil
-            }
-        }
+        // Single actor hop to ingest everything in one batch.
+        let update = RecordingActorUpdate(
+            coordinate: location.coordinate,
+            speed: speed,
+            timestamp: ts.timeIntervalSince1970,
+            acceleration: speedAccuracyOK && accel > 0 ? accel : nil,
+            deceleration: speedAccuracyOK && -accel > 0 ? -accel : nil,
+            brakeDetected: accel < -2.5,
+            gForce: speedAccuracyOK ? computedGForce(accel: accel, location: location, prev: prev, speed: speed, dt: dt) : nil,
+            cornerSpeed: speedAccuracyOK ? speed : nil
+        )
+        await RecordingActor.shared.ingest(update)
     }
 
     func processHeadingBackground(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
@@ -351,6 +246,28 @@ extension DriveManager {
         print("✅ Current drive updated: distance=\(totalDist), duration=\(drive.duration), maxSpeed=\(drive.maxSpeed)")
         #endif
     }
+}
+
+/// Compute the longitudinal+lat G-force magnitude for a sample.
+/// Mirrors the original logic that lived inside processLocationHeavy.
+private func computedGForce(
+    accel: Double,
+    location: CLLocation,
+    prev: CLLocation,
+    speed: Double,
+    dt: TimeInterval
+) -> Double {
+    var latAccel = 0.0
+    if location.course >= 0 && prev.course >= 0 && speed > 1 {
+        var dh = location.course - prev.course
+        if dh > 180 { dh -= 360 }
+        if dh < -180 { dh += 360 }
+        let omega = (dh * .pi / 180) / dt
+        latAccel = speed * omega
+    }
+    let lonG = accel / 9.81
+    let latG = abs(latAccel) / 9.81
+    return (lonG * lonG + latG * latG).squareRoot()
 }
 
 private extension Double {
