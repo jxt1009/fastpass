@@ -210,7 +210,7 @@ struct ContentView: View {
                 Button {
                     if driveManager.isRecording {
                         print("🛑 Stop recording button pressed")
-                        driveManager.stopRecording()
+                        Task { await driveManager.stopRecording() }
                     } else {
                         print("▶️ Start recording button pressed")
                         let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)

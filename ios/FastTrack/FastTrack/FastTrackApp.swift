@@ -166,7 +166,7 @@ struct RootView: View {
             .onOpenURL { url in
                 // Handle deep links from Live Activity controls
                 if url.scheme == "fasttrack", url.host == "stop-recording" {
-                    driveManager.stopRecording()
+                    Task { await driveManager.stopRecording() }
                     selectedTab = 0  // Switch to Track tab
                 }
             }
