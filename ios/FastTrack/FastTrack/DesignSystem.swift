@@ -226,8 +226,8 @@ struct InstrumentCard<Content: View>: View {
 // ─── Gauge Arc ──────────────────────────────────────────
 
 struct GaugeArc: Shape {
-    var startAngle: Angle = .degrees(135)
-    var endAngle: Angle = .degrees(45)
+    var startAngle: Angle = .degrees(180)
+    var endAngle: Angle = .degrees(360)
 
     func path(in rect: CGRect) -> Path {
         let center = CGPoint(x: rect.midX, y: rect.midY)
