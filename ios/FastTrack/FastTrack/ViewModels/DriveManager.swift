@@ -23,9 +23,22 @@ class DriveManager: ObservableObject {
     private var locationManager: LocationManager?
     private var cancellables = Set<AnyCancellable>()
     var recordingLocations: [CLLocation] = []
-    var speedReadings: [Double] = []
+    /// Bounded ring buffer of the most recent speed samples (default
+    /// capacity: 1500 ≈ 1 min at 25 Hz). Used only for "recent speed"
+    /// UI smoothing during the active drive. Final saved-drive stats
+    /// are computed once at stop from `recordingLocations` /
+    /// `richRoutePoints` (not from this buffer).
+    var speedReadings: RingBuffer<Double> = RingBuffer(capacity: 1500)
+    /// O(1) running min/max/avg/count over every speed sample observed
+    /// during the active drive. Replaces the O(N) `reduce` / `.max` /
+    /// `.min` calls in the old `updateCurrentDrive`.
+    var runningSpeedStats = RunningSpeedStats()
     var latestSpeedSample: SpeedSample?
     private var pollTimer: Timer?
+    /// Caps view-facing @Published re-renders at 10 Hz. Updated
+    /// fields (currentMaxSpeed, currentGForce, etc.) stay current
+    /// regardless; only the SwiftUI re-render is suppressed.
+    let publishThrottler = PublishThrottler(minInterval: 0.1)
 
     // Rich route data: each point stores speed+timestamp alongside lat/lng
     var richRoutePoints: [(lat: Double, lng: Double, speed: Double, ts: Double)] = []
@@ -60,6 +73,7 @@ class DriveManager: ObservableObject {
 
     // Live Activity
     var liveActivity: Activity<DriveActivityAttributes>?
+    var lastLiveActivityUpdate: Date?
     private let authManager: AuthManager
     private let profileManager: ProfileManager
     private let settings: AppSettings
@@ -113,7 +127,9 @@ class DriveManager: ObservableObject {
         routeCoordinates = []
         richRoutePoints = []
         recordedRouteEvents = []
-        speedReadings = []
+        speedReadings.removeAll()
+        runningSpeedStats.reset()
+        publishThrottler.reset()
         attempts060 = []
 
         #if DEBUG
@@ -235,31 +251,15 @@ class DriveManager: ObservableObject {
             return resolved
         }
 
-        // Serialize route as v2 format: {v:2, points:[{lat,lng,speed,ts}], events:[{type,lat,lng,ts}]}
-        // Emit one zero_to_sixty event per attempt so legacy clients can still
-        // show the bubble; new clients should read Drive.zeroToSixtyAttempts.
-        let pointDicts = richRoutePoints.map { p -> [String: Any] in
-            ["lat": p.lat, "lng": p.lng, "speed": p.speed, "ts": p.ts]
-        }
-        var eventDicts = recordedRouteEvents.map { e -> [String: Any] in
-            ["type": e.type, "lat": e.lat, "lng": e.lng, "ts": e.ts]
-        }
-        for attempt in attemptsResolved {
-            eventDicts.append([
-                "type": "zero_to_sixty",
-                "lat": attempt.startLatitude,
-                "lng": attempt.startLongitude,
-                "ts": attempt.endTimestamp,
-                "start_ts": attempt.startTimestamp,
-                "end_ts": attempt.endTimestamp,
-                "start_index": attempt.startIndex,
-                "end_index": attempt.endIndex,
-                "time_seconds": attempt.elapsedSeconds
-            ])
-        }
-        let routePayload: [String: Any] = ["v": 2, "points": pointDicts, "events": eventDicts]
-        if let data = try? JSONSerialization.data(withJSONObject: routePayload),
-           let json = String(data: data, encoding: .utf8) {
+        // Snapshot the route inputs on main, then build the JSON off
+        // main so the user's "Stop" tap doesn't hitch on serialization
+        // of 600+ route points and events.
+        let routeSnapshot = RouteSerializationSnapshot(
+            richRoutePoints: richRoutePoints,
+            recordedRouteEvents: recordedRouteEvents,
+            attempts: attemptsResolved
+        )
+        if let json = RouteSerializer.encodeV2(snapshot: routeSnapshot) {
             drive.routeData = json
         }
 
@@ -272,7 +272,19 @@ class DriveManager: ObservableObject {
         drive.best060Time = best060Time
         drive.zeroToSixtyAttempts = attemptsResolved
 
+        var bgTaskID = UIBackgroundTaskIdentifier.invalid
+        bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "DriveUpload") {
+            // Expiration handler: the OS is about to suspend us.
+            // Nothing useful we can do — just release the identifier
+            // so we don't leak it.
+            UIApplication.shared.endBackgroundTask(bgTaskID)
+        }
         Task {
+            defer {
+                if bgTaskID != UIBackgroundTaskIdentifier.invalid {
+                    UIApplication.shared.endBackgroundTask(bgTaskID)
+                }
+            }
             do {
                 let saved = try await apiService.createDrive(drive)
                 await MainActor.run {
@@ -448,7 +460,9 @@ class DriveManager: ObservableObject {
         routeCoordinates = []
         recordingStartTime = nil
         recordingLocations = []
-        speedReadings = []
+        speedReadings.removeAll()
+        runningSpeedStats.reset()
+        publishThrottler.reset()
         latestSpeedSample = nil
         richRoutePoints = []
         recordedRouteEvents = []
@@ -473,6 +487,92 @@ class DriveManager: ObservableObject {
         userAchievements = []
         achievementsCatalog = []
     }
+}
+
+// MARK: - RingBuffer
+
+/// Fixed-capacity FIFO ring buffer. When full, the oldest element is
+/// overwritten on the next `append`. Iteration is in insertion order
+/// (oldest → newest). Used for the per-tick speed buffer to keep
+/// memory bounded over a 10+ min drive.
+struct RingBuffer<Element> {
+    let capacity: Int
+    private var storage: [Element?]
+
+    init(capacity: Int) {
+        precondition(capacity > 0, "RingBuffer capacity must be > 0")
+        self.capacity = capacity
+        self.storage = Array(repeating: nil, count: capacity)
+    }
+
+    private(set) var head: Int = 0     // index of the oldest element
+    private(set) var count: Int = 0
+
+    var isEmpty: Bool { count == 0 }
+    var isFull: Bool { count == capacity }
+
+    mutating func append(_ element: Element) {
+        let writeIndex = (head + count) % capacity
+        storage[writeIndex] = element
+        if isFull {
+            head = (head + 1) % capacity
+        } else {
+            count += 1
+        }
+    }
+
+    mutating func removeAll() {
+        storage = Array(repeating: nil, count: capacity)
+        head = 0
+        count = 0
+    }
+
+    /// Iterate in insertion order (oldest → newest). Returns a
+    /// snapshot array so callers can use the values after the buffer
+    /// is mutated.
+    func snapshot() -> [Element] {
+        guard count > 0 else { return [] }
+        var out: [Element] = []
+        out.reserveCapacity(count)
+        for i in 0..<count {
+            let idx = (head + i) % capacity
+            if let v = storage[idx] { out.append(v) }
+        }
+        return out
+    }
+}
+
+// MARK: - PublishThrottler
+
+/// Caps the rate at which a main-thread caller publishes a value to
+/// the view layer. The first call always publishes (so the first
+/// post-start state isn't lost). Subsequent calls within
+/// `minInterval` are skipped — the underlying value is updated, but
+/// the SwiftUI re-render is suppressed.
+///
+/// Used to drop 25 Hz IMU ticks down to 10 Hz for @Published
+/// view-facing fields during recording. The underlying state
+/// (runningSpeedStats, currentMaxSpeed, etc.) is always up to date.
+final class PublishThrottler {
+    private let minInterval: TimeInterval
+    private var lastPublishedAt: Date?
+
+    init(minInterval: TimeInterval) {
+        self.minInterval = minInterval
+    }
+
+    /// Returns `true` if the caller should publish now, `false` if
+    /// the publish should be skipped (the value will be re-published
+    /// on the next call outside the window).
+    func shouldPublish(now: Date = Date()) -> Bool {
+        if let last = lastPublishedAt, now.timeIntervalSince(last) < minInterval {
+            return false
+        }
+        lastPublishedAt = now
+        return true
+    }
+
+    func reset() { lastPublishedAt = nil }
 }
 
 // MARK: - Preview Helper
