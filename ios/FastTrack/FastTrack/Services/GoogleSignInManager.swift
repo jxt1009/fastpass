@@ -10,6 +10,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
     static let redirectURI = "com.toper.fasttrack:/oauth2callback"
 
     private var codeVerifier: String = ""
+    private var expectedState: String = ""
 
     func signInWithGoogle() {
         guard Self.clientID.contains(".apps.googleusercontent.com"),
@@ -22,6 +23,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
         codeVerifier = generateCodeVerifier()
         let codeChallenge = generateCodeChallenge(from: codeVerifier)
         let state = UUID().uuidString
+        self.expectedState = state
 
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
         components.queryItems = [
@@ -51,14 +53,24 @@ class GoogleSignInManager: NSObject, ObservableObject {
                 return
             }
 
-            guard let callbackURL = callbackURL,
-                  let code = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
-                      .queryItems?.first(where: { $0.name == "code" })?.value
+            guard let callbackURL = callbackURL else {
+                DispatchQueue.main.async { self.error = "No callback URL received" }
+                return
+            }
+
+            guard self.verifyState(in: callbackURL) else {
+                DispatchQueue.main.async { self.error = "OAuth state mismatch — possible CSRF attack" }
+                return
+            }
+
+            guard let code = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "code" })?.value
             else {
                 DispatchQueue.main.async { self.error = "No authorization code received" }
                 return
             }
 
+            self.expectedState = ""  // Single-use: clear after verification
             Task { await self.exchangeCode(code) }
         }
 
@@ -116,6 +128,36 @@ class GoogleSignInManager: NSObject, ObservableObject {
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
     }
+
+    /// Verifies that the `state` query parameter on the OAuth callback matches
+    /// the value we sent in the authorization URL. Prevents a CSRF attack where
+    /// an attacker opens our callback scheme with their own authorization code
+    /// and links their account to the victim's FastTrack user.
+    func verifyState(in callbackURL: URL) -> Bool {
+        guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
+              let returnedState = components.queryItems?.first(where: { $0.name == "state" })?.value
+        else {
+            return false
+        }
+        guard !expectedState.isEmpty,
+              returnedState.count == expectedState.count
+        else {
+            return false
+        }
+        var diff = 0
+        for (a, b) in zip(returnedState.utf8, expectedState.utf8) {
+            diff |= Int(a) ^ Int(b)
+        }
+        return diff == 0
+    }
+
+#if DEBUG
+    /// Test seam for injecting the expected OAuth state without going through
+    /// the full sign-in flow. Compiled out of release builds.
+    func setExpectedStateForTesting(_ state: String) {
+        self.expectedState = state
+    }
+#endif
 }
 
 extension GoogleSignInManager: ASWebAuthenticationPresentationContextProviding {
