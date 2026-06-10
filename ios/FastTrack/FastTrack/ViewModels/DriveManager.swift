@@ -35,6 +35,10 @@ class DriveManager: ObservableObject {
     var runningSpeedStats = RunningSpeedStats()
     var latestSpeedSample: SpeedSample?
     private var pollTimer: Timer?
+    /// Caps view-facing @Published re-renders at 10 Hz. Updated
+    /// fields (currentMaxSpeed, currentGForce, etc.) stay current
+    /// regardless; only the SwiftUI re-render is suppressed.
+    let publishThrottler = PublishThrottler(minInterval: 0.1)
 
     // Rich route data: each point stores speed+timestamp alongside lat/lng
     var richRoutePoints: [(lat: Double, lng: Double, speed: Double, ts: Double)] = []
@@ -124,6 +128,7 @@ class DriveManager: ObservableObject {
         recordedRouteEvents = []
         speedReadings.removeAll()
         runningSpeedStats.reset()
+        publishThrottler.reset()
         attempts060 = []
 
         #if DEBUG
@@ -460,6 +465,7 @@ class DriveManager: ObservableObject {
         recordingLocations = []
         speedReadings.removeAll()
         runningSpeedStats.reset()
+        publishThrottler.reset()
         latestSpeedSample = nil
         richRoutePoints = []
         recordedRouteEvents = []
@@ -537,6 +543,39 @@ struct RingBuffer<Element> {
         }
         return out
     }
+}
+
+// MARK: - PublishThrottler
+
+/// Caps the rate at which a main-thread caller publishes a value to
+/// the view layer. The first call always publishes (so the first
+/// post-start state isn't lost). Subsequent calls within
+/// `minInterval` are skipped — the underlying value is updated, but
+/// the SwiftUI re-render is suppressed.
+///
+/// Used to drop 25 Hz IMU ticks down to 10 Hz for @Published
+/// view-facing fields during recording. The underlying state
+/// (runningSpeedStats, currentMaxSpeed, etc.) is always up to date.
+final class PublishThrottler {
+    private let minInterval: TimeInterval
+    private var lastPublishedAt: Date?
+
+    init(minInterval: TimeInterval) {
+        self.minInterval = minInterval
+    }
+
+    /// Returns `true` if the caller should publish now, `false` if
+    /// the publish should be skipped (the value will be re-published
+    /// on the next call outside the window).
+    func shouldPublish(now: Date = Date()) -> Bool {
+        if let last = lastPublishedAt, now.timeIntervalSince(last) < minInterval {
+            return false
+        }
+        lastPublishedAt = now
+        return true
+    }
+
+    func reset() { lastPublishedAt = nil }
 }
 
 // MARK: - Preview Helper

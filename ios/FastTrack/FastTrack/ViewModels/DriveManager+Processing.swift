@@ -52,7 +52,9 @@ extension DriveManager {
 
         // Update drive stats on main thread (lightweight)
         updateCurrentDrive()
-        updateLiveActivity(speedMph: speedMph, distanceMiles: currentDrive?.distance.metersToMiles ?? 0)
+        if publishThrottler.shouldPublish() {
+            updateLiveActivity(speedMph: speedMph, distanceMiles: currentDrive?.distance.metersToMiles ?? 0)
+        }
     }
 
     func processSpeedSample(_ sample: SpeedSample) {
@@ -83,7 +85,9 @@ extension DriveManager {
         guard var drive = currentDrive else { return }
         drive.stoppedTime = stoppedTimeTracker.totalStoppedTime(at: sample.timestamp)
         drive.best060Time = best060Time
-        currentDrive = drive
+        if publishThrottler.shouldPublish() {
+            currentDrive = drive
+        }
     }
 
     func routePointSpeed(for location: CLLocation) -> Double {
