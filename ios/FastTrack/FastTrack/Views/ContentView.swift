@@ -22,7 +22,8 @@ struct ContentView: View {
                 LiveMapView(
                     userLocation: locationManager.currentLocation?.coordinate
                         ?? CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                    routeCoordinates: driveManager.routeCoordinates
+                    routeCoordinates: driveManager.routeCoordinates,
+                    useFlatElevation: driveManager.isRecording
                 )
                 .opacity(driveManager.isRecording ? 0.7 : 0.34)
                 .ignoresSafeArea(edges: .horizontal)
@@ -209,7 +210,7 @@ struct ContentView: View {
                 Button {
                     if driveManager.isRecording {
                         print("🛑 Stop recording button pressed")
-                        driveManager.stopRecording()
+                        Task { await driveManager.stopRecording() }
                     } else {
                         print("▶️ Start recording button pressed")
                         let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
@@ -365,17 +366,30 @@ private struct TrackMetricCard: View {
 struct LiveMapView: View {
     let userLocation: CLLocationCoordinate2D
     let routeCoordinates: [CLLocationCoordinate2D]
+    let useFlatElevation: Bool
 
     @State private var cameraPosition: MapCameraPosition
 
-    init(userLocation: CLLocationCoordinate2D, routeCoordinates: [CLLocationCoordinate2D]) {
+    init(
+        userLocation: CLLocationCoordinate2D,
+        routeCoordinates: [CLLocationCoordinate2D],
+        useFlatElevation: Bool = false
+    ) {
         self.userLocation = userLocation
         self.routeCoordinates = routeCoordinates
-
+        self.useFlatElevation = useFlatElevation
         _cameraPosition = State(initialValue: .region(MKCoordinateRegion(
             center: userLocation,
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         )))
+    }
+
+    /// Decimate to ≤500 points before handing to MapKit. MapKit has
+    /// no incremental polyline update; redrawing 600+ points on
+    /// every GPS tick with realistic elevation was the GPU hot spot.
+    private var displayCoordinates: [CLLocationCoordinate2D] {
+        if routeCoordinates.count <= 500 { return routeCoordinates }
+        return RouteDecimator.decimate(routeCoordinates, toleranceMeters: 5, maxOutput: 500)
     }
 
     var body: some View {
@@ -391,8 +405,9 @@ struct LiveMapView: View {
                 }
             }
 
-            if routeCoordinates.count > 1 {
-                MapPolyline(coordinates: routeCoordinates)
+            let coords = displayCoordinates
+            if coords.count > 1 {
+                MapPolyline(coordinates: coords)
                     .stroke(Color.ftAmber, lineWidth: 4)
             }
 
@@ -404,7 +419,7 @@ struct LiveMapView: View {
                 }
             }
         }
-        .mapStyle(.standard(elevation: .realistic))
+        .mapStyle(.standard(elevation: useFlatElevation ? .flat : .realistic))
         .mapControls {
             MapUserLocationButton()
             MapCompass()

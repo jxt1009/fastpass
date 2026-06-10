@@ -210,7 +210,8 @@ class DriveManager: ObservableObject {
         startLiveActivity()
     }
 
-    func stopRecording() {
+    @MainActor
+    func stopRecording() async {
         guard isRecording else { return }
         isRecording = false
         locationManager?.stopUpdatingLocation()
@@ -272,6 +273,9 @@ class DriveManager: ObservableObject {
         drive.best060Time = best060Time
         drive.zeroToSixtyAttempts = attemptsResolved
 
+<        // Reset actor state for the next drive.
+        await RecordingActor.shared.reset()
+
         var bgTaskID = UIBackgroundTaskIdentifier.invalid
         bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "DriveUpload") {
             // Expiration handler: the OS is about to suspend us.
@@ -279,34 +283,27 @@ class DriveManager: ObservableObject {
             // so we don't leak it.
             UIApplication.shared.endBackgroundTask(bgTaskID)
         }
-        Task {
-            defer {
-                if bgTaskID != UIBackgroundTaskIdentifier.invalid {
-                    UIApplication.shared.endBackgroundTask(bgTaskID)
-                }
+        defer {
+            if bgTaskID != UIBackgroundTaskIdentifier.invalid {
+                UIApplication.shared.endBackgroundTask(bgTaskID)
             }
-            do {
-                let saved = try await apiService.createDrive(drive)
-                await MainActor.run {
-                    self.drives.insert(saved, at: 0)
-                    // Update car statistics
-                    self.carStatsManager.updateStats(for: saved)
-                    self.currentDrive = nil
-                    self.recordingStartTime = nil
-                    self.attempts060 = []
-                    #if DEBUG
-                    print("✅ Drive saved and car stats updated")
-                    #endif
-                }
-                // Refresh server-authoritative achievements (any unlocks from
-                // this drive are included in the response already, but pulling
-                // the canonical state keeps the cache in sync for the profile).
-                await self.refreshAchievementsFromServer()
-            } catch {
-                #if DEBUG
-                print("❌ Failed to save drive: \(error.localizedDescription)")
-                #endif
-            }
+        }
+
+        do {
+            let saved = try await apiService.createDrive(drive)
+            self.drives.insert(saved, at: 0)
+            self.carStatsManager.updateStats(for: saved)
+            self.currentDrive = nil
+            self.recordingStartTime = nil
+            self.attempts060 = []
+            #if DEBUG
+            print("✅ Drive saved and car stats updated")
+            #endif
+            await self.refreshAchievementsFromServer()
+        } catch {
+            #if DEBUG
+            print("❌ Failed to save drive: \(error.localizedDescription)")
+            #endif
         }
     }
 
