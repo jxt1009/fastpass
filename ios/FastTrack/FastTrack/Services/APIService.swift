@@ -4,9 +4,13 @@ class APIService {
     static let shared = APIService()
 
     // Production API endpoint - Change this before deployment
-    // Development: "http://localhost:8080/api/v1"
-    // Production: "https://fast.toper.dev/api/v1"
+    // Debug builds currently point at the same host as release; switch to a
+    // staging URL (e.g. "https://staging.fast.toper.dev/api/v1") once one exists.
+    #if DEBUG
     let baseURL = "https://fast.toper.dev/api/v1"
+    #else
+    let baseURL = "https://fast.toper.dev/api/v1"
+    #endif
 
     private let session: URLSession
     private let decoder: JSONDecoder
