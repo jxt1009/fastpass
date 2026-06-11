@@ -36,7 +36,23 @@ class LocationManager: NSObject, ObservableObject {
         clManager.delegate = self
         clManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         clManager.distanceFilter = kCLDistanceFilterNone
+        clManager.pausesLocationUpdatesAutomatically = true
+    }
 
+    // MARK: - Public API
+
+    func requestPermission() {
+        clManager.requestAlwaysAuthorization()
+    }
+
+    func startUpdatingLocation() {
+        #if DEBUG
+        print("📍 Starting location updates...")
+        #endif
+        // Only enable background updates while actively recording. We toggle the
+        // flag here (not in init) so the app never claims background location
+        // capability outside an active drive, which Apple HIG and App Review
+        // expect.
         #if !targetEnvironment(simulator)
         if Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") != nil {
             clManager.allowsBackgroundLocationUpdates = true
@@ -53,18 +69,6 @@ class LocationManager: NSObject, ObservableObject {
         #if DEBUG
         print("ℹ️ Simulator: background location disabled")
         #endif
-        #endif
-    }
-
-    // MARK: - Public API
-
-    func requestPermission() {
-        clManager.requestAlwaysAuthorization()
-    }
-
-    func startUpdatingLocation() {
-        #if DEBUG
-        print("📍 Starting location updates...")
         #endif
         // Start with good accuracy for faster initial fix
         clManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
@@ -83,6 +87,11 @@ class LocationManager: NSObject, ObservableObject {
 
     func stopUpdatingLocation() {
         clManager.stopUpdatingLocation()
+        // Drop background-location capability now that the drive has ended, and
+        // restore the safe "pause automatically" default so the system can
+        // suspend updates if the app is backgrounded without an active drive.
+        clManager.allowsBackgroundLocationUpdates = false
+        clManager.pausesLocationUpdatesAutomatically = true
         stopIMU()
         fusion.reset()
         currentSpeed = 0
