@@ -131,6 +131,27 @@ final class NotificationsManagerTests: XCTestCase {
         XCTAssertEqual(NotificationsManager.badgeLabel(forUnreadCount: 1_000_000), "9+")
     }
 
+    // MARK: - lastError surface (F-2)
+
+    /// `lastError` must be a published, settable, clearable `String?`.
+    /// `NotificationsView` observes it to surface a Toast. We can't
+    /// drive the catch blocks without mocking `APIService`, but the
+    /// contract the view relies on is that the property exists, starts
+    /// nil, and accepts a new value.
+    @MainActor
+    func testLastError_StartsNilAndAcceptsAssignment() {
+        let manager = NotificationsManager.shared
+        // Reset in case a prior test surfaced an error.
+        manager.lastError = nil
+        XCTAssertNil(manager.lastError)
+
+        manager.lastError = "Couldn't load notifications"
+        XCTAssertEqual(manager.lastError, "Couldn't load notifications")
+
+        manager.lastError = nil
+        XCTAssertNil(manager.lastError)
+    }
+
     // MARK: - Polling lifecycle (smoke)
 
     /// Smoke test: startPolling followed by stopPolling should not crash

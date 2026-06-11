@@ -44,6 +44,12 @@ struct NotificationsView: View {
         .task {
             await manager.refresh()
         }
+        .onChange(of: manager.lastError) { _, newValue in
+            if let newValue {
+                ToastManager.shared.show(ToastMessage(text: newValue))
+                manager.lastError = nil
+            }
+        }
     }
 }
 

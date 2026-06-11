@@ -8,6 +8,7 @@ final class NotificationsManager: ObservableObject {
     @Published private(set) var notifications: [InAppNotification] = []
     @Published private(set) var unreadCount: Int = 0
     @Published private(set) var isLoading: Bool = false
+    @Published var lastError: String?
 
     private var pollingTask: Task<Void, Never>?
     private var nextCursor: String?
@@ -39,7 +40,7 @@ final class NotificationsManager: ObservableObject {
             let count = try await APIService.shared.fetchUnreadNotificationCount()
             await MainActor.run { self.unreadCount = count }
         } catch {
-            // Silent: bell badge is a soft signal.
+            await MainActor.run { self.lastError = "Couldn't refresh notification count" }
         }
     }
 
@@ -57,7 +58,7 @@ final class NotificationsManager: ObservableObject {
                 self.nextCursor = resp.nextCursor
             }
         } catch {
-            // Silent on first failure; bell badge is the primary signal.
+            await MainActor.run { self.lastError = "Couldn't load notifications" }
         }
     }
 
@@ -72,7 +73,7 @@ final class NotificationsManager: ObservableObject {
                 self.nextCursor = resp.nextCursor
             }
         } catch {
-            // Silent: pagination is best-effort.
+            await MainActor.run { self.lastError = "Couldn't load older notifications" }
         }
     }
 
@@ -97,7 +98,7 @@ final class NotificationsManager: ObservableObject {
             }
             await refreshUnreadCount()
         } catch {
-            // Silent: read state is best-effort.
+            await MainActor.run { self.lastError = "Couldn't mark notification as read" }
         }
     }
 
@@ -106,7 +107,7 @@ final class NotificationsManager: ObservableObject {
             try await APIService.shared.markAllNotificationsRead()
             await MainActor.run { self.unreadCount = 0 }
         } catch {
-            // Silent: read state is best-effort.
+            await MainActor.run { self.lastError = "Couldn't mark all as read" }
         }
     }
 
