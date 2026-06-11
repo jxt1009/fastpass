@@ -13,7 +13,7 @@ struct SignInView: View {
             // Logo
             VStack(spacing: 12) {
                 Image(systemName: "speedometer")
-                    .font(.system(size: 80))
+                    .font(FTFont.iconLarge).minimumScaleFactor(0.6)
                     .foregroundColor(.blue)
                 Text("FastTrack")
                     .font(.largeTitle).fontWeight(.bold)

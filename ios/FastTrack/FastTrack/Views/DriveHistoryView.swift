@@ -173,7 +173,7 @@ struct DriveRowView: View {
     private func pbPill(text: String, icon: String, bg: Color, fg: Color) -> some View {
         HStack(spacing: 3) {
             Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
+                .font(FTFont.pill).minimumScaleFactor(0.7)
             Text(text)
                 .font(.caption2.weight(.bold))
         }

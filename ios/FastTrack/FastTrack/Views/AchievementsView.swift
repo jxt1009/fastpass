@@ -238,7 +238,7 @@ struct AchievementDetailView: View {
             VStack(spacing: 30) {
                 // Large icon
                 Image(systemName: achievement.badgeIcon)
-                    .font(.system(size: 80))
+                    .font(FTFont.iconLarge).minimumScaleFactor(0.6)
                     .foregroundColor(achievement.badgeColor)
                 
                 // Title and description

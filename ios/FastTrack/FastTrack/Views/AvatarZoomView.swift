@@ -17,7 +17,7 @@ struct AvatarZoomView: View {
         .overlay(alignment: .topTrailing) {
             Button(action: onDismiss) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 30))
+                    .font(.title).minimumScaleFactor(0.6)
                     .foregroundColor(.white.opacity(0.85))
                     .padding(20)
             }
@@ -26,7 +26,7 @@ struct AvatarZoomView: View {
             if onEdit != nil {
                 Button(action: handleEdit) {
                     Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 30))
+                        .font(.title).minimumScaleFactor(0.6)
                         .foregroundColor(.white.opacity(0.85))
                         .padding(20)
                 }
