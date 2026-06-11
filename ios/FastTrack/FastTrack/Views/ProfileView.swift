@@ -565,9 +565,6 @@ private struct EditingCarTarget: Identifiable {
     let id: String
 }
 
-<<<<<<< HEAD
-/// Small rounded thumbnail for a car's photo. Falls back to a tinted car icon
-/// placeholder when no usable photo URL is set.
 struct CarPhotoThumbnail: View {
     let photoURL: String?
     var size: CGFloat = 56

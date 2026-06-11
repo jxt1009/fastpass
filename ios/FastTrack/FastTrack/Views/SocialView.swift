@@ -370,11 +370,6 @@ private struct LeaderboardRow: View {
     }
 }
 
-<<<<<<< HEAD
-// MARK: - Car Thumbnail
-
-/// 40-48pt rounded thumbnail for a car photo. Falls back to a tinted
-/// car icon when the URL is nil/empty or the image fails to load.
 private struct CarThumbnail: View {
     let urlString: String?
     let size: CGFloat
