@@ -304,6 +304,20 @@ class DriveManager: ObservableObject {
         drive.best060Time = best060Time
         drive.zeroToSixtyAttempts = attemptsResolved
 
+        // Persist the fully-built in-flight Drive to a temp file BEFORE the
+        // upload attempt. The 30-second background task may expire mid-
+        // upload on slow networks, killing the request before it lands. If
+        // that happens (or the upload throws for any other reason), the
+        // temp file is left in place so `recoverPendingDrives` can pick it
+        // up on next app launch and re-upload. On upload success we delete
+        // the file. The filename encodes userID + startTime so concurrent
+        // drives from different accounts don't collide, and so a manual
+        // scrub is identifiable.
+        let inFlightURL = inFlightTempFileURL(for: drive)
+        if let encoded = try? Self.driveEncoder.encode(drive) {
+            try? encoded.write(to: inFlightURL, options: .atomic)
+        }
+
         // Reset actor state for the next drive.
         await RecordingActor.shared.reset()
 
@@ -327,6 +341,9 @@ class DriveManager: ObservableObject {
             self.currentDrive = nil
             self.recordingStartTime = nil
             self.attempts060 = []
+            // Upload succeeded — drop the in-flight temp file so the next
+            // recovery cycle doesn't re-upload this drive.
+            try? FileManager.default.removeItem(at: inFlightURL)
             #if DEBUG
             print("✅ Drive saved and car stats updated")
             #endif
@@ -335,6 +352,9 @@ class DriveManager: ObservableObject {
             #if DEBUG
             print("❌ Failed to save drive: \(error.localizedDescription)")
             #endif
+            // Leave the in-flight temp file in place. The next call to
+            // `recoverPendingDrives` (via `startPolling` or app launch)
+            // will pick it up and re-attempt the upload.
             let surfaced = (error as? APIError) ?? APIError.invalidResponse
             self.lastError = surfaced
         }
@@ -345,6 +365,118 @@ class DriveManager: ObservableObject {
     /// recording doesn't show a stale failure from the previous one.
     func dismissLastError() {
         lastError = nil
+    }
+
+    // MARK: - In-flight drive persistence (A-4)
+
+    /// JSON encoder used to write in-flight Drives to disk. Uses iso8601
+    /// dates to match the wire format the backend expects.
+    private static let driveEncoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
+
+    /// JSON decoder used to read in-flight Drives back from disk. Uses
+    /// iso8601 dates to match the encoder.
+    private static let driveDecoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
+
+    /// Filename prefix for in-flight temp files. Recovery scans the
+    /// configured directory for files matching `in_flight_drive_*.json`.
+    static let inFlightFilePrefix = "in_flight_drive_"
+
+    /// Computes the on-disk path for an in-flight Drive's temp file. The
+    /// directory is injectable so tests can point at a temp dir without
+    /// touching the real one.
+    func inFlightTempFileURL(
+        for drive: Drive,
+        in directory: URL = FileManager.default.temporaryDirectory
+    ) -> URL {
+        let stamp = Int(drive.startTime.timeIntervalSince1970)
+        return directory
+            .appendingPathComponent("\(Self.inFlightFilePrefix)\(drive.userID)_\(stamp).json")
+    }
+
+    /// Scans `directory` for `in_flight_drive_*.json` files and re-attempts
+    /// `createDrive` on each. On success the file is deleted; on failure
+    /// it is left in place so the next call (next poll, next app launch)
+    /// can try again. Called once on app start (via `startPolling`) and
+    /// every 10 seconds thereafter.
+    ///
+    /// `directory` is injectable so tests can point at a custom temp dir.
+    func recoverPendingDrives(
+        in directory: URL = FileManager.default.temporaryDirectory
+    ) async {
+        let fm = FileManager.default
+        let entries: [URL]
+        do {
+            entries = try fm.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil
+            )
+        } catch {
+            #if DEBUG
+            print("recoverPendingDrives: failed to list \(directory.path): \(error.localizedDescription)")
+            #endif
+            return
+        }
+        let candidates = entries.filter { url in
+            url.lastPathComponent.hasPrefix(Self.inFlightFilePrefix) &&
+            url.pathExtension == "json"
+        }
+        for url in candidates {
+            await recoverOnePendingDrive(at: url)
+        }
+    }
+
+    /// Recovers a single in-flight Drive file. Decodes the Drive from the
+    /// JSON blob, retries `createDrive`, and deletes the file on success.
+    /// If the file can't be decoded (e.g. corrupted, schema drift) we
+    /// delete it anyway so it doesn't wedge future recovery cycles.
+    private func recoverOnePendingDrive(at url: URL) async {
+        let data: Data
+        do {
+            data = try Data(contentsOf: url)
+        } catch {
+            #if DEBUG
+            print("recoverPendingDrives: failed to read \(url.lastPathComponent): \(error.localizedDescription)")
+            #endif
+            // Unreadable — drop it so we don't loop forever.
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        let drive: Drive
+        do {
+            drive = try Self.driveDecoder.decode(Drive.self, from: data)
+        } catch {
+            #if DEBUG
+            print("recoverPendingDrives: failed to decode \(url.lastPathComponent): \(error.localizedDescription)")
+            #endif
+            // Corrupt / wrong schema — drop it.
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        do {
+            let saved = try await apiService.createDrive(drive)
+            // Success — insert into local list and drop the temp file.
+            self.drives.insert(saved, at: 0)
+            self.carStatsManager.updateStats(for: saved)
+            try? FileManager.default.removeItem(at: url)
+            #if DEBUG
+            print("✅ recoverPendingDrives: recovered \(url.lastPathComponent)")
+            #endif
+        } catch {
+            // Leave the file in place for next cycle. If it's a 4xx error
+            // (bad data) the file will keep retrying forever; log so a
+            // user can scrub the temp dir manually.
+            #if DEBUG
+            print("recoverPendingDrives: upload failed for \(url.lastPathComponent): \(error.localizedDescription)")
+            #endif
+        }
     }
 
     // MARK: - API
@@ -477,8 +609,13 @@ class DriveManager: ObservableObject {
     func startPolling() {
         guard pollTimer == nil else { return }   // already running
         fetchDrives()
+        // Sweep in-flight temp files on app start (in case the user crashed
+        // or background-task expired mid-upload last session) and every 10s
+        // thereafter. Recovery is a no-op if there are no pending files.
+        Task { [weak self] in await self?.recoverPendingDrives() }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             self?.fetchDrives()
+            Task { [weak self] in await self?.recoverPendingDrives() }
         }
     }
 
