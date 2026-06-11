@@ -60,6 +60,21 @@ enum Spacing {
     static let xl: CGFloat = 32
 }
 
+// ─── Radius ─────────────────────────────────────────────────
+
+enum Radius {
+    static let xxxs: CGFloat = 1.5
+    static let xxs: CGFloat = 3
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 10
+    static let lg: CGFloat = 12
+    static let xl: CGFloat = 14
+    static let xxl: CGFloat = 18
+    static let xxxl: CGFloat = 20
+    static let giant: CGFloat = 24
+}
+
 enum Motion {
     static let quick: Animation = .easeOut(duration: 0.14)
     static let standard: Animation = .easeInOut(duration: 0.24)
