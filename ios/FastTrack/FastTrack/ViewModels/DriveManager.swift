@@ -315,7 +315,19 @@ class DriveManager: ObservableObject {
         // scrub is identifiable.
         let inFlightURL = inFlightTempFileURL(for: drive)
         if let encoded = try? Self.driveEncoder.encode(drive) {
-            try? encoded.write(to: inFlightURL, options: .atomic)
+            do {
+                try encoded.write(to: inFlightURL, options: .atomic)
+            } catch {
+                #if DEBUG
+                print("⚠️ Failed to write in-flight drive to \(inFlightURL.lastPathComponent): \(error.localizedDescription)")
+                #endif
+                lastError = .invalidResponse
+            }
+        } else {
+            #if DEBUG
+            print("⚠️ Failed to encode in-flight drive JSON")
+            #endif
+            lastError = .invalidResponse
         }
 
         // Reset actor state for the next drive.
@@ -458,6 +470,13 @@ class DriveManager: ObservableObject {
             #endif
             // Corrupt / wrong schema — drop it.
             try? FileManager.default.removeItem(at: url)
+            return
+        }
+        // Cross-user guard: a pending drive from a previous sign-in must not
+        // be uploaded under the current user's JWT. Skip (don't delete) so the
+        // original owner can recover it if they sign back in.
+        let currentUserID = authManager.getUser()?.id ?? 0
+        if drive.userID != currentUserID {
             return
         }
         do {

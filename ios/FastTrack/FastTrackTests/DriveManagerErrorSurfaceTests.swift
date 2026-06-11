@@ -285,7 +285,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
 
-        let drive = makeDrive(userID: 42, startTime: Date(timeIntervalSince1970: 1_700_000_000))
+        let drive = makeDrive(userID: 0, startTime: Date(timeIntervalSince1970: 1_700_000_000))
         let url = dm.inFlightTempFileURL(for: drive, in: dir)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -313,7 +313,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
 
-        let drive = makeDrive(userID: 7)
+        let drive = makeDrive(userID: 0)
         let url = dm.inFlightTempFileURL(for: drive, in: dir)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
