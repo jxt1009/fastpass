@@ -445,3 +445,19 @@ enum APIError: Error, LocalizedError {
         }
     }
 }
+
+// MARK: - DriveAPI protocol
+
+/// The subset of `APIService` that `DriveManager` actually depends on.
+/// Extracted into a protocol so tests can inject a mock (e.g. for the
+/// `recoverPendingDrives` retry path or the `createDrive` failure
+/// surface). `APIService` conforms trivially; production code keeps the
+/// concrete singleton.
+protocol DriveAPI: AnyObject {
+    func createDrive(_ drive: Drive) async throws -> Drive
+    func fetchDrives() async throws -> [Drive]
+    func deleteDrive(id: Int) async throws
+    func fetchMyAchievements() async throws -> UserAchievementsResponse
+}
+
+extension APIService: DriveAPI {}

@@ -83,14 +83,14 @@ class DriveManager: ObservableObject {
     private let authManager: AuthManager
     private let profileManager: ProfileManager
     private let settings: AppSettings
-    private let apiService: APIService
+    private let apiService: DriveAPI
     private let carStatsManager: CarStatsManager
 
     init(
         authManager: AuthManager = .shared,
         profileManager: ProfileManager = .shared,
         settings: AppSettings = .shared,
-        apiService: APIService = .shared,
+        apiService: DriveAPI = APIService.shared,
         carStatsManager: CarStatsManager = .shared
     ) {
         self.authManager = authManager

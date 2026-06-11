@@ -82,7 +82,7 @@ class LocationManager: NSObject, ObservableObject {
     /// `.authorizedWhenInUse`) because background location is essential for
     /// drives that continue past the app being backgrounded.
     var hasRecordingPermission: Bool {
-        clManager.authorizationStatus == .authorizedAlways
+        authorizationStatus == .authorizedAlways
     }
 
     func startUpdatingLocation() {
