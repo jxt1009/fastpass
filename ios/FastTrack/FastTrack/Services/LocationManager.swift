@@ -53,10 +53,8 @@ class LocationManager: NSObject, ObservableObject {
     /// launch.
     func requestPermission() {
         switch clManager.authorizationStatus {
-        case .notDetermined:
+         case .notDetermined:
             clManager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse:
-            requestAlwaysIfNeeded()
         case .authorizedAlways, .denied, .restricted:
             break
         @unknown default:
