@@ -146,64 +146,19 @@ private struct UserSearchRow: View {
 
             Spacer()
 
-            // Follow/Following button — only for other users
-            if result.username != currentUsername {
-                FollowToggleButton(result: $result)
-            }
+            FollowButton(
+                isFollowing: Binding(
+                    get: { result.isFollowedByMe },
+                    set: { result.isFollowedByMe = $0 }
+                ),
+                username: result.username,
+                isSelf: result.username == currentUsername,
+                onError: { message in
+                    ToastManager.shared.show(ToastMessage(text: message))
+                }
+            )
         }
         .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Follow Toggle Button
-
-private struct FollowToggleButton: View {
-    @Binding var result: UserSearchResult
-    @State private var isLoading = false
-
-    var body: some View {
-        Button {
-            Task { await toggle() }
-        } label: {
-            if isLoading {
-                ProgressView()
-                    .frame(minWidth: 80, minHeight: 44)
-            } else if result.isFollowedByMe {
-                Text("Following")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemFill), in: Capsule())
-            } else {
-                Text("Follow")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.ftBlue, in: Capsule())
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(isLoading)
-    }
-
-    private func toggle() async {
-        isLoading = true
-        do {
-            if result.isFollowedByMe {
-                try await APIService.shared.unfollowUser(username: result.username)
-                result.isFollowedByMe = false
-            } else {
-                try await APIService.shared.followUser(username: result.username)
-                result.isFollowedByMe = true
-            }
-        } catch {
-            // Silently ignore — the button state stays unchanged
-        }
-        isLoading = false
     }
 }
 
