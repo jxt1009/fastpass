@@ -370,40 +370,6 @@ private struct LeaderboardRow: View {
     }
 }
 
-private struct CarThumbnail: View {
-    let urlString: String?
-    let size: CGFloat
-
-    var body: some View {
-        Group {
-            if let urlString, !urlString.isEmpty, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.xs + 2))
-    }
-
-    private var placeholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.xs + 2)
-                .fill(Color.ftBlue.opacity(0.15))
-            Image(systemName: "car.fill")
-                .foregroundStyle(Color.ftBlue)
-                .font(.system(size: size * 0.5))
-        }
-    }
-}
-
 #Preview {
     SocialView()
         .environmentObject(ProfileManager.shared)

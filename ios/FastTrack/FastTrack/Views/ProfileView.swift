@@ -565,48 +565,6 @@ private struct EditingCarTarget: Identifiable {
     let id: String
 }
 
-struct CarPhotoThumbnail: View {
-    let photoURL: String?
-    var size: CGFloat = 56
-
-    var body: some View {
-        Group {
-            if let photoURL, !photoURL.isEmpty, let url = URL(string: photoURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        placeholder
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        placeholder
-                    @unknown default:
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.md)
-                .stroke(Color.secondary.opacity(0.15), lineWidth: 0.5)
-        )
-    }
-
-    private var placeholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.md)
-                .fill(Color.ftBlue.opacity(0.15))
-            Image(systemName: "car.fill")
-                .font(.system(size: size * 0.45))
-                .foregroundColor(.ftBlue)
-        }
-    }
-}
-
 struct CarStatsRow: View {
     let stats: CarStats
     @ObservedObject private var settings = AppSettings.shared
