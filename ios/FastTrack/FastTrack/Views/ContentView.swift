@@ -86,7 +86,7 @@ struct ContentView: View {
 
                 VStack(spacing: 4) {
                     Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
-                        .font(.system(size: 96, weight: .heavy, design: .monospaced))
+                        .font(FTFont.speedHero).minimumScaleFactor(0.5)
                         .foregroundColor(driveManager.isRecording ? .primary : .secondary)
                         .contentTransition(.numericText())
                         .animation(.easeInOut(duration: 0.18),
@@ -330,13 +330,13 @@ private struct TrackMetricCard: View {
                     .foregroundColor(.primary)
                 if !unit.isEmpty {
                     Text(unit.uppercased())
-                        .font(.system(size: 8, weight: .semibold))
+                        .font(FTFont.gaugeLabelCompact).minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
                 }
             }
 
             Text(title)
-                .font(.system(size: 9, weight: .bold))
+                .font(FTFont.pill).minimumScaleFactor(0.7)
                 .foregroundColor(.secondary)
 
             GeometryReader { proxy in
@@ -429,7 +429,7 @@ struct LiveMapView: View {
                 Annotation("", coordinate: first) {
                     Image(systemName: "flag.checkered")
                         .foregroundColor(.ftGreen)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(FTFont.subtitleBold).minimumScaleFactor(0.6)
                 }
             }
         }

@@ -180,7 +180,7 @@ struct GarageView: View {
         InstrumentCard {
             VStack(spacing: 14) {
                 Image(systemName: "car")
-                    .font(.system(size: 36))
+                    .font(FTFont.scoreboard).minimumScaleFactor(0.6)
                     .foregroundColor(.secondary)
                 Text("No cars in your garage yet")
                     .font(.headline)
@@ -427,7 +427,7 @@ struct GarageDriveRow: View {
                     if let badge {
                         HStack(spacing: 3) {
                             Image(systemName: badge.icon)
-                                .font(.system(size: 9, weight: .bold))
+                                .font(FTFont.pill).minimumScaleFactor(0.7)
                             Text(badge.text)
                                 .font(.caption2.weight(.bold))
                         }

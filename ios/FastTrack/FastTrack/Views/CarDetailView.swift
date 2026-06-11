@@ -233,7 +233,7 @@ struct CarDetailView: View {
                     showingHeroPhotoEditor = true
                 } label: {
                     Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 24))
+                        .font(FTFont.sectionCaption).minimumScaleFactor(0.6)
                         .foregroundColor(.white)
                         .padding(10)
                         .background(Circle().fill(Color.black.opacity(0.45)))
