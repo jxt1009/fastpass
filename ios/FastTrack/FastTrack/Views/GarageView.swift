@@ -439,7 +439,7 @@ struct GarageDriveRow: View {
                     }
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(Color.secondary.opacity(0.5))
+                        .foregroundColor(Color.secondary.opacity(0.7))
                 }
             }
         }

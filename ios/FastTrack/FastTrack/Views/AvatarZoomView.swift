@@ -41,6 +41,8 @@ struct AvatarZoomView: View {
     private var content: some View {
         if let image {
             ZoomableImageView(image: image, onDismiss: onDismiss)
+                .accessibilityLabel("Avatar photo")
+                .accessibilityHint("Double tap to edit or dismiss")
         } else if let url {
             AsyncImage(url: url) { phase in
                 switch phase {
@@ -50,6 +52,8 @@ struct AvatarZoomView: View {
                         .scaledToFit()
                         .contentShape(Rectangle())
                         .onTapGesture { onDismiss() }
+                        .accessibilityLabel("Avatar photo")
+                        .accessibilityHint("Double tap to edit or dismiss")
                 default:
                     ProgressView()
                         .tint(.white)

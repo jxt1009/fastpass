@@ -4,6 +4,7 @@ import Combine
 
 struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var settings: AppSettings
@@ -84,6 +85,7 @@ struct ContentView: View {
                     isRecording: driveManager.isRecording
                 )
                 .frame(width: 256, height: 256)
+                .accessibilityLabel("Current speed \(Int(settings.calibratedSpeedValue(locationManager.currentSpeed))) \(settings.speedUnit)")
 
                 VStack(spacing: 4) {
                     Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
@@ -109,6 +111,7 @@ struct ContentView: View {
                 Circle()
                     .fill(gpsStatusColor)
                     .frame(width: 7, height: 7)
+                    .accessibilityLabel("GPS: \(gpsStatusText)")
                 Text(driveManager.isRecording ? "Recording" : "Idle")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(driveManager.isRecording ? recordingAccent : .secondary)
@@ -235,11 +238,12 @@ struct ContentView: View {
                         .scaleEffect(driveManager.isRecording ? 1.05 : 1)
                         .opacity(driveManager.isRecording ? 0.6 : 0)
                         .animation(
-                            driveManager.isRecording && !reduceMotion
+                            driveManager.isRecording && !reduceMotion && scenePhase == .active
                                 ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
                                 : .default,
                             value: driveManager.isRecording
                         )
+                        .id("pulse-\(scenePhase)")
                 )
             }
         }
@@ -409,7 +413,7 @@ struct LiveMapView: View {
     var body: some View {
         recomputeDecimationIfNeeded()
         return Map(position: $cameraPosition) {
-            Annotation("", coordinate: userLocation) {
+            Annotation("Current location", coordinate: userLocation) {
                 ZStack {
                     Circle()
                         .stroke(.white, lineWidth: 3)
@@ -427,10 +431,11 @@ struct LiveMapView: View {
             }
 
             if let first = routeCoordinates.first {
-                Annotation("", coordinate: first) {
+                Annotation("Route start", coordinate: first) {
                     Image(systemName: "flag.checkered")
                         .foregroundColor(.ftGreen)
                         .font(FTFont.subtitleBold).minimumScaleFactor(0.6)
+                        .accessibilityLabel("Route start")
                 }
             }
         }

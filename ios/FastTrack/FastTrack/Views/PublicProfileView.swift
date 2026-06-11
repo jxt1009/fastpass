@@ -208,13 +208,13 @@ struct PublicProfileView: View {
         } label: {
             if followLoading {
                 ProgressView()
-                    .frame(width: 80, height: 28)
+                    .frame(minWidth: 80, minHeight: 44)
             } else {
                 Text(isFollowing ? "Following" : "Follow")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(isFollowing ? .secondary : .white)
-                    .frame(width: 80, height: 28)
+                    .frame(minWidth: 80, minHeight: 44)
                     .background(
                         isFollowing
                             ? Color(.systemFill)
