@@ -526,7 +526,7 @@ struct CarDetailView: View {
             Text("Performance")
                 .font(.headline)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            StatsGrid(spacing: 10) {
                 PerformanceBreakdownCard(
                     title: "Best 0-60",
                     value: data?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",

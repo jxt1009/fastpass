@@ -15,7 +15,7 @@ struct DrivePerformanceDetailView: View {
                         Text("Performance Summary")
                             .font(.headline)
                         
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        StatsGrid(spacing: 10) {
                             PerformanceStatCard(title: "Max Speed", value: AppSettings.shared.speedDisplay(drive.maxSpeed), icon: "speedometer")
                             PerformanceStatCard(title: "Avg Speed", value: AppSettings.shared.speedDisplay(drive.avgSpeed), icon: "gauge.medium")
                             PerformanceStatCard(title: "Distance", value: AppSettings.shared.distanceDisplay(drive.distance), icon: "map")
@@ -29,7 +29,7 @@ struct DrivePerformanceDetailView: View {
                             .font(.headline)
 
                         if drive.maxAcceleration > 0 || drive.maxDeceleration > 0 || drive.peakGForce > 0 {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            StatsGrid(spacing: 10) {
                                 if drive.maxAcceleration > 0 {
                                     PerformanceStatCard(
                                         title: "Max Accel",
@@ -62,7 +62,7 @@ struct DrivePerformanceDetailView: View {
                         }
 
                         if drive.brakeEvents > 0 || drive.leftTurns > 0 || drive.rightTurns > 0 || drive.laneChanges > 0 {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            StatsGrid(spacing: 10) {
                                 if drive.brakeEvents > 0 {
                                     PerformanceStatCard(title: "Brakes", value: "\(drive.brakeEvents)", icon: "hand.raised.fill")
                                 }

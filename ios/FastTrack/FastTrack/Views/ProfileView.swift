@@ -225,7 +225,7 @@ struct ProfileView: View {
     private var profileStatsSkeleton: some View {
         VStack(spacing: 16) {
             // Stats grid skeleton (4 cells)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            StatsGrid(spacing: 12) {
                 ForEach(0..<6, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: Radius.lg)
                         .fill(Color.ftCardBg.opacity(0.2))
@@ -247,7 +247,7 @@ struct ProfileView: View {
     // MARK: Main Stats Grid
 
     private var mainStatsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+        StatsGrid(spacing: 10) {
             InstrumentStatCell(
                 icon: "location.fill", iconColor: .cyan,
                 label: "Total Distance",
@@ -278,7 +278,7 @@ struct ProfileView: View {
     // MARK: Headline Speed Grid (Top Speed + Best 0-60)
 
     private var headlineSpeedGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+        StatsGrid(spacing: 10) {
             InstrumentStatCell(
                 icon: "bolt.fill", iconColor: .yellow,
                 label: "Top Speed",
@@ -609,7 +609,7 @@ struct CarStatsRow: View {
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+        StatsGrid(spacing: 8) {
             StatMini(title: "Drives", value: "\(stats.totalDrives)")
             StatMini(title: settings.distanceUnit == "mi" ? "Miles" : "KM",
                      value: String(format: "%.0f", settings.distanceValue(stats.totalDistance)))

@@ -43,7 +43,7 @@ struct AchievementsView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        StatsGrid(spacing: 16) {
                             ForEach(filteredAchievements) { achievement in
                                 AchievementCard(achievement: achievement)
                             }

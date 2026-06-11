@@ -115,7 +115,7 @@ struct DriveDetailView: View {
                 }
 
                 // Stats Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                StatsGrid(spacing: 12) {
                     DashboardGauge(value: settings.speedDisplay(drive.maxSpeed), label: "Top Speed", color: .ftAmber)
                     DashboardGauge(value: settings.distanceDisplay(drive.distance, decimals: 1), label: "Distance", color: .ftBlue)
                     DashboardGauge(value: drive.durationString, label: "Duration", color: .ftBlue)
@@ -133,7 +133,7 @@ struct DriveDetailView: View {
                             Text("Driving Stats")
                                 .font(.headline)
 
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                            StatsGrid(spacing: 15) {
                                 StatCard(title: "Left Turns",    value: "\(drive.leftTurns)",   icon: "arrow.turn.up.left",   info: StatInfo.leftTurns)
                                 StatCard(title: "Right Turns",   value: "\(drive.rightTurns)",  icon: "arrow.turn.up.right",  info: StatInfo.rightTurns)
                                 StatCard(title: "Brake Events",  value: "\(drive.brakeEvents)", icon: "hand.raised.fill",     info: StatInfo.brakeEvents)
@@ -141,14 +141,14 @@ struct DriveDetailView: View {
                             }
 
                             if drive.maxAcceleration > 0 {
-                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                StatsGrid(spacing: 15) {
                                     StatCard(title: "Max Accel", value: String(format: "%.1f m/s²", drive.maxAcceleration), icon: "arrow.up.circle",   info: StatInfo.maxAcceleration)
                                     StatCard(title: "Max Decel", value: String(format: "%.1f m/s²", drive.maxDeceleration), icon: "arrow.down.circle", info: StatInfo.maxDeceleration)
                                 }
                             }
 
                             if drive.peakGForce > 0 {
-                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                StatsGrid(spacing: 15) {
                                     StatCard(title: "Peak G-Force", value: String(format: "%.2f G", drive.peakGForce), icon: "circle.circle", info: StatInfo.peakGForce)
                                     if let best060 = drive.best060Time {
                                         StatCard(title: "0-60 Time", value: String(format: "%.1f sec", best060), icon: "timer", info: StatInfo.zeroToSixty)

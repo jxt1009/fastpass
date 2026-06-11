@@ -43,7 +43,7 @@ struct GarageView: View {
     }
 
     private var allCarsSummary: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+        StatsGrid(spacing: 10) {
             InstrumentStatCell(
                 icon: "flag.fill", iconColor: .ftGreen,
                 label: "Total Drives",
@@ -329,10 +329,7 @@ struct GarageCarCard: View {
     }
 
     private var statsGrid: some View {
-        LazyVGrid(
-            columns: [GridItem(.flexible()), GridItem(.flexible())],
-            spacing: 6
-        ) {
+        StatsGrid(spacing: 6) {
             StatMini(title: "Drives", value: "\(stats?.totalDrives ?? 0)")
             StatMini(
                 title: settings.distanceUnit == "mi" ? "Miles" : "KM",
