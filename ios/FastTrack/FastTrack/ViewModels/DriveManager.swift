@@ -14,6 +14,12 @@ class DriveManager: ObservableObject {
     @Published var isLoadingDrives = true  // true until first fetch completes
     @Published var routeCoordinates: [CLLocationCoordinate2D] = []
     @Published var recordingStartTime: Date?
+    /// Most recent error surfaced from a failed `createDrive` upload or from
+    /// a refused `startRecording` (e.g. missing location permission). Views
+    /// observe this to show a banner / alert so the user is never told a
+    /// drive was saved when it wasn't. Cleared on the next `startRecording`
+    /// and by `dismissLastError()` once the user has acknowledged it.
+    @Published var lastError: APIError?
     /// Server-authoritative achievements cache. Repopulated on profile appear,
     /// after each drive save, and on app foreground.
     @Published var userAchievements: [UserAchievement] = []
@@ -117,6 +123,9 @@ class DriveManager: ObservableObject {
 
     func startRecording() {
         guard !isRecording else { return }
+        // Clear any prior upload failure so a new recording doesn't show a
+        // stale error from the previous drive.
+        lastError = nil
         #if DEBUG
         print("🚗 Starting drive recording...")
         #endif
@@ -309,7 +318,16 @@ class DriveManager: ObservableObject {
             #if DEBUG
             print("❌ Failed to save drive: \(error.localizedDescription)")
             #endif
+            let surfaced = (error as? APIError) ?? APIError.invalidResponse
+            self.lastError = surfaced
         }
+    }
+
+    /// Clears the published `lastError`. Call from the view when the user
+    /// dismisses the error banner, or from `startRecording` so a new
+    /// recording doesn't show a stale failure from the previous one.
+    func dismissLastError() {
+        lastError = nil
     }
 
     // MARK: - API

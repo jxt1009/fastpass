@@ -428,6 +428,7 @@ enum APIError: Error, LocalizedError {
     case invalidResponse
     case serverError(Int)
     case decodingError
+    case locationPermissionDenied
 
     var errorDescription: String? {
         switch self {
@@ -439,6 +440,8 @@ enum APIError: Error, LocalizedError {
             return "Server error: \(code)"
         case .decodingError:
             return "Failed to decode response"
+        case .locationPermissionDenied:
+            return "Location permission is required to record drives"
         }
     }
 }
