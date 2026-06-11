@@ -292,7 +292,7 @@ struct GarageCarCard: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 160)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
                         Text("SELECTED")
@@ -330,11 +330,11 @@ struct GarageCarCard: View {
                 .padding(.bottom, 10)
         }
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .fill(Color.ftCardBg)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .stroke(Color.secondary.opacity(0.12), lineWidth: 0.5)
         )
     }

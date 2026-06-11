@@ -104,7 +104,7 @@ struct PublicCarDetailView: View {
             .padding(16)
         }
         .frame(height: 260)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
     }
 
     private var heroBackground: some View {

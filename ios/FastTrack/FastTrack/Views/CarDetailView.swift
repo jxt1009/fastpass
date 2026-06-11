@@ -191,14 +191,14 @@ struct CarDetailView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 260)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
 
             LinearGradient(
                 colors: [.clear, .black.opacity(0.65)],
                 startPoint: .center,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
             .frame(height: 260)
             .allowsHitTesting(false)
 

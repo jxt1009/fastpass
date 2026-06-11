@@ -153,7 +153,7 @@ struct DriveRowView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
                         .background(Color.ftBlue.opacity(0.1))
-                        .cornerRadius(4)
+                        .cornerRadius(Radius.xs)
                 }
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: pbAnimationKey)

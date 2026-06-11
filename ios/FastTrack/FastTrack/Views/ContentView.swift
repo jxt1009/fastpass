@@ -192,7 +192,7 @@ struct ContentView: View {
                 .opacity(driveManager.isRecording ? 0.5 : 1)
                 .frame(maxWidth: .infinity)
                 .background(Color.ftCardBg)
-                .cornerRadius(12)
+                .cornerRadius(Radius.lg)
             }
 
             if profileManager.profile?.garage.isEmpty ?? true {
@@ -229,7 +229,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(InstrumentButtonStyle(color: driveManager.isRecording ? .ftRed : .ftBlue))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: Radius.lg)
                         .stroke(Color.red.opacity(0.6), lineWidth: 2)
                         .scaleEffect(driveManager.isRecording ? 1.05 : 1)
                         .opacity(driveManager.isRecording ? 0.6 : 0)
@@ -340,10 +340,10 @@ private struct TrackMetricCard: View {
                 .foregroundColor(.secondary)
 
             GeometryReader { proxy in
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
                     .fill(color.opacity(0.22))
                     .overlay(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
                             .fill(color)
                             .frame(width: proxy.size.width * min(1, max(0, progress)))
                             .animation(.easeInOut(duration: 0.2), value: progress)
@@ -354,9 +354,9 @@ private struct TrackMetricCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 9)
         .padding(.horizontal, 8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
                 .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
     }

@@ -163,7 +163,7 @@ struct SocialView: View {
                 if isLoading {
                     ProgressView()
                         .padding(10)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.md))
                         .padding(.top, 12)
                         .transition(.opacity)
                 }
@@ -252,7 +252,7 @@ private struct LeaderboardQuickFilterChip: View {
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .fill(accent ? Color.ftBlue.opacity(0.12) : Color.ftCardBg)
         )
     }
@@ -387,12 +387,12 @@ private struct CarThumbnail: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xs + 2))
     }
 
     private var placeholder: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: Radius.xs + 2)
                 .fill(Color.ftBlue.opacity(0.15))
             Image(systemName: "car.fill")
                 .foregroundStyle(Color.ftBlue)

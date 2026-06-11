@@ -41,7 +41,7 @@ struct CarHeroPhotoEditorSheet: View {
                 heroPreview
                     .frame(maxWidth: .infinity)
                     .frame(height: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
 
                 actionArea
 
@@ -127,13 +127,13 @@ struct CarHeroPhotoEditorSheet: View {
                 .scaledToFill()
         } else if isLoading {
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
                     .fill(Color.secondary.opacity(0.15))
                 ProgressView()
             }
         } else {
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
                     .fill(Color.secondary.opacity(0.15))
                 Image(systemName: "car.fill")
                     .font(.system(size: 48))

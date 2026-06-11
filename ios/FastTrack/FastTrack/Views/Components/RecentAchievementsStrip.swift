@@ -113,10 +113,10 @@ struct RecentAchievementCard: View {
         .padding(10)
         .background(achievement.category.color.opacity(0.12))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .stroke(achievement.category.color.opacity(0.35), lineWidth: 1)
         )
-        .cornerRadius(10)
+        .cornerRadius(Radius.md)
     }
 }
 

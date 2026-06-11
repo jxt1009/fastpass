@@ -226,7 +226,7 @@ struct ProfileView: View {
             // Stats grid skeleton (4 cells)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(0..<6, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: Radius.lg)
                         .fill(Color(.systemGray6).opacity(0.2))
                         .frame(height: 80)
                         .shimmer()
@@ -234,7 +234,7 @@ struct ProfileView: View {
             }
             // Full-width card skeletons
             ForEach(0..<3, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .fill(Color(.systemGray6).opacity(0.2))
                     .frame(height: 60)
                     .shimmer()
@@ -340,7 +340,7 @@ struct ProfileView: View {
             .frame(maxWidth: .infinity)
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .cornerRadius(Radius.lg)
         }
         .disabled(isDeletingAccount)
         .padding(.top, 8)
@@ -356,7 +356,7 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .cornerRadius(Radius.lg)
         }
         .padding(.top, 8)
     }
@@ -484,7 +484,7 @@ struct CarGarageCard: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(Color.ftBlue.opacity(0.2))
-                                .cornerRadius(8)
+                                .cornerRadius(Radius.sm)
                         }
 
                         Button {
@@ -569,16 +569,16 @@ struct CarPhotoThumbnail: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .stroke(Color.secondary.opacity(0.15), lineWidth: 0.5)
         )
     }
 
     private var placeholder: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .fill(Color.ftBlue.opacity(0.15))
             Image(systemName: "car.fill")
                 .font(.system(size: size * 0.45))

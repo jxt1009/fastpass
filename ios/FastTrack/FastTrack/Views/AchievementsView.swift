@@ -148,7 +148,7 @@ struct CategoryFilterChip: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(isSelected ? color : Color(.systemGray6))
-                .cornerRadius(20)
+                .cornerRadius(Radius.xxxl)
         }
     }
 }
@@ -220,7 +220,7 @@ struct AchievementCard: View {
             .frame(height: 140)
             .opacity(achievement.isUnlocked ? 1.0 : 0.65)
             .background(Color.ftCardBg)
-            .cornerRadius(12)
+            .cornerRadius(Radius.lg)
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingDetail) {
@@ -299,7 +299,7 @@ struct AchievementDetailView: View {
                 .padding(.vertical, 6)
                 .background(achievement.category.color.opacity(0.2))
                 .foregroundColor(achievement.category.color)
-                .cornerRadius(12)
+                .cornerRadius(Radius.lg)
                 
                 Spacer()
             }

@@ -45,11 +45,11 @@ struct PublicCarDetailGauge: View {
         .padding(.vertical, 14)
         .padding(.horizontal, 6)
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .stroke(color.opacity(0.35), lineWidth: 1)
         )
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .fill(color.opacity(0.08))
         )
         .accessibilityElement(children: .combine)

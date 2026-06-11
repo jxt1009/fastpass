@@ -34,8 +34,8 @@ struct SignInView: View {
                         .padding()
                         .background(Color.white)
                         .foregroundColor(.black)
-                        .cornerRadius(10)
-                        .overlay(RoundedRectangle(cornerRadius: 10)
+                        .cornerRadius(Radius.md)
+                        .overlay(RoundedRectangle(cornerRadius: Radius.md)
                             .stroke(Color.gray.opacity(0.4), lineWidth: 1))
                         .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
                 }
@@ -47,7 +47,7 @@ struct SignInView: View {
                     appleSignInManager.handleSignInResult(result)
                 }
                 .frame(height: 50)
-                .cornerRadius(10)
+                .cornerRadius(Radius.md)
             }
             .padding(.horizontal, 40)
 

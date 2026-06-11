@@ -257,7 +257,7 @@ struct DriveDetailView: View {
         if !routeCoordinates.isEmpty {
             mapContent
                 .frame(height: 260)
-                .cornerRadius(12)
+                .cornerRadius(Radius.lg)
                 // Expand button overlay (top-right)
                 .overlay(alignment: .topTrailing) {
                     Button {
@@ -266,7 +266,7 @@ struct DriveDetailView: View {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
                             .font(.system(size: 13, weight: .semibold))
                             .padding(8)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.sm))
                     }
                     .padding(10)
                 }
@@ -292,7 +292,7 @@ struct DriveDetailView: View {
                     }
                 }
         } else {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: Radius.lg)
                 .fill(Color.ftCardBg)
                 .frame(height: 260)
                 .overlay(
@@ -422,7 +422,7 @@ struct DriveDetailView: View {
         }
         .padding()
         .background(Color.ftCardBg)
-        .cornerRadius(12)
+        .cornerRadius(Radius.lg)
     }
 
     // MARK: - Computed helpers
@@ -888,11 +888,11 @@ struct ZeroSixtyAttemptBubble: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
-                SpeechBubble(cornerRadius: 6, tailWidth: 8, tailHeight: 5)
+                SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)
                     .fill(isPersonalBest ? Color.yellow : Color.orange)
             )
             .overlay(
-                SpeechBubble(cornerRadius: 6, tailWidth: 8, tailHeight: 5)
+                SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)
                     .stroke(Color.white, lineWidth: 1)
             )
             .foregroundColor(isPersonalBest ? .black : .white)
