@@ -36,11 +36,7 @@ struct UserRow<Avatar: View, Trailing: View>: View {
                 HStack(spacing: 4) {
                     Text(primary).font(.body)
                     if isYou {
-                        Text("You")
-                            .font(.caption2).fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(Color.ftBlue, in: Capsule())
+                        BadgePill("You", style: .you)
                     }
                 }
                 if let secondary {

@@ -315,13 +315,7 @@ private struct LeaderboardRow: View {
                         .fontWeight(isCurrentUserRow ? .semibold : .regular)
                         .lineLimit(1)
                     if isCurrentUserRow {
-                        Text("You")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.ftBlue, in: Capsule())
+                        BadgePill("You", style: .you)
                     }
                 }
                 HStack(spacing: 6) {

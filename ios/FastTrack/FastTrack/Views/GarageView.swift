@@ -301,16 +301,7 @@ struct GarageCarCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
-                        Text("SELECTED")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule()
-                                    .fill(Color.ftBlue)
-                            )
+                        BadgePill("SELECTED", style: .selected)
                             .padding(8)
                     }
                 }
@@ -398,7 +389,7 @@ struct GarageCarCard: View {
 
 struct GarageDriveRow: View {
     let drive: Drive
-    var badge: GarageDriveBadge? = nil
+    var badge: BadgePill? = nil
     @EnvironmentObject var settings: AppSettings
 
     var body: some View {
@@ -410,14 +401,7 @@ struct GarageDriveRow: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                         if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
-                            Text(drive.carDisplayString)
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.ftBlue.opacity(0.8))
-                                .clipShape(Capsule())
+                            BadgePill(drive.carDisplayString, style: .carChip)
                         }
                     }
                     HStack(spacing: 12) {
@@ -431,17 +415,7 @@ struct GarageDriveRow: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 8) {
                     if let badge {
-                        HStack(spacing: 3) {
-                            Image(systemName: badge.icon)
-                                .font(FTFont.pill).minimumScaleFactor(0.7)
-                            Text(badge.text)
-                                .font(.caption2.weight(.bold))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(badge.background)
-                        .foregroundColor(badge.foreground)
-                        .clipShape(Capsule())
+                        badge
                     }
                     Image(systemName: "chevron.right")
                         .font(.caption)
@@ -450,13 +424,6 @@ struct GarageDriveRow: View {
             }
         }
     }
-}
-
-struct GarageDriveBadge {
-    let text: String
-    let icon: String
-    let background: Color
-    let foreground: Color
 }
 
 // MARK: - Analytics Card (hoisted from AnalyticsView)

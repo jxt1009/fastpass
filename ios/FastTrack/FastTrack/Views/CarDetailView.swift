@@ -110,13 +110,7 @@ struct CarDetailView: View {
                         }
                     }
                     if isActiveCar {
-                        Text("Active")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(Color.ftBlue))
+                        BadgePill("Active", style: .selected)
                     } else if car != nil {
                         Button("Set Active") {
                             setActiveCar()
@@ -725,12 +719,12 @@ struct CarDetailView: View {
         }
     }
 
-    private func driveBadge(for drive: Drive, topSpeedPBDriveId: Int?, zeroSixtyPBDriveId: Int?) -> GarageDriveBadge? {
+    private func driveBadge(for drive: Drive, topSpeedPBDriveId: Int?, zeroSixtyPBDriveId: Int?) -> BadgePill? {
         if drive.id == zeroSixtyPBDriveId {
-            return GarageDriveBadge(text: "PB 0-60", icon: "trophy.fill", background: .yellow, foreground: .black)
+            return BadgePill("PB 0-60", icon: "trophy.fill", style: .pb060)
         }
         if drive.id == topSpeedPBDriveId {
-            return GarageDriveBadge(text: "PB Speed", icon: "flame.fill", background: .red, foreground: .white)
+            return BadgePill("PB Speed", icon: "flame.fill", style: .pbTopSpeed)
         }
         return nil
     }
