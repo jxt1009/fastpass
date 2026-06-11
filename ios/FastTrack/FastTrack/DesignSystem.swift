@@ -51,7 +51,7 @@ extension Color {
 
     static let ftShimmer = Color(white: 1, opacity: 0.35)
     static let ftScrim = Color.black.opacity(0.45)
-    static let ftRankGold = Color(red: 255/255, green: 214/255, blue: 10/255)
+    static let ftRankGold = Color.ftGold
     static let ftRankSilver = Color(red: 192/255, green: 192/255, blue: 192/255)
     static let ftRankBronze = Color(red: 205/255, green: 127/255, blue: 50/255)
     static let ftOnDarkDivider = Color.white.opacity(0.14)
