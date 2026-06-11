@@ -36,7 +36,61 @@ class LocationManager: NSObject, ObservableObject {
         clManager.delegate = self
         clManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         clManager.distanceFilter = kCLDistanceFilterNone
+        clManager.pausesLocationUpdatesAutomatically = true
+    }
 
+    // MARK: - Public API
+
+    /// UserDefaults key tracking whether we've ever asked the user to upgrade
+    /// from WhenInUse to Always. We only ask once, and only at the moment the
+    /// user actually starts a drive — not on first launch — so the upgrade
+    /// prompt is contextual and Apple-HIG friendly.
+    private static let hasRequestedAlwaysLocationKey = "FastTrack.hasRequestedAlwaysLocation"
+
+    /// Request location permission, preferring WhenInUse. We only escalate to
+    /// Always at the moment the user taps Start (see `requestAlwaysIfNeeded`)
+    /// so we never ambush the user with the more invasive prompt on first
+    /// launch.
+    func requestPermission() {
+        switch clManager.authorizationStatus {
+         case .notDetermined:
+            clManager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .denied, .restricted:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    /// Escalate to Always authorization if the user currently has WhenInUse
+    /// and we have never asked for Always before. Sets a UserDefaults flag so
+    /// the prompt only appears once per install. Wired into
+    /// `DriveManager.startRecording` so the prompt fires the first time the
+    /// user starts a drive, not on first launch.
+    func requestAlwaysIfNeeded() {
+        guard clManager.authorizationStatus == .authorizedWhenInUse else { return }
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.hasRequestedAlwaysLocationKey) else { return }
+        defaults.set(true, forKey: Self.hasRequestedAlwaysLocationKey)
+        clManager.requestAlwaysAuthorization()
+    }
+
+    /// Whether the user has granted the Always authorization we require to
+    /// record a drive. We deliberately require `.authorizedAlways` (not
+    /// `.authorizedWhenInUse`) because background location is essential for
+    /// drives that continue past the app being backgrounded.
+    var hasRecordingPermission: Bool {
+        authorizationStatus == .authorizedAlways
+    }
+
+    func startUpdatingLocation() {
+        #if DEBUG
+        print("📍 Starting location updates...")
+        #endif
+        // Only enable background updates while actively recording. We toggle the
+        // flag here (not in init) so the app never claims background location
+        // capability outside an active drive, which Apple HIG and App Review
+        // expect.
         #if !targetEnvironment(simulator)
         if Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") != nil {
             clManager.allowsBackgroundLocationUpdates = true
@@ -53,18 +107,6 @@ class LocationManager: NSObject, ObservableObject {
         #if DEBUG
         print("ℹ️ Simulator: background location disabled")
         #endif
-        #endif
-    }
-
-    // MARK: - Public API
-
-    func requestPermission() {
-        clManager.requestAlwaysAuthorization()
-    }
-
-    func startUpdatingLocation() {
-        #if DEBUG
-        print("📍 Starting location updates...")
         #endif
         // Start with good accuracy for faster initial fix
         clManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
@@ -83,6 +125,11 @@ class LocationManager: NSObject, ObservableObject {
 
     func stopUpdatingLocation() {
         clManager.stopUpdatingLocation()
+        // Drop background-location capability now that the drive has ended, and
+        // restore the safe "pause automatically" default so the system can
+        // suspend updates if the app is backgrounded without an active drive.
+        clManager.allowsBackgroundLocationUpdates = false
+        clManager.pausesLocationUpdatesAutomatically = true
         stopIMU()
         fusion.reset()
         currentSpeed = 0

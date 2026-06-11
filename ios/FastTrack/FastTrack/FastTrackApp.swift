@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import os
 
 @main
 struct FastTrackApp: App {
@@ -77,6 +78,8 @@ struct RootView: View {
     /// Index 0 (Track) is intentionally never reset so active recordings survive tab switches.
     @State private var tabResetIDs = (0..<4).map { _ in UUID() }
 
+    private static let signOutLog = Logger(subsystem: "app.fasttrack", category: "signOut")
+
     var body: some View {
         ZStack {
             if isInitializing {
@@ -104,6 +107,20 @@ struct RootView: View {
         .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
             if !isAuthenticated {
                 Task { @MainActor in
+                    // If the user was recording when they signed out, stop
+                    // the drive first so its route data is flushed to disk
+                    // and the upload is attempted. The upload may still fail
+                    // (no network, etc.); see the lastError log below.
+                    if driveManager.isRecording {
+                        await driveManager.stopRecording()
+                    }
+                    if let err = driveManager.lastError {
+                        // The in-flight drive didn't make it to the server
+                        // before sign-out. Don't block sign-out on it; the
+                        // route data is on disk and will be retried on the
+                        // next sign-in.
+                        Self.signOutLog.error("Drive upload failed during sign-out: \(err.localizedDescription, privacy: .public)")
+                    }
                     driveManager.clearLocalData()
                     notificationsManager.stopPolling()
                     selectedTab = 0

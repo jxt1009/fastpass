@@ -4,9 +4,13 @@ class APIService {
     static let shared = APIService()
 
     // Production API endpoint - Change this before deployment
-    // Development: "http://localhost:8080/api/v1"
-    // Production: "https://fast.toper.dev/api/v1"
+    // Debug builds currently point at the same host as release; switch to a
+    // staging URL (e.g. "https://staging.fast.toper.dev/api/v1") once one exists.
+    #if DEBUG
     let baseURL = "https://fast.toper.dev/api/v1"
+    #else
+    let baseURL = "https://fast.toper.dev/api/v1"
+    #endif
 
     private let session: URLSession
     private let decoder: JSONDecoder
@@ -424,6 +428,7 @@ enum APIError: Error, LocalizedError {
     case invalidResponse
     case serverError(Int)
     case decodingError
+    case locationPermissionDenied
 
     var errorDescription: String? {
         switch self {
@@ -435,6 +440,24 @@ enum APIError: Error, LocalizedError {
             return "Server error: \(code)"
         case .decodingError:
             return "Failed to decode response"
+        case .locationPermissionDenied:
+            return "Location permission is required to record drives"
         }
     }
 }
+
+// MARK: - DriveAPI protocol
+
+/// The subset of `APIService` that `DriveManager` actually depends on.
+/// Extracted into a protocol so tests can inject a mock (e.g. for the
+/// `recoverPendingDrives` retry path or the `createDrive` failure
+/// surface). `APIService` conforms trivially; production code keeps the
+/// concrete singleton.
+protocol DriveAPI: AnyObject {
+    func createDrive(_ drive: Drive) async throws -> Drive
+    func fetchDrives() async throws -> [Drive]
+    func deleteDrive(id: Int) async throws
+    func fetchMyAchievements() async throws -> UserAchievementsResponse
+}
+
+extension APIService: DriveAPI {}
