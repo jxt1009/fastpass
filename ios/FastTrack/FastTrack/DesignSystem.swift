@@ -82,6 +82,24 @@ enum Motion {
     static let hero: Animation = .spring(response: 0.52, dampingFraction: 0.84)
 }
 
+// ─── Typography ─────────────────────────────────────────────
+
+enum FTFont {
+    static let speedHero = Font.system(size: 96, weight: .heavy, design: .monospaced)
+    static let gaugeNumber = Font.system(size: 32, weight: .bold, design: .monospaced)
+    static let gaugeValue = Font.system(size: 28, weight: .bold, design: .monospaced)
+    static let gaugeLabelCompact = Font.system(size: 8, weight: .semibold)
+    static let pill = Font.system(size: 9, weight: .bold)
+    static let scoreboard = Font.system(size: 36)
+    static let trophy = Font.system(size: 40)
+    static let wordmark = Font.system(size: 36, weight: .bold, design: .rounded)
+    static let appIcon = Font.system(size: 52, weight: .medium)
+    static let iconLarge = Font.system(size: 80)
+    static let iconXLarge = Font.system(size: 48, weight: .bold, design: .rounded)
+    static let subtitleBold = Font.system(size: 18, weight: .bold)
+    static let sectionCaption = Font.system(size: 24)
+}
+
 // ─── Speed Color Mapping ───────────────────────────────────
 
 enum SpeedColor {
