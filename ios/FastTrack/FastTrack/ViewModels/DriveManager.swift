@@ -150,6 +150,11 @@ class DriveManager: ObservableObject {
         latestSpeedSample = nil
         headingHistory = []
 
+        // First time the user actually starts a drive, escalate to Always
+        // authorization. We deliberately do this on Start (not on launch) so
+        // the prompt is contextual — by the time the user sees it, they have
+        // already chosen to record a drive.
+        locationManager?.requestAlwaysIfNeeded()
         locationManager?.startUpdatingLocation()
         #if DEBUG
         print("📍 Location manager started")

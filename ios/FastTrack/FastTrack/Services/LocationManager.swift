@@ -41,7 +41,39 @@ class LocationManager: NSObject, ObservableObject {
 
     // MARK: - Public API
 
+    /// UserDefaults key tracking whether we've ever asked the user to upgrade
+    /// from WhenInUse to Always. We only ask once, and only at the moment the
+    /// user actually starts a drive — not on first launch — so the upgrade
+    /// prompt is contextual and Apple-HIG friendly.
+    private static let hasRequestedAlwaysLocationKey = "FastTrack.hasRequestedAlwaysLocation"
+
+    /// Request location permission, preferring WhenInUse. We only escalate to
+    /// Always at the moment the user taps Start (see `requestAlwaysIfNeeded`)
+    /// so we never ambush the user with the more invasive prompt on first
+    /// launch.
     func requestPermission() {
+        switch clManager.authorizationStatus {
+        case .notDetermined:
+            clManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse:
+            requestAlwaysIfNeeded()
+        case .authorizedAlways, .denied, .restricted:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    /// Escalate to Always authorization if the user currently has WhenInUse
+    /// and we have never asked for Always before. Sets a UserDefaults flag so
+    /// the prompt only appears once per install. Wired into
+    /// `DriveManager.startRecording` so the prompt fires the first time the
+    /// user starts a drive, not on first launch.
+    func requestAlwaysIfNeeded() {
+        guard clManager.authorizationStatus == .authorizedWhenInUse else { return }
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.hasRequestedAlwaysLocationKey) else { return }
+        defaults.set(true, forKey: Self.hasRequestedAlwaysLocationKey)
         clManager.requestAlwaysAuthorization()
     }
 
