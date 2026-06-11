@@ -116,13 +116,13 @@ struct DriveDetailView: View {
 
                 // Stats Grid
                 StatsGrid(spacing: 12) {
-                    DashboardGauge(value: settings.speedDisplay(drive.maxSpeed), label: "Top Speed", color: .ftAmber)
-                    DashboardGauge(value: settings.distanceDisplay(drive.distance, decimals: 1), label: "Distance", color: .ftBlue)
-                    DashboardGauge(value: drive.durationString, label: "Duration", color: .ftBlue)
+                    FTGauge(style: .compact, label: "Top Speed", value: settings.speedDisplay(drive.maxSpeed), color: .ftAmber)
+                    FTGauge(style: .compact, label: "Distance", value: settings.distanceDisplay(drive.distance, decimals: 1), color: .ftBlue)
+                    FTGauge(style: .compact, label: "Duration", value: drive.durationString, color: .ftBlue)
                     if let best = drive.best060Time {
-                        DashboardGauge(value: String(format: "%.1fs", best), label: "0-60", color: .ftGreen)
+                        FTGauge(style: .compact, label: "0-60", value: String(format: "%.1fs", best), color: .ftGreen)
                     } else {
-                        DashboardGauge(value: settings.speedDisplay(drive.avgSpeed), label: "Avg Speed", color: .secondary)
+                        FTGauge(style: .compact, label: "Avg Speed", value: settings.speedDisplay(drive.avgSpeed), color: .secondary)
                     }
                 }
 

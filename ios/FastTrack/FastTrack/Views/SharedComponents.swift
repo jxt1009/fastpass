@@ -483,30 +483,6 @@ struct InstrumentStatCell: View {
     }
 }
 
-struct MetricGauge: View {
-    let title: String
-    let value: String
-    let unit: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(.title3, design: .monospaced)).fontWeight(.bold)
-                .foregroundColor(color)
-            HStack(spacing: 2) {
-                Text(title).font(.caption2.weight(.semibold)).minimumScaleFactor(0.75).foregroundColor(.secondary)
-                Text(unit).font(.caption2).minimumScaleFactor(0.7).foregroundColor(.secondary.opacity(0.6))
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(Color.ftCardBg)
-        .cornerRadius(Radius.sm)
-    }
-}
-
 struct InstrumentButtonStyle: ButtonStyle {
     let color: Color
 

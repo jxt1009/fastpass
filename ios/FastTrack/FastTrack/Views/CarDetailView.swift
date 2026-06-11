@@ -263,28 +263,30 @@ struct CarDetailView: View {
     @ViewBuilder
     private var pbGauges: some View {
         HStack(spacing: 12) {
-            CarDetailGauge(
-                title: "Top Speed",
-                value: topSpeedDisplay,
-                unit: settings.speedUnit,
-                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0),
-                setOn: data?.topSpeedPBDate,
-                progress: data.map { d in
-                    let raw = d.bestTopSpeed.map { CarDetailGaugeProgress.topSpeedProgress(speedMps: $0) } ?? 0
-                    return CarDetailGaugeProgress.visualProgress(raw)
-                }
+            FTGauge(
+                style: .hero(
+                    progress: data.map { d in
+                        let raw = d.bestTopSpeed.map { CarDetailGaugeProgress.topSpeedProgress(speedMps: $0) } ?? 0
+                        return CarDetailGaugeProgress.visualProgress(raw)
+                    },
+                    setOn: data?.topSpeedPBDate
+                ),
+                label: "Top Speed",
+                value: "\(topSpeedDisplay) \(settings.speedUnit)",
+                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0)
             )
-            CarDetailGauge(
-                title: "Best 0-60",
-                value: zeroSixtyDisplay,
-                unit: "sec",
-                color: .ftAmber,
-                setOn: data?.zeroSixtyPBDate,
-                progress: data.map { d in
-                    CarDetailGaugeProgress.visualProgress(
-                        CarDetailGaugeProgress.zeroSixtyProgress(seconds: d.bestZeroToSixty)
-                    )
-                }
+            FTGauge(
+                style: .hero(
+                    progress: data.map { d in
+                        CarDetailGaugeProgress.visualProgress(
+                            CarDetailGaugeProgress.zeroSixtyProgress(seconds: d.bestZeroToSixty)
+                        )
+                    },
+                    setOn: data?.zeroSixtyPBDate
+                ),
+                label: "Best 0-60",
+                value: "\(zeroSixtyDisplay) sec",
+                color: .ftAmber
             )
         }
     }

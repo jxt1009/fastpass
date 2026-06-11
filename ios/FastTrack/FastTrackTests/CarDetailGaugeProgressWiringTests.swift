@@ -3,16 +3,17 @@ import XCTest
 
 // Source-order regression guard for PR 1 of the car-detail-polish spec:
 // the own-profile `CarDetailView` must pass a non-nil `progress`
-// argument to both `CarDetailGauge` calls inside `pbGauges`, derived
-// from the new `CarDetailGaugeProgress` helper. Mirrors the
-// `readSourceFile` pattern in `PublicProfileRedesignTests`.
+// argument to both hero gauge calls inside `pbGauges`, derived
+// from the `CarDetailGaugeProgress` helper. After the C-4 gauge
+// consolidation the hero gauge is `FTGauge(.hero(...))`; the wiring
+// invariant is unchanged.
 
 final class CarDetailGaugeProgressWiringTests: XCTestCase {
 
-    /// The two `CarDetailGauge(` calls inside `pbGauges` must each pass
-    /// a `progress:` argument, and the call must read from
-    /// `CarDetailGaugeProgress`. A regression here means the gauge
-    /// reverts to a decorative arc without animation.
+    /// The two hero-gauge calls inside `pbGauges` must each carry a
+    /// `progress:` argument in their `.hero(...)` style, and the call
+    /// must read from `CarDetailGaugeProgress`. A regression here means
+    /// the gauge reverts to a decorative arc without animation.
     func testCarDetailView_pbGauges_PassesProgressFromHelper() throws {
         let source = try readCarDetailViewSource()
 
@@ -27,27 +28,27 @@ final class CarDetailGaugeProgressWiringTests: XCTestCase {
         )
 
         // The pbGauges body should contain at least two `progress:`
-        // assignments — one per CarDetailGauge. Bound the body to
+        // assignments — one per FTGauge .hero call. Bound the body to
         // everything between the `private var pbGauges` declaration
         // and the next `private var ` declaration (any other computed
-        // property). Both `CarDetailGauge(` calls in `pbGauges` must
-        // have a `progress:` line each.
+        // property). Both `FTGauge(` calls in `pbGauges` must have a
+        // `progress:` line each.
         let pbGaugesBody = try firstSubstringUpToNext(
             in: source,
             open: "private var pbGauges: some View {",
             terminator: "    private var "
         )
         let progressCount = pbGaugesBody.components(separatedBy: "progress:").count - 1
-        let gaugeCount = pbGaugesBody.components(separatedBy: "CarDetailGauge(").count - 1
+        let gaugeCount = pbGaugesBody.components(separatedBy: "FTGauge(").count - 1
         XCTAssertGreaterThanOrEqual(
             gaugeCount,
             2,
-            "pbGauges must render at least two CarDetailGauge calls (found \(gaugeCount))."
+            "pbGauges must render at least two FTGauge calls (found \(gaugeCount))."
         )
         XCTAssertGreaterThanOrEqual(
             progressCount,
             gaugeCount,
-            "pbGauges must wire `progress:` for every CarDetailGauge call (found \(progressCount) progress: lines for \(gaugeCount) gauges)."
+            "pbGauges must wire `progress:` for every FTGauge call (found \(progressCount) progress: lines for \(gaugeCount) gauges)."
         )
     }
 
@@ -64,7 +65,7 @@ final class CarDetailGaugeProgressWiringTests: XCTestCase {
         XCTAssertTrue(
             source.contains("progress: data.map"),
             """
-            Both CarDetailGauge `progress:` arguments must be derived \
+            Both FTGauge `.hero(progress:)` arguments must be derived \
             via `data.map { ... }` so they evaluate to nil when `data` \
             is nil (e.g. car removed). Found a progress: line that \
             does not gate on `data.map`.
