@@ -186,6 +186,69 @@ final class PersonalBestsTests: XCTestCase {
         XCTAssertEqual(drive?.id, 2)
     }
 
+    // MARK: - CarStats performance fields round-trip non-optional Drive fields
+
+    /// `CarStatsManager.updateStats(for:)` must read `Drive.maxAcceleration`,
+    /// `maxDeceleration`, `peakGForce`, `brakeEvents`, `leftTurns`, and
+    /// `rightTurns` as non-optional values. They are non-optional on `Drive`
+    /// and always populated by the recording pipeline, so any `?? 0` on
+    /// the read path in `CarStats.swift:88-94` is dead code. This test is a
+    /// regression guard: it would fail if those fields ever reverted to
+    /// optional (silently degrading to zero) or if the aggregator
+    /// accidentally dropped one of the values.
+    func testUpdateStats_accumulatesPerformanceFieldsFromNonOptionalDriveFields() {
+        let carId = "car-p0-1"
+        // Use a fresh manager so we don't read prior test state from the
+        // shared singleton. We never call saveCarStats / upload because
+        // the public surface used here only mutates in-memory state.
+        let manager = CarStatsManager.shared
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let drive = Drive(
+            id: 1,
+            userID: 1,
+            startTime: start,
+            endTime: start.addingTimeInterval(60),
+            startLatitude: 37.0,
+            startLongitude: -122.0,
+            endLatitude: 37.001,
+            endLongitude: -122.0,
+            distance: 100,
+            duration: 60,
+            maxSpeed: 10,
+            minSpeed: 0,
+            avgSpeed: 5,
+            routeData: nil,
+            carId: carId,
+            carMake: nil,
+            carModel: nil,
+            carYear: nil,
+            carTrim: nil,
+            carNickname: nil,
+            stoppedTime: 0,
+            leftTurns: 4,
+            rightTurns: 7,
+            brakeEvents: 3,
+            laneChanges: 0,
+            maxAcceleration: 2.5,
+            maxDeceleration: 3.5,
+            peakGForce: 0.9,
+            topCornerSpeed: 0,
+            best060Time: nil
+        )
+
+        manager.updateStats(for: drive, suppressUpload: true)
+
+        guard let stats = manager.getStats(for: carId) else {
+            XCTFail("Expected stats for \(carId) after updateStats")
+            return
+        }
+        XCTAssertEqual(stats.bestAcceleration, 2.5, accuracy: 0.0001)
+        XCTAssertEqual(stats.bestDeceleration, 3.5, accuracy: 0.0001)
+        XCTAssertEqual(stats.bestLateralG, 0.9, accuracy: 0.0001)
+        XCTAssertEqual(stats.totalBrakeEvents, 3)
+        XCTAssertEqual(stats.totalTurns, 11) // 4 left + 7 right
+    }
+
     // MARK: - 0-60 label is not unit-dependent
 
     /// The "Best 0-60" label in ProfileView must be the fixed string
