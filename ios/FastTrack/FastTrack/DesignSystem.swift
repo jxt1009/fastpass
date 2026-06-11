@@ -48,6 +48,18 @@ extension Color {
             ? UIColor(white: 1, alpha: 0.16)
             : UIColor(white: 1, alpha: 0.42)
     })
+
+    static let ftShimmer = Color(white: 1, opacity: 0.35)
+    static let ftScrim = Color.black.opacity(0.45)
+    static let ftRankGold = Color.ftGold
+    static let ftRankSilver = Color(red: 192/255, green: 192/255, blue: 192/255)
+    static let ftRankBronze = Color(red: 205/255, green: 127/255, blue: 50/255)
+    static let ftOnDarkDivider = Color.white.opacity(0.14)
+    static let ftHairline = Color.white.opacity(0.1)
+    static let ftSkeleton = Color(.systemGray5)
+    static let ftPB060Tint = Color.yellow
+    static let ftPBTopSpeedTint = Color.red
+    static let ftErrorBackground = Color.red.opacity(0.6)
 }
 
 // ─── Spacing ───────────────────────────────────────────────
@@ -60,11 +72,44 @@ enum Spacing {
     static let xl: CGFloat = 32
 }
 
+// ─── Radius ─────────────────────────────────────────────────
+
+enum Radius {
+    static let xxxs: CGFloat = 1.5
+    static let xxs: CGFloat = 3
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 10
+    static let lg: CGFloat = 12
+    static let xl: CGFloat = 14
+    static let xxl: CGFloat = 18
+    static let xxxl: CGFloat = 20
+    static let giant: CGFloat = 24
+}
+
 enum Motion {
     static let quick: Animation = .easeOut(duration: 0.14)
     static let standard: Animation = .easeInOut(duration: 0.24)
     static let entrance: Animation = .spring(response: 0.36, dampingFraction: 0.88)
     static let hero: Animation = .spring(response: 0.52, dampingFraction: 0.84)
+}
+
+// ─── Typography ─────────────────────────────────────────────
+
+enum FTFont {
+    static let speedHero = Font.system(size: 96, weight: .heavy, design: .monospaced)
+    static let gaugeNumber = Font.system(size: 32, weight: .bold, design: .monospaced)
+    static let gaugeValue = Font.system(size: 28, weight: .bold, design: .monospaced)
+    static let gaugeLabelCompact = Font.system(size: 8, weight: .semibold)
+    static let pill = Font.system(size: 9, weight: .bold)
+    static let scoreboard = Font.system(size: 36)
+    static let trophy = Font.system(size: 40)
+    static let wordmark = Font.system(size: 36, weight: .bold, design: .rounded)
+    static let appIcon = Font.system(size: 52, weight: .medium)
+    static let iconLarge = Font.system(size: 80)
+    static let iconXLarge = Font.system(size: 48, weight: .bold, design: .rounded)
+    static let subtitleBold = Font.system(size: 18, weight: .bold)
+    static let sectionCaption = Font.system(size: 24)
 }
 
 // ─── Speed Color Mapping ───────────────────────────────────
@@ -133,24 +178,24 @@ struct DashboardGauge: View {
                     .lineLimit(1)
 
                 Text(label.uppercased())
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(FTFont.gaugeLabelCompact)
                     .foregroundColor(.secondary)
                     .tracking(0.5)
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Radius.sm)
                     .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Radius.sm)
                     .fill(Color.ftCardBg)
             )
         } else {
             VStack(spacing: 8) {
                 Text(value)
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .font(FTFont.gaugeValue)
                     .foregroundColor(color)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
@@ -162,10 +207,11 @@ struct DashboardGauge: View {
                         endPoint: .trailing
                     ))
                     .frame(width: 32, height: 3)
-                    .cornerRadius(1.5)
+                    .cornerRadius(Radius.xxxs)
 
                 Text(label.uppercased())
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
+                    .minimumScaleFactor(0.75)
                     .foregroundColor(.secondary)
                     .tracking(1)
             }
@@ -173,11 +219,11 @@ struct DashboardGauge: View {
             .padding(.vertical, 16)
             .padding(.horizontal, 8)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .fill(Color.ftCardBg)
             )
         }
@@ -213,11 +259,11 @@ struct InstrumentCard<Content: View>: View {
         content
             .padding(Spacing.md)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .fill(glass ? Color.ftGlassSurface : Color.ftCardBg)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .stroke(glass ? Color.ftGlassStroke : Color.clear, lineWidth: 1)
             )
     }

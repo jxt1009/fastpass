@@ -7,7 +7,7 @@ struct NotificationsBell: View {
         Image(systemName: "bell.fill")
             .font(.body)
             .foregroundColor(.primary)
-            .frame(width: 32, height: 32)
+            .frame(minWidth: 44, minHeight: 44)
             .overlay(alignment: .topTrailing) {
                 if manager.unreadCount > 0 {
                     Text(NotificationsManager.badgeLabel(forUnreadCount: manager.unreadCount))
@@ -15,7 +15,7 @@ struct NotificationsBell: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
-                        .background(Capsule().fill(Color.red))
+                        .background(Capsule().fill(Color.ftRed))
                         .offset(x: 8, y: -4)
                 }
             }

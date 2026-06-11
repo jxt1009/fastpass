@@ -3,6 +3,8 @@ import MapKit
 import Combine
 
 struct ContentView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var settings: AppSettings
@@ -83,10 +85,11 @@ struct ContentView: View {
                     isRecording: driveManager.isRecording
                 )
                 .frame(width: 256, height: 256)
+                .accessibilityLabel("Current speed \(Int(settings.calibratedSpeedValue(locationManager.currentSpeed))) \(settings.speedUnit)")
 
                 VStack(spacing: 4) {
                     Text("\(Int(settings.calibratedSpeedValue(locationManager.currentSpeed)))")
-                        .font(.system(size: 96, weight: .heavy, design: .monospaced))
+                        .font(FTFont.speedHero).minimumScaleFactor(0.5)
                         .foregroundColor(driveManager.isRecording ? .primary : .secondary)
                         .contentTransition(.numericText())
                         .animation(.easeInOut(duration: 0.18),
@@ -108,6 +111,7 @@ struct ContentView: View {
                 Circle()
                     .fill(gpsStatusColor)
                     .frame(width: 7, height: 7)
+                    .accessibilityLabel("GPS: \(gpsStatusText)")
                 Text(driveManager.isRecording ? "Recording" : "Idle")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(driveManager.isRecording ? recordingAccent : .secondary)
@@ -192,7 +196,7 @@ struct ContentView: View {
                 .opacity(driveManager.isRecording ? 0.5 : 1)
                 .frame(maxWidth: .infinity)
                 .background(Color.ftCardBg)
-                .cornerRadius(12)
+                .cornerRadius(Radius.lg)
             }
 
             if profileManager.profile?.garage.isEmpty ?? true {
@@ -229,17 +233,21 @@ struct ContentView: View {
                 }
                 .buttonStyle(InstrumentButtonStyle(color: driveManager.isRecording ? .ftRed : .ftBlue))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.red.opacity(0.6), lineWidth: 2)
+                    RoundedRectangle(cornerRadius: Radius.lg)
+                        .stroke(Color.ftErrorBackground, lineWidth: 2)
                         .scaleEffect(driveManager.isRecording ? 1.05 : 1)
                         .opacity(driveManager.isRecording ? 0.6 : 0)
                         .animation(
-                            driveManager.isRecording
+                            driveManager.isRecording && !reduceMotion && scenePhase == .active
                                 ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
                                 : .default,
                             value: driveManager.isRecording
                         )
+                        .id("pulse-\(scenePhase)")
                 )
+                .sensoryFeedback(.impact(weight: .medium), trigger: driveManager.isRecording) { oldValue, newValue in
+                    newValue
+                }
             }
         }
     }
@@ -292,7 +300,7 @@ private struct SpeedHeroRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.1), lineWidth: 16)
+                .stroke(Color.ftHairline, lineWidth: 16)
 
             Circle()
                 .trim(from: 0, to: progress)
@@ -330,20 +338,20 @@ private struct TrackMetricCard: View {
                     .foregroundColor(.primary)
                 if !unit.isEmpty {
                     Text(unit.uppercased())
-                        .font(.system(size: 8, weight: .semibold))
+                        .font(FTFont.gaugeLabelCompact).minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
                 }
             }
 
             Text(title)
-                .font(.system(size: 9, weight: .bold))
+                .font(FTFont.pill).minimumScaleFactor(0.7)
                 .foregroundColor(.secondary)
 
             GeometryReader { proxy in
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
                     .fill(color.opacity(0.22))
                     .overlay(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
                             .fill(color)
                             .frame(width: proxy.size.width * min(1, max(0, progress)))
                             .animation(.easeInOut(duration: 0.2), value: progress)
@@ -354,10 +362,10 @@ private struct TrackMetricCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 9)
         .padding(.horizontal, 8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                .stroke(Color.ftOnDarkDivider, lineWidth: 1)
         )
     }
 }
@@ -408,13 +416,13 @@ struct LiveMapView: View {
     var body: some View {
         recomputeDecimationIfNeeded()
         return Map(position: $cameraPosition) {
-            Annotation("", coordinate: userLocation) {
+            Annotation("Current location", coordinate: userLocation) {
                 ZStack {
                     Circle()
                         .stroke(.white, lineWidth: 3)
                         .frame(width: 22, height: 22)
                     Circle()
-                        .fill(Color.blue)
+                        .fill(Color.ftBlue)
                         .frame(width: 16, height: 16)
                 }
             }
@@ -426,10 +434,11 @@ struct LiveMapView: View {
             }
 
             if let first = routeCoordinates.first {
-                Annotation("", coordinate: first) {
+                Annotation("Route start", coordinate: first) {
                     Image(systemName: "flag.checkered")
                         .foregroundColor(.ftGreen)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(FTFont.subtitleBold).minimumScaleFactor(0.6)
+                        .accessibilityLabel("Route start")
                 }
             }
         }

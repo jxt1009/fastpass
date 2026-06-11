@@ -180,7 +180,7 @@ struct GarageView: View {
         InstrumentCard {
             VStack(spacing: 14) {
                 Image(systemName: "car")
-                    .font(.system(size: 36))
+                    .font(FTFont.scoreboard).minimumScaleFactor(0.6)
                     .foregroundColor(.secondary)
                 Text("No cars in your garage yet")
                     .font(.headline)
@@ -292,7 +292,7 @@ struct GarageCarCard: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 160)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
                         Text("SELECTED")
@@ -330,11 +330,11 @@ struct GarageCarCard: View {
                 .padding(.bottom, 10)
         }
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .fill(Color.ftCardBg)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .stroke(Color.secondary.opacity(0.12), lineWidth: 0.5)
         )
     }
@@ -427,7 +427,7 @@ struct GarageDriveRow: View {
                     if let badge {
                         HStack(spacing: 3) {
                             Image(systemName: badge.icon)
-                                .font(.system(size: 9, weight: .bold))
+                                .font(FTFont.pill).minimumScaleFactor(0.7)
                             Text(badge.text)
                                 .font(.caption2.weight(.bold))
                         }
@@ -439,7 +439,7 @@ struct GarageDriveRow: View {
                     }
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(Color.secondary.opacity(0.5))
+                        .foregroundColor(Color.secondary.opacity(0.7))
                 }
             }
         }

@@ -167,7 +167,7 @@ private struct FollowToggleButton: View {
         } label: {
             if isLoading {
                 ProgressView()
-                    .frame(width: 80)
+                    .frame(minWidth: 80, minHeight: 44)
             } else if result.isFollowedByMe {
                 Text("Following")
                     .font(.caption)

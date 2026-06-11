@@ -96,7 +96,7 @@ struct RecentAchievementCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Image(systemName: achievement.icon)
-                .font(.system(size: 40))
+                .font(FTFont.trophy).minimumScaleFactor(0.6)
                 .foregroundColor(achievement.category.color)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(achievement.title)
@@ -113,10 +113,10 @@ struct RecentAchievementCard: View {
         .padding(10)
         .background(achievement.category.color.opacity(0.12))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Radius.md)
                 .stroke(achievement.category.color.opacity(0.35), lineWidth: 1)
         )
-        .cornerRadius(10)
+        .cornerRadius(Radius.md)
     }
 }
 

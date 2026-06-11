@@ -257,16 +257,16 @@ struct DriveDetailView: View {
         if !routeCoordinates.isEmpty {
             mapContent
                 .frame(height: 260)
-                .cornerRadius(12)
+                .cornerRadius(Radius.lg)
                 // Expand button overlay (top-right)
                 .overlay(alignment: .topTrailing) {
                     Button {
                         isMapExpanded = true
                     } label: {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.footnote.weight(.semibold)).minimumScaleFactor(0.8)
                             .padding(8)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.sm))
                     }
                     .padding(10)
                 }
@@ -292,7 +292,7 @@ struct DriveDetailView: View {
                     }
                 }
         } else {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: Radius.lg)
                 .fill(Color.ftCardBg)
                 .frame(height: 260)
                 .overlay(
@@ -321,14 +321,14 @@ struct DriveDetailView: View {
             // Start / End markers
             Annotation("Start", coordinate: routeCoordinates.first!) {
                 ZStack {
-                    Circle().fill(Color.green).frame(width: 20, height: 20)
-                    Image(systemName: "flag.fill").font(.system(size: 10)).foregroundColor(.white)
+                    Circle().fill(Color.ftGreen).frame(width: 20, height: 20)
+                    Image(systemName: "flag.fill").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                 }
             }
             Annotation("End", coordinate: routeCoordinates.last!) {
                 ZStack {
-                    Circle().fill(Color.red).frame(width: 20, height: 20)
-                    Image(systemName: "flag.checkered").font(.system(size: 10)).foregroundColor(.white)
+                    Circle().fill(Color.ftRed).frame(width: 20, height: 20)
+                    Image(systemName: "flag.checkered").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                 }
             }
 
@@ -337,7 +337,7 @@ struct DriveDetailView: View {
                 Annotation(event.label, coordinate: event.coordinate) {
                     ZStack {
                         Circle().fill(event.color.opacity(0.85)).frame(width: 22, height: 22)
-                        Image(systemName: event.icon).font(.system(size: 10)).foregroundColor(.white)
+                        Image(systemName: event.icon).font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                     }
                 }
             }
@@ -347,7 +347,7 @@ struct DriveDetailView: View {
             ForEach(zeroToSixtyAttempts) { attempt in
                 if attempt.polylineCoordinates.count >= 2 {
                     MapPolyline(coordinates: attempt.polylineCoordinates)
-                        .stroke(Color.orange, lineWidth: 6)
+                        .stroke(Color.ftAmber, lineWidth: 6)
                 }
                 Annotation("", coordinate: attempt.midpointCoordinate) {
                     ZeroSixtyAttemptBubble(
@@ -422,7 +422,7 @@ struct DriveDetailView: View {
         }
         .padding()
         .background(Color.ftCardBg)
-        .cornerRadius(12)
+        .cornerRadius(Radius.lg)
     }
 
     // MARK: - Computed helpers
@@ -618,14 +618,14 @@ struct DriveDetailView: View {
     private var zeroToSixtyLegend: some View {
         HStack(spacing: 8) {
             Capsule()
-                .fill(Color.orange)
+                .fill(Color.ftAmber)
                 .frame(width: 18, height: 4)
             Text("0-60 attempts")
                 .font(.caption)
                 .foregroundColor(.secondary)
             if zeroToSixtyAttempts.contains(where: { $0.isPersonalBest }) {
                 Capsule()
-                    .fill(Color.yellow)
+                    .fill(Color.ftGold)
                     .frame(width: 18, height: 4)
                 Text("personal best")
                     .font(.caption)
@@ -879,20 +879,20 @@ struct ZeroSixtyAttemptBubble: View {
             HStack(spacing: 4) {
                 if isPersonalBest {
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(FTFont.pill).minimumScaleFactor(0.7)
                 }
                 Text(String(format: "%.1fs", elapsedSeconds))
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.caption.weight(.bold)).minimumScaleFactor(0.8)
                     .monospacedDigit()
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
-                SpeechBubble(cornerRadius: 6, tailWidth: 8, tailHeight: 5)
-                    .fill(isPersonalBest ? Color.yellow : Color.orange)
+                SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)
+                    .fill(isPersonalBest ? Color.ftPB060Tint : Color.ftAmber)
             )
             .overlay(
-                SpeechBubble(cornerRadius: 6, tailWidth: 8, tailHeight: 5)
+                SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)
                     .stroke(Color.white, lineWidth: 1)
             )
             .foregroundColor(isPersonalBest ? .black : .white)

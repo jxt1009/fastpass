@@ -163,18 +163,18 @@ struct AppStoreScreenshotRootView: View {
                                 }
                                 .padding()
                                 .background(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                                         .fill(Color.white.opacity(entry.rank == 2 ? 0.12 : 0.07))
                                 )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous)
                                         .stroke(entry.rank == 2 ? Color.blue.opacity(0.5) : Color.white.opacity(0.06), lineWidth: 1)
                                 )
                             }
                         }
                         .padding(20)
                         .background(
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            RoundedRectangle(cornerRadius: Radius.giant, style: .continuous)
                                 .fill(Color.white.opacity(0.05))
                         )
                     }

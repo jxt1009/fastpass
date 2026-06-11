@@ -31,7 +31,7 @@ struct CarPhotoEditorSection: View {
         HStack(spacing: 12) {
             photoPreview
                 .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
 
             VStack(alignment: .leading, spacing: 6) {
                 PhotosPicker(selection: $pickedPhoto, matching: .images) {
@@ -97,8 +97,8 @@ struct CarPhotoEditorSection: View {
 
     private var carIconPlaceholder: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.blue.opacity(0.15))
+            RoundedRectangle(cornerRadius: Radius.sm)
+                .fill(Color.ftBlue.opacity(0.15))
             Image(systemName: "car.fill")
                 .foregroundColor(.blue)
         }

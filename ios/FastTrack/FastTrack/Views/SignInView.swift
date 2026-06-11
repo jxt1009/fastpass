@@ -13,7 +13,7 @@ struct SignInView: View {
             // Logo
             VStack(spacing: 12) {
                 Image(systemName: "speedometer")
-                    .font(.system(size: 80))
+                    .font(FTFont.iconLarge).minimumScaleFactor(0.6)
                     .foregroundColor(.blue)
                 Text("FastTrack")
                     .font(.largeTitle).fontWeight(.bold)
@@ -34,9 +34,9 @@ struct SignInView: View {
                         .padding()
                         .background(Color.white)
                         .foregroundColor(.black)
-                        .cornerRadius(10)
-                        .overlay(RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.gray.opacity(0.4), lineWidth: 1))
+                        .cornerRadius(Radius.md)
+                        .overlay(RoundedRectangle(cornerRadius: Radius.md)
+                            .stroke(Color.ftOnDarkDivider, lineWidth: 1))
                         .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
                 }
 
@@ -47,7 +47,7 @@ struct SignInView: View {
                     appleSignInManager.handleSignInResult(result)
                 }
                 .frame(height: 50)
-                .cornerRadius(10)
+                .cornerRadius(Radius.md)
             }
             .padding(.horizontal, 40)
 
@@ -87,7 +87,7 @@ struct SignInView: View {
             .font(.caption2)
             .padding(.bottom, 24)
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.ftSurfaceBg.ignoresSafeArea())
     }
 }
 

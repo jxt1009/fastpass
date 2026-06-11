@@ -54,7 +54,7 @@ struct CarPhotoView: View {
             )
             if showInitials {
                 Text(initials(for: car))
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .font(FTFont.iconXLarge).minimumScaleFactor(0.6)
                     .foregroundColor(.white.opacity(0.9))
             }
         }

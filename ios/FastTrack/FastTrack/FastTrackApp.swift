@@ -202,6 +202,7 @@ struct RootView: View {
 // MARK: - Splash Screen
 
 struct SplashView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var iconScale: CGFloat = 0.7
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
@@ -220,7 +221,7 @@ struct SplashView: View {
                         .fill(Color(.systemGray5))
                         .frame(width: 110, height: 110)
                     Image(systemName: "speedometer")
-                        .font(.system(size: 52, weight: .medium))
+                        .font(FTFont.appIcon).minimumScaleFactor(0.6)
                         .foregroundStyle(.primary)
                 }
                 .scaleEffect(iconScale)
@@ -229,7 +230,7 @@ struct SplashView: View {
                 // Wordmark
                 VStack(spacing: 6) {
                     Text("FastTrack")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(FTFont.wordmark).minimumScaleFactor(0.6)
                         .foregroundStyle(.primary)
                     Text("Every drive. Every detail.")
                         .font(.subheadline)
@@ -247,7 +248,7 @@ struct SplashView: View {
                             .frame(width: 7, height: 7)
                             .scaleEffect(dotOffset == CGFloat(i) ? 1.4 : 1.0)
                             .animation(
-                                .easeInOut(duration: 0.4).repeatForever().delay(Double(i) * 0.15),
+                                reduceMotion ? nil : .easeInOut(duration: 0.4).repeatForever().delay(Double(i) * 0.15),
                                 value: dotOffset
                             )
                     }

@@ -191,14 +191,14 @@ struct CarDetailView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 260)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
 
             LinearGradient(
                 colors: [.clear, .black.opacity(0.65)],
                 startPoint: .center,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
             .frame(height: 260)
             .allowsHitTesting(false)
 
@@ -233,10 +233,10 @@ struct CarDetailView: View {
                     showingHeroPhotoEditor = true
                 } label: {
                     Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 24))
+                        .font(FTFont.sectionCaption).minimumScaleFactor(0.6)
                         .foregroundColor(.white)
                         .padding(10)
-                        .background(Circle().fill(Color.black.opacity(0.45)))
+                        .background(Circle().fill(Color.ftScrim))
                 }
                 .frame(width: 44, height: 44)
                 .accessibilityLabel("Edit car photo")
@@ -375,7 +375,7 @@ struct CarDetailView: View {
             x: .value("Drive", index),
             y: .value("Max Speed", settings.speedValue(speed))
         )
-        .foregroundStyle(Color.red)
+        .foregroundStyle(Color.ftRed)
         .symbolSize(120)
         .annotation(position: .top) {
             Text("PB")
