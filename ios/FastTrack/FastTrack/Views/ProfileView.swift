@@ -480,7 +480,12 @@ struct CarGarageCard: View {
             VStack(spacing: 8) {
                 // Main car info
                 HStack(spacing: 12) {
-                    CarPhotoThumbnail(photoURL: car.photoUrl, size: 56)
+                    CarPhotoView(
+                        car: car,
+                        url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+                        cornerRadius: 10,
+                        size: 56
+                    )
                     VStack(alignment: .leading, spacing: 4) {
                         Text(car.shortDisplay)
                             .font(.headline)
@@ -560,6 +565,7 @@ private struct EditingCarTarget: Identifiable {
     let id: String
 }
 
+<<<<<<< HEAD
 /// Small rounded thumbnail for a car's photo. Falls back to a tinted car icon
 /// placeholder when no usable photo URL is set.
 struct CarPhotoThumbnail: View {

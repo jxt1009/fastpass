@@ -305,7 +305,20 @@ private struct LeaderboardRow: View {
                 .frame(width: 32, alignment: .leading)
 
             // Car photo thumbnail (40pt, rounded) — falls back to tinted car icon
-            CarThumbnail(urlString: entry.carPhotoUrl, size: 40)
+            CarPhotoView(
+                car: UserCar(
+                    id: entry.carId ?? entry.carKey,
+                    make: entry.carMake,
+                    model: entry.carModel,
+                    year: entry.carYear,
+                    trim: entry.carTrim ?? "",
+                    nickname: entry.carNickname ?? "",
+                    photoUrl: entry.carPhotoUrl
+                ),
+                url: entry.carPhotoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+                cornerRadius: 6,
+                size: 40
+            )
 
             // Car info (primary) + username (supporting)
             VStack(alignment: .leading, spacing: 2) {
@@ -357,6 +370,7 @@ private struct LeaderboardRow: View {
     }
 }
 
+<<<<<<< HEAD
 // MARK: - Car Thumbnail
 
 /// 40-48pt rounded thumbnail for a car photo. Falls back to a tinted
