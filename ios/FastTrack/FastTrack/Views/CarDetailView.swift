@@ -380,15 +380,11 @@ struct CarDetailView: View {
     }
 
     private var sparklineEmptyState: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "chart.line.uptrend.xyaxis")
-                .font(.title2)
-                .foregroundColor(.secondary)
-            Text("Record more drives to see the trend")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
+        ContentUnavailableView(
+            "No trend data",
+            systemImage: "chart.line.uptrend.xyaxis",
+            description: Text("Record more drives to see the trend")
+        )
         .frame(height: 120)
     }
 

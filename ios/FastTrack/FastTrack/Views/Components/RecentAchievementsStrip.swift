@@ -45,11 +45,13 @@ struct RecentAchievementsStrip: View {
                 }
 
                 if recent.isEmpty {
-                    Text("Complete a drive to start unlocking achievements")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 6)
+                    ContentUnavailableView(
+                        "No achievements yet",
+                        systemImage: "trophy",
+                        description: Text("Complete a drive to start unlocking achievements")
+                    )
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {

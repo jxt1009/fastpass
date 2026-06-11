@@ -173,23 +173,12 @@ struct PublicCarDetailView: View {
                 }
             }
         } else {
-            InstrumentCard {
-                HStack(spacing: 10) {
-                    Image(systemName: "chart.bar")
-                        .foregroundColor(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(statsNotSyncedCopy)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        if statsNotSyncedCopy != noDataCopy {
-                            Text("Stats will appear here once they sync from the device that recorded them.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    Spacer()
-                }
-            }
+            ContentUnavailableView(
+                "Stats not synced",
+                systemImage: "chart.bar",
+                description: Text(statsNotSyncedCopy)
+            )
+            .frame(maxWidth: .infinity)
         }
     }
 

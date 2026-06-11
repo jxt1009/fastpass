@@ -177,30 +177,14 @@ struct GarageView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
-        InstrumentCard {
-            VStack(spacing: 14) {
-                Image(systemName: "car")
-                    .font(FTFont.scoreboard).minimumScaleFactor(0.6)
-                    .foregroundColor(.secondary)
-                Text("No cars in your garage yet")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Text("Add a car to start tracking drives, photos, and personal bests.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                Button {
-                    showingAddCar = true
-                } label: {
-                    Text("Add Your First Car")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(InstrumentButtonStyle(color: .ftBlue))
-                .padding(.top, 4)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+        ContentUnavailableView {
+            Label("No cars in your garage yet", systemImage: "car")
+        } description: {
+            Text("Add a car to start tracking drives, photos, and personal bests.")
+        } actions: {
+            Button("Add Your First Car") { showingAddCar = true }
+                .buttonStyle(.borderedProminent)
+                .tint(.ftBlue)
         }
     }
 
