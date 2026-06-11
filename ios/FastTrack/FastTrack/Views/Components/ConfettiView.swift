@@ -34,6 +34,7 @@ struct ConfettiView: View {
     /// via `elapsed = context.date.timeIntervalSince(startTime)` so the
     /// confetti always starts at 0 regardless of wall-clock state.
     @State private var startTime: Date = Date()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init() {
         // Pre-randomize each particle so the animation is reproducible
@@ -60,14 +61,20 @@ struct ConfettiView: View {
 
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { context in
-            Canvas { gc, size in
-                let elapsed = context.date.timeIntervalSince(startTime)
-                draw(in: gc, size: size, time: elapsed)
+        if reduceMotion {
+            Color.clear
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { context in
+                Canvas { gc, size in
+                    let elapsed = context.date.timeIntervalSince(startTime)
+                    draw(in: gc, size: size, time: elapsed)
+                }
             }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 
     private func draw(in gc: GraphicsContext, size: CGSize, time: TimeInterval) {

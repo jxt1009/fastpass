@@ -202,6 +202,7 @@ struct RootView: View {
 // MARK: - Splash Screen
 
 struct SplashView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var iconScale: CGFloat = 0.7
     @State private var iconOpacity: Double = 0
     @State private var textOpacity: Double = 0
@@ -247,7 +248,7 @@ struct SplashView: View {
                             .frame(width: 7, height: 7)
                             .scaleEffect(dotOffset == CGFloat(i) ? 1.4 : 1.0)
                             .animation(
-                                .easeInOut(duration: 0.4).repeatForever().delay(Double(i) * 0.15),
+                                reduceMotion ? nil : .easeInOut(duration: 0.4).repeatForever().delay(Double(i) * 0.15),
                                 value: dotOffset
                             )
                     }

@@ -365,6 +365,7 @@ extension View {
 
 /// A view modifier that overlays a shimmering highlight to indicate loading.
 struct ShimmerModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var phase: CGFloat = -1
 
     func body(content: Content) -> some View {
@@ -386,8 +387,10 @@ struct ShimmerModifier: ViewModifier {
                 .clipped()
             )
             .onAppear {
-                withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
-                    phase = 1
+                if !reduceMotion {
+                    withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
+                        phase = 1
+                    }
                 }
             }
     }
