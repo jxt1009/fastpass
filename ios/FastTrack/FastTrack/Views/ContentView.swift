@@ -245,6 +245,9 @@ struct ContentView: View {
                         )
                         .id("pulse-\(scenePhase)")
                 )
+                .sensoryFeedback(.impact(weight: .medium), trigger: driveManager.isRecording) { oldValue, newValue in
+                    newValue
+                }
             }
         }
     }
