@@ -236,7 +236,7 @@ struct CarDetailView: View {
                         .font(FTFont.sectionCaption).minimumScaleFactor(0.6)
                         .foregroundColor(.white)
                         .padding(10)
-                        .background(Circle().fill(Color.black.opacity(0.45)))
+                        .background(Circle().fill(Color.ftScrim))
                 }
                 .frame(width: 44, height: 44)
                 .accessibilityLabel("Edit car photo")
@@ -375,7 +375,7 @@ struct CarDetailView: View {
             x: .value("Drive", index),
             y: .value("Max Speed", settings.speedValue(speed))
         )
-        .foregroundStyle(Color.red)
+        .foregroundStyle(Color.ftRed)
         .symbolSize(120)
         .annotation(position: .top) {
             Text("PB")

@@ -374,7 +374,7 @@ struct ShimmerModifier: ViewModifier {
                     LinearGradient(
                         gradient: Gradient(stops: [
                             .init(color: .clear, location: 0),
-                            .init(color: Color.white.opacity(0.35), location: 0.4),
+                            .init(color: Color.ftShimmer, location: 0.4),
                             .init(color: .clear, location: 0.8),
                         ]),
                         startPoint: .leading,
@@ -419,7 +419,7 @@ struct LeaderboardSkeletonRow: View {
         HStack(spacing: 12) {
             SkeletonBlock(width: 28, height: 20)
             Circle()
-                .fill(Color(.systemGray5))
+                .fill(Color.ftSkeleton)
                 .frame(width: 36, height: 36)
                 .shimmer()
             VStack(alignment: .leading, spacing: 6) {

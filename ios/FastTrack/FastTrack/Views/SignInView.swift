@@ -36,7 +36,7 @@ struct SignInView: View {
                         .foregroundColor(.black)
                         .cornerRadius(Radius.md)
                         .overlay(RoundedRectangle(cornerRadius: Radius.md)
-                            .stroke(Color.gray.opacity(0.4), lineWidth: 1))
+                            .stroke(Color.ftOnDarkDivider, lineWidth: 1))
                         .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
                 }
 
@@ -87,7 +87,7 @@ struct SignInView: View {
             .font(.caption2)
             .padding(.bottom, 24)
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.ftSurfaceBg.ignoresSafeArea())
     }
 }
 

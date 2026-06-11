@@ -321,13 +321,13 @@ struct DriveDetailView: View {
             // Start / End markers
             Annotation("Start", coordinate: routeCoordinates.first!) {
                 ZStack {
-                    Circle().fill(Color.green).frame(width: 20, height: 20)
+                    Circle().fill(Color.ftGreen).frame(width: 20, height: 20)
                     Image(systemName: "flag.fill").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                 }
             }
             Annotation("End", coordinate: routeCoordinates.last!) {
                 ZStack {
-                    Circle().fill(Color.red).frame(width: 20, height: 20)
+                    Circle().fill(Color.ftRed).frame(width: 20, height: 20)
                     Image(systemName: "flag.checkered").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                 }
             }
@@ -347,7 +347,7 @@ struct DriveDetailView: View {
             ForEach(zeroToSixtyAttempts) { attempt in
                 if attempt.polylineCoordinates.count >= 2 {
                     MapPolyline(coordinates: attempt.polylineCoordinates)
-                        .stroke(Color.orange, lineWidth: 6)
+                        .stroke(Color.ftAmber, lineWidth: 6)
                 }
                 Annotation("", coordinate: attempt.midpointCoordinate) {
                     ZeroSixtyAttemptBubble(
@@ -618,14 +618,14 @@ struct DriveDetailView: View {
     private var zeroToSixtyLegend: some View {
         HStack(spacing: 8) {
             Capsule()
-                .fill(Color.orange)
+                .fill(Color.ftAmber)
                 .frame(width: 18, height: 4)
             Text("0-60 attempts")
                 .font(.caption)
                 .foregroundColor(.secondary)
             if zeroToSixtyAttempts.contains(where: { $0.isPersonalBest }) {
                 Capsule()
-                    .fill(Color.yellow)
+                    .fill(Color.ftGold)
                     .frame(width: 18, height: 4)
                 Text("personal best")
                     .font(.caption)
@@ -889,7 +889,7 @@ struct ZeroSixtyAttemptBubble: View {
             .padding(.vertical, 4)
             .background(
                 SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)
-                    .fill(isPersonalBest ? Color.yellow : Color.orange)
+                    .fill(isPersonalBest ? Color.ftPB060Tint : Color.ftAmber)
             )
             .overlay(
                 SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)

@@ -8,8 +8,8 @@ struct DriveHistoryView: View {
     /// Yellow wins over red: a 0-60 PB is rarer, so when both PBs are
     /// held by the same drive, the yellow tint takes precedence.
     private func rowTint(isPB060: Bool, isPBTopSpeed: Bool) -> Color {
-        if isPB060        { return Color.yellow.opacity(0.15) }
-        if isPBTopSpeed   { return Color.red.opacity(0.10) }
+        if isPB060        { return Color.ftPB060Tint.opacity(0.15) }
+        if isPBTopSpeed   { return Color.ftPBTopSpeedTint.opacity(0.10) }
         return Color.ftSurfaceBg
     }
 
@@ -138,11 +138,11 @@ struct DriveRowView: View {
                 Text(drive.startTime, style: .date)
                     .font(.headline)
                 if isPersonalBest060, drive.best060Time != nil {
-                    pbPill(text: "PB 0-60", icon: "trophy.fill", bg: Color.yellow, fg: Color.black)
+                    pbPill(text: "PB 0-60", icon: "trophy.fill", bg: Color.ftPB060Tint, fg: Color.black)
                         .transition(.scale.combined(with: .opacity))
                 }
                 if isPersonalBestTopSpeed {
-                    pbPill(text: "PB Top Speed", icon: "flame.fill", bg: Color.red, fg: Color.white)
+                    pbPill(text: "PB Top Speed", icon: "flame.fill", bg: Color.ftPBTopSpeedTint, fg: Color.white)
                         .transition(.scale.combined(with: .opacity))
                 }
                 Spacer()

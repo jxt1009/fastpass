@@ -230,7 +230,7 @@ struct ContentView: View {
                 .buttonStyle(InstrumentButtonStyle(color: driveManager.isRecording ? .ftRed : .ftBlue))
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .stroke(Color.red.opacity(0.6), lineWidth: 2)
+                        .stroke(Color.ftErrorBackground, lineWidth: 2)
                         .scaleEffect(driveManager.isRecording ? 1.05 : 1)
                         .opacity(driveManager.isRecording ? 0.6 : 0)
                         .animation(
@@ -292,7 +292,7 @@ private struct SpeedHeroRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.1), lineWidth: 16)
+                .stroke(Color.ftHairline, lineWidth: 16)
 
             Circle()
                 .trim(from: 0, to: progress)
@@ -357,7 +357,7 @@ private struct TrackMetricCard: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(Color.ftOnDarkDivider, lineWidth: 1)
         )
     }
 }
@@ -414,7 +414,7 @@ struct LiveMapView: View {
                         .stroke(.white, lineWidth: 3)
                         .frame(width: 22, height: 22)
                     Circle()
-                        .fill(Color.blue)
+                        .fill(Color.ftBlue)
                         .frame(width: 16, height: 16)
                 }
             }

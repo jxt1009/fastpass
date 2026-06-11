@@ -15,7 +15,7 @@ struct NotificationsBell: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
-                        .background(Capsule().fill(Color.red))
+                        .background(Capsule().fill(Color.ftRed))
                         .offset(x: 8, y: -4)
                 }
             }

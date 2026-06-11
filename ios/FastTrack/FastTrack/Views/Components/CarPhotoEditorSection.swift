@@ -98,7 +98,7 @@ struct CarPhotoEditorSection: View {
     private var carIconPlaceholder: some View {
         ZStack {
             RoundedRectangle(cornerRadius: Radius.sm)
-                .fill(Color.blue.opacity(0.15))
+                .fill(Color.ftBlue.opacity(0.15))
             Image(systemName: "car.fill")
                 .foregroundColor(.blue)
         }

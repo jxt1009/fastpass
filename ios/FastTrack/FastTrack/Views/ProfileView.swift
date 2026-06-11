@@ -227,7 +227,7 @@ struct ProfileView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(0..<6, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .fill(Color(.systemGray6).opacity(0.2))
+                        .fill(Color.ftCardBg.opacity(0.2))
                         .frame(height: 80)
                         .shimmer()
                 }
@@ -235,7 +235,7 @@ struct ProfileView: View {
             // Full-width card skeletons
             ForEach(0..<3, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color(.systemGray6).opacity(0.2))
+                    .fill(Color.ftCardBg.opacity(0.2))
                     .frame(height: 60)
                     .shimmer()
             }
@@ -339,7 +339,7 @@ struct ProfileView: View {
             .foregroundColor(.red)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.ftCardBg)
             .cornerRadius(Radius.lg)
         }
         .disabled(isDeletingAccount)
@@ -355,7 +355,7 @@ struct ProfileView: View {
                 .foregroundColor(.red)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color(.systemGray6))
+                .background(Color.ftCardBg)
                 .cornerRadius(Radius.lg)
         }
         .padding(.top, 8)
