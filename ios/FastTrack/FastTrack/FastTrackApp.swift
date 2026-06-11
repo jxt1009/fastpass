@@ -90,6 +90,7 @@ struct RootView: View {
                     .transition(.opacity)
             }
         }
+        .toastOverlay()
         .animation(.easeInOut(duration: 0.4), value: isInitializing)
         .preferredColorScheme(settings.preferredColorScheme.colorScheme)
         .task {
