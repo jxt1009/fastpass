@@ -15,6 +15,7 @@ struct ProfileView: View {
     @State private var showingDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @State private var deleteAccountError: String?
+    @State private var showingSignOutConfirmation = false
     @State private var zoomedAvatar: AvatarZoomTarget?
     @State private var croppingAvatar: CropImageSource?
     var onSwitchToGarage: (() -> Void)? = nil
@@ -305,6 +306,9 @@ struct ProfileView: View {
                         guard var p = profileManager.profile else { return }
                         p.isPublic = newValue
                         profileManager.saveProfile(p)
+                        ToastManager.shared.show(ToastMessage(
+                            text: newValue ? "Profile is now public" : "Profile is now private"
+                        ))
                     }
                 )) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -348,7 +352,7 @@ struct ProfileView: View {
 
     private var signOutButton: some View {
         Button(role: .destructive) {
-            AuthManager.shared.signOut()
+            showingSignOutConfirmation = true
         } label: {
             Text("Sign Out")
                 .fontWeight(.semibold)
@@ -357,6 +361,19 @@ struct ProfileView: View {
                 .padding()
                 .background(Color.ftCardBg)
                 .cornerRadius(Radius.lg)
+        }
+        .confirmationDialog(
+            "Sign out of FastTrack?",
+            isPresented: $showingSignOutConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Sign Out", role: .destructive) {
+                AuthManager.shared.signOut()
+                ToastManager.shared.show(ToastMessage(text: "Signed out"))
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll need to sign in again to view drives.")
         }
         .padding(.top, 8)
     }
