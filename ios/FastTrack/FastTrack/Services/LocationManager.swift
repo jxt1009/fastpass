@@ -77,6 +77,14 @@ class LocationManager: NSObject, ObservableObject {
         clManager.requestAlwaysAuthorization()
     }
 
+    /// Whether the user has granted the Always authorization we require to
+    /// record a drive. We deliberately require `.authorizedAlways` (not
+    /// `.authorizedWhenInUse`) because background location is essential for
+    /// drives that continue past the app being backgrounded.
+    var hasRecordingPermission: Bool {
+        clManager.authorizationStatus == .authorizedAlways
+    }
+
     func startUpdatingLocation() {
         #if DEBUG
         print("📍 Starting location updates...")

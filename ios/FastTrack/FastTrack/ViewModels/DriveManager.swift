@@ -126,6 +126,28 @@ class DriveManager: ObservableObject {
         // Clear any prior upload failure so a new recording doesn't show a
         // stale error from the previous drive.
         lastError = nil
+
+        // First time the user actually starts a drive, escalate to Always
+        // authorization. We deliberately do this on Start (not on launch) so
+        // the prompt is contextual — by the time the user sees it, they have
+        // already chosen to record a drive. If they had previously granted
+        // only WhenInUse, this fires the system upgrade prompt.
+        locationManager?.requestAlwaysIfNeeded()
+
+        // If we still don't have Always authorization, refuse to start so
+        // we don't silently produce a 0-distance drive (startUpdatingLocation
+        // would no-op under denied / restricted / WhenInUse). The user can
+        // grant Always in Settings and tap Start again. The
+        // requestAlwaysIfNeeded() call above handles the WhenInUse →
+        // .authorizedAlways upgrade.
+        guard locationManager?.hasRecordingPermission == true else {
+            #if DEBUG
+            print("🚫 Refusing to start recording: location permission not .authorizedAlways")
+            #endif
+            lastError = .locationPermissionDenied
+            return
+        }
+
         #if DEBUG
         print("🚗 Starting drive recording...")
         #endif
@@ -159,11 +181,6 @@ class DriveManager: ObservableObject {
         latestSpeedSample = nil
         headingHistory = []
 
-        // First time the user actually starts a drive, escalate to Always
-        // authorization. We deliberately do this on Start (not on launch) so
-        // the prompt is contextual — by the time the user sees it, they have
-        // already chosen to record a drive.
-        locationManager?.requestAlwaysIfNeeded()
         locationManager?.startUpdatingLocation()
         #if DEBUG
         print("📍 Location manager started")
