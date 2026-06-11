@@ -277,7 +277,7 @@ struct StatCard: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(color.opacity(0.1))
-            .cornerRadius(10)
+            .cornerRadius(Radius.md)
         } else {
             // Default version (used in DriveDetailView)
             VStack(alignment: .leading, spacing: 8) {
@@ -296,7 +296,7 @@ struct StatCard: View {
 .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .background(Color.ftCardBg)
-            .cornerRadius(12)
+            .cornerRadius(Radius.lg)
         }
     }
 }
@@ -403,7 +403,7 @@ extension View {
 struct SkeletonBlock: View {
     var width: CGFloat? = nil
     var height: CGFloat = 16
-    var cornerRadius: CGFloat = 6
+    var cornerRadius: CGFloat = Radius.xs + 2
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
@@ -438,14 +438,14 @@ struct LeaderboardSkeletonRow: View {
 struct StatCardSkeleton: View {
     var body: some View {
         VStack(spacing: 8) {
-            SkeletonBlock(width: 24, height: 24, cornerRadius: 4)
+            SkeletonBlock(width: 24, height: 24, cornerRadius: Radius.xs)
             SkeletonBlock(width: 50, height: 12)
             SkeletonBlock(width: 70, height: 18)
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(Color.ftCardBg)
-        .cornerRadius(12)
+        .cornerRadius(Radius.lg)
     }
 }
 
@@ -500,7 +500,7 @@ struct MetricGauge: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
         .background(Color.ftCardBg)
-        .cornerRadius(8)
+        .cornerRadius(Radius.sm)
     }
 }
 
@@ -514,7 +514,7 @@ struct InstrumentButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding()
             .background(color)
-            .cornerRadius(12)
+            .cornerRadius(Radius.lg)
             .opacity(configuration.isPressed ? 0.8 : 1)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
@@ -566,7 +566,7 @@ struct PerformanceBreakdownCard: View {
                     .padding(.vertical, 2)
                     .background(color.opacity(0.2))
                     .foregroundColor(color)
-                    .cornerRadius(4)
+                    .cornerRadius(Radius.xs)
             }
         }
     }
@@ -577,7 +577,7 @@ struct PerformanceBreakdownCard: View {
 /// A rounded-rectangle bubble with a small triangular tail at the bottom
 /// centre. Used to label 0-60 attempts on the drive map.
 struct SpeechBubble: Shape {
-    var cornerRadius: CGFloat = 10
+    var cornerRadius: CGFloat = Radius.md
     var tailWidth: CGFloat = 14
     var tailHeight: CGFloat = 8
 

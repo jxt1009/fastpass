@@ -185,11 +185,11 @@ struct DashboardGauge: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Radius.sm)
                     .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Radius.sm)
                     .fill(Color.ftCardBg)
             )
         } else {
@@ -207,7 +207,7 @@ struct DashboardGauge: View {
                         endPoint: .trailing
                     ))
                     .frame(width: 32, height: 3)
-                    .cornerRadius(1.5)
+                    .cornerRadius(Radius.xxxs)
 
                 Text(label.uppercased())
                     .font(.system(size: 9, weight: .semibold))
@@ -218,11 +218,11 @@ struct DashboardGauge: View {
             .padding(.vertical, 16)
             .padding(.horizontal, 8)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .stroke(Color.ftSectionBg, lineWidth: 1)
             )
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .fill(Color.ftCardBg)
             )
         }
@@ -258,11 +258,11 @@ struct InstrumentCard<Content: View>: View {
         content
             .padding(Spacing.md)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .fill(glass ? Color.ftGlassSurface : Color.ftCardBg)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: Radius.lg)
                     .stroke(glass ? Color.ftGlassStroke : Color.clear, lineWidth: 1)
             )
     }
