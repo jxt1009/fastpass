@@ -220,7 +220,7 @@ struct SplashView: View {
                         .fill(Color(.systemGray5))
                         .frame(width: 110, height: 110)
                     Image(systemName: "speedometer")
-                        .font(.system(size: 52, weight: .medium))
+                        .font(FTFont.appIcon).minimumScaleFactor(0.6)
                         .foregroundStyle(.primary)
                 }
                 .scaleEffect(iconScale)
@@ -229,7 +229,7 @@ struct SplashView: View {
                 // Wordmark
                 VStack(spacing: 6) {
                     Text("FastTrack")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(FTFont.wordmark).minimumScaleFactor(0.6)
                         .foregroundStyle(.primary)
                     Text("Every drive. Every detail.")
                         .font(.subheadline)

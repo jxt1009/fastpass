@@ -32,11 +32,11 @@ struct PublicCarDetailGauge: View {
                 .lineLimit(1)
             HStack(spacing: 2) {
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.caption.weight(.semibold)).minimumScaleFactor(0.8)
                     .foregroundColor(.secondary)
                 if !unit.isEmpty {
                     Text(unit)
-                        .font(.system(size: 9))
+                        .font(.caption2).minimumScaleFactor(0.75)
                         .foregroundColor(.secondary.opacity(0.6))
                 }
             }

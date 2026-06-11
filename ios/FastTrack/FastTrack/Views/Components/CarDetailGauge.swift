@@ -58,7 +58,7 @@ struct CarDetailGauge: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(value)
-                    .font(.system(size: 32, weight: .bold, design: .monospaced))
+                    .font(FTFont.gaugeNumber).minimumScaleFactor(0.6)
                     .foregroundColor(color)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)

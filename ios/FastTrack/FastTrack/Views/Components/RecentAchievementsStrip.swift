@@ -96,7 +96,7 @@ struct RecentAchievementCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Image(systemName: achievement.icon)
-                .font(.system(size: 40))
+                .font(FTFont.trophy).minimumScaleFactor(0.6)
                 .foregroundColor(achievement.category.color)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(achievement.title)

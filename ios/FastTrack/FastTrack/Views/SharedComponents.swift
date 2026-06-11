@@ -492,8 +492,8 @@ struct MetricGauge: View {
                 .font(.system(.title3, design: .monospaced)).fontWeight(.bold)
                 .foregroundColor(color)
             HStack(spacing: 2) {
-                Text(title).font(.system(size: 9, weight: .semibold)).foregroundColor(.secondary)
-                Text(unit).font(.system(size: 8)).foregroundColor(.secondary.opacity(0.6))
+                Text(title).font(.caption2.weight(.semibold)).minimumScaleFactor(0.75).foregroundColor(.secondary)
+                Text(unit).font(.caption2).minimumScaleFactor(0.7).foregroundColor(.secondary.opacity(0.6))
             }
         }
         .frame(maxWidth: .infinity)

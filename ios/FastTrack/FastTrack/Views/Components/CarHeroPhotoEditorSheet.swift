@@ -136,7 +136,7 @@ struct CarHeroPhotoEditorSheet: View {
                 RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
                     .fill(Color.secondary.opacity(0.15))
                 Image(systemName: "car.fill")
-                    .font(.system(size: 48))
+                    .font(FTFont.iconXLarge).minimumScaleFactor(0.6)
                     .foregroundColor(.secondary)
             }
         }

@@ -264,7 +264,7 @@ struct DriveDetailView: View {
                         isMapExpanded = true
                     } label: {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.footnote.weight(.semibold)).minimumScaleFactor(0.8)
                             .padding(8)
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.sm))
                     }
@@ -322,13 +322,13 @@ struct DriveDetailView: View {
             Annotation("Start", coordinate: routeCoordinates.first!) {
                 ZStack {
                     Circle().fill(Color.green).frame(width: 20, height: 20)
-                    Image(systemName: "flag.fill").font(.system(size: 10)).foregroundColor(.white)
+                    Image(systemName: "flag.fill").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                 }
             }
             Annotation("End", coordinate: routeCoordinates.last!) {
                 ZStack {
                     Circle().fill(Color.red).frame(width: 20, height: 20)
-                    Image(systemName: "flag.checkered").font(.system(size: 10)).foregroundColor(.white)
+                    Image(systemName: "flag.checkered").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                 }
             }
 
@@ -337,7 +337,7 @@ struct DriveDetailView: View {
                 Annotation(event.label, coordinate: event.coordinate) {
                     ZStack {
                         Circle().fill(event.color.opacity(0.85)).frame(width: 22, height: 22)
-                        Image(systemName: event.icon).font(.system(size: 10)).foregroundColor(.white)
+                        Image(systemName: event.icon).font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
                     }
                 }
             }
@@ -879,10 +879,10 @@ struct ZeroSixtyAttemptBubble: View {
             HStack(spacing: 4) {
                 if isPersonalBest {
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(FTFont.pill).minimumScaleFactor(0.7)
                 }
                 Text(String(format: "%.1fs", elapsedSeconds))
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.caption.weight(.bold)).minimumScaleFactor(0.8)
                     .monospacedDigit()
             }
             .padding(.horizontal, 8)

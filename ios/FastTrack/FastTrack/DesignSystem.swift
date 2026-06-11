@@ -178,7 +178,7 @@ struct DashboardGauge: View {
                     .lineLimit(1)
 
                 Text(label.uppercased())
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(FTFont.gaugeLabelCompact)
                     .foregroundColor(.secondary)
                     .tracking(0.5)
             }
@@ -195,7 +195,7 @@ struct DashboardGauge: View {
         } else {
             VStack(spacing: 8) {
                 Text(value)
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .font(FTFont.gaugeValue)
                     .foregroundColor(color)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
@@ -210,7 +210,8 @@ struct DashboardGauge: View {
                     .cornerRadius(Radius.xxxs)
 
                 Text(label.uppercased())
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
+                    .minimumScaleFactor(0.75)
                     .foregroundColor(.secondary)
                     .tracking(1)
             }
