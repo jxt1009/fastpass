@@ -58,9 +58,7 @@ private struct NotificationRow: View {
 
     var body: some View {
         UserRow(
-            avatarSize: 36,
-            primary: notification.message,
-            secondary: Text(notification.createdAt, style: .relative)
+            avatarSize: 36
         ) {
             Group {
                 if let url = notification.actor?.avatarUrl, !url.isEmpty,
@@ -78,6 +76,14 @@ private struct NotificationRow: View {
                 }
             }
             .clipShape(Circle())
+        } primaryContent: {
+            Text(notification.message)
+                .font(.subheadline)
+                .fontWeight(notification.readAt == nil ? .semibold : .regular)
+        } secondaryContent: {
+            Text(notification.createdAt, style: .relative)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         } trailing: {
             if notification.readAt == nil {
                 Circle()

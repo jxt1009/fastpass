@@ -3,27 +3,31 @@ import SwiftUI
 /// Reusable avatar + name + secondary text row. Used for search results,
 /// follower lists, and notifications. The trailing slot is left to the
 /// caller (FollowButton, unread dot, etc.).
-struct UserRow<Avatar: View, Trailing: View>: View {
+///
+/// The `primaryContent` and `secondaryContent` are `@ViewBuilder`
+/// closures so each call site can supply its own styling (e.g. bold for
+/// unread notifications, two-line secondary for fullName + country).
+struct UserRow<Avatar: View, Primary: View, Secondary: View, Trailing: View>: View {
     let avatarSize: CGFloat
-    let primary: String
-    let secondary: Text?
     let isYou: Bool
     @ViewBuilder let avatar: () -> Avatar
+    @ViewBuilder let primaryContent: () -> Primary
+    @ViewBuilder let secondaryContent: () -> Secondary
     @ViewBuilder let trailing: () -> Trailing
 
     init(
         avatarSize: CGFloat = 42,
-        primary: String,
-        secondary: Text? = nil,
         isYou: Bool = false,
         @ViewBuilder avatar: @escaping () -> Avatar,
+        @ViewBuilder primaryContent: @escaping () -> Primary,
+        @ViewBuilder secondaryContent: @escaping () -> Secondary = { EmptyView() },
         @ViewBuilder trailing: @escaping () -> Trailing
     ) {
         self.avatarSize = avatarSize
-        self.primary = primary
-        self.secondary = secondary
         self.isYou = isYou
         self.avatar = avatar
+        self.primaryContent = primaryContent
+        self.secondaryContent = secondaryContent
         self.trailing = trailing
     }
 
@@ -34,16 +38,12 @@ struct UserRow<Avatar: View, Trailing: View>: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(primary).font(.body)
+                    primaryContent()
                     if isYou {
                         BadgePill("You", style: .you)
                     }
                 }
-                if let secondary {
-                    secondary
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                secondaryContent()
             }
 
             Spacer()

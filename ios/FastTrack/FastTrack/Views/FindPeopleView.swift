@@ -86,10 +86,9 @@ private struct UserSearchRow: View {
     var body: some View {
         UserRow(
             avatarSize: 42,
-            primary: "@\(result.username)",
-            secondary: [result.fullName, result.country].first { !$0.isEmpty }.map { Text($0) },
             isYou: result.username == currentUsername
         ) {
+            // Avatar
             Group {
                 if !result.avatarURL.isEmpty, let url = URL(string: result.avatarURL) {
                     AsyncImage(url: url) { phase in
@@ -105,6 +104,17 @@ private struct UserSearchRow: View {
                 }
             }
             .clipShape(Circle())
+        } primaryContent: {
+            Text("@\(result.username)").font(.body)
+        } secondaryContent: {
+            VStack(alignment: .leading, spacing: 1) {
+                if !result.fullName.isEmpty {
+                    Text(result.fullName).font(.caption).foregroundStyle(.secondary)
+                }
+                if !result.country.isEmpty {
+                    Text(result.country).font(.caption).foregroundStyle(.secondary)
+                }
+            }
         } trailing: {
             FollowButton(
                 isFollowing: Binding(

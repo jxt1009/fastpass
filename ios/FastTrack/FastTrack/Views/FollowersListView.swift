@@ -93,9 +93,7 @@ private struct FollowUserRow: View {
 
     var body: some View {
         UserRow(
-            avatarSize: 40,
-            primary: "@\(user.username)",
-            secondary: user.country.isEmpty ? nil : Text(user.country)
+            avatarSize: 40
         ) {
             ZStack {
                 Circle()
@@ -109,6 +107,12 @@ private struct FollowUserRow: View {
                     .foregroundColor(.white)
             }
             .clipShape(Circle())
+        } primaryContent: {
+            Text("@\(user.username)").font(.body)
+        } secondaryContent: {
+            if !user.country.isEmpty {
+                Text(user.country).font(.caption).foregroundStyle(.secondary)
+            }
         } trailing: {
             EmptyView()
         }
