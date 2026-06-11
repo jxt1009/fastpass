@@ -92,7 +92,11 @@ private struct FollowUserRow: View {
     let user: FollowUserEntry
 
     var body: some View {
-        HStack(spacing: 12) {
+        UserRow(
+            avatarSize: 40,
+            primary: "@\(user.username)",
+            secondary: user.country.isEmpty ? nil : Text(user.country)
+        ) {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
@@ -100,20 +104,13 @@ private struct FollowUserRow: View {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
-                    .frame(width: 40, height: 40)
                 Text(String(user.username.prefix(1)).uppercased())
                     .font(.headline)
                     .foregroundColor(.white)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("@\(user.username)")
-                    .font(.body)
-                if !user.country.isEmpty {
-                    Text(user.country)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
+            .clipShape(Circle())
+        } trailing: {
+            EmptyView()
         }
     }
 }

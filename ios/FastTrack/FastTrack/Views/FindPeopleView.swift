@@ -83,69 +83,29 @@ private struct UserSearchRow: View {
     @Binding var result: UserSearchResult
     let currentUsername: String?
 
-    private func avatarCircle(initial: String) -> some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(
-                    colors: [.ftBlue, .purple],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .frame(width: 42, height: 42)
-            Text(initial)
-                .font(.headline)
-                .foregroundStyle(.white)
-        }
-    }
-
     var body: some View {
-        HStack(spacing: 12) {
-            // Avatar
+        UserRow(
+            avatarSize: 42,
+            primary: "@\(result.username)",
+            secondary: [result.fullName, result.country].first { !$0.isEmpty }.map { Text($0) },
+            isYou: result.username == currentUsername
+        ) {
             Group {
                 if !result.avatarURL.isEmpty, let url = URL(string: result.avatarURL) {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
                             image.resizable().scaledToFill()
-                                .frame(width: 42, height: 42)
-                                .clipShape(Circle())
                         default:
-                            avatarCircle(initial: result.username.prefix(1).uppercased())
+                            avatarPlaceholder
                         }
                     }
                 } else {
-                    avatarCircle(initial: result.username.prefix(1).uppercased())
+                    avatarPlaceholder
                 }
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text("@\(result.username)")
-                        .font(.body)
-                    if result.username == currentUsername {
-                        Text("You")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.ftBlue, in: Capsule())
-                    }
-                }
-                if !result.fullName.isEmpty {
-                    Text(result.fullName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                if !result.country.isEmpty {
-                    Text(result.country)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
+            .clipShape(Circle())
+        } trailing: {
             FollowButton(
                 isFollowing: Binding(
                     get: { result.isFollowedByMe },
@@ -158,7 +118,20 @@ private struct UserSearchRow: View {
                 }
             )
         }
-        .padding(.vertical, 4)
+    }
+
+    private var avatarPlaceholder: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [.ftBlue, .purple],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+            Text(result.username.prefix(1).uppercased())
+                .font(.headline)
+                .foregroundStyle(.white)
+        }
     }
 }
 
