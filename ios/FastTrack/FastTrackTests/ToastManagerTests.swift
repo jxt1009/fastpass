@@ -7,8 +7,6 @@ final class ToastManagerTests: XCTestCase {
     override func setUp() async throws {
         // Reset shared state between tests
         ToastManager.shared.dismiss()
-        // Drain any in-flight task
-        try? await Task.sleep(nanoseconds: 50_000_000)
     }
 
     func testShow_SetsCurrentMessage() {

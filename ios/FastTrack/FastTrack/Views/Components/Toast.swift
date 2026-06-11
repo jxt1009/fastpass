@@ -3,13 +3,10 @@ import Combine
 
 // MARK: - ToastMessage
 
-struct ToastMessage: Equatable, Identifiable {
+struct ToastMessage: Identifiable {
     let id = UUID()
     let text: String
     let actionLabel: String?
-    /// Action is Equatable-via-reference identity; we do not compare actions
-    /// across instances, so storing as a closure is safe. The Equatable
-    /// conformance is for diffing during view updates.
     var action: (() -> Void)?
 
     init(text: String, actionLabel: String? = nil, action: (() -> Void)? = nil) {
@@ -17,15 +14,10 @@ struct ToastMessage: Equatable, Identifiable {
         self.actionLabel = actionLabel
         self.action = action
     }
-
-    static func == (lhs: ToastMessage, rhs: ToastMessage) -> Bool {
-        lhs.id == rhs.id
-    }
 }
 
 // MARK: - ToastManager
 
-@MainActor
 final class ToastManager: ObservableObject {
     static let shared = ToastManager()
 
@@ -39,6 +31,7 @@ final class ToastManager: ObservableObject {
     /// pending auto-dismiss and start a new timer). The optional action
     /// runs on dismissal if the user taps the action button; the toast
     /// itself dismisses as soon as the user taps.
+    @MainActor
     func show(_ message: ToastMessage, autoDismissAfter seconds: Double = 3) {
         let hasAction = message.action != nil
         let delay = hasAction ? max(seconds, 4) : seconds
@@ -51,6 +44,7 @@ final class ToastManager: ObservableObject {
         }
     }
 
+    @MainActor
     func dismiss() {
         dismissTask?.cancel()
         current = nil
@@ -76,6 +70,7 @@ struct ToastView: View {
                 Button(label, action: onAction)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.ftBlue)
+                    .fixedSize()
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
             }
