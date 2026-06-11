@@ -210,6 +210,12 @@ struct GarageView: View {
         do {
             try await driveManager.deleteDrive(id: id)
             drivePendingDelete = nil
+            ToastManager.shared.show(ToastMessage(
+                text: "Drive deleted",
+                actionLabel: "Undo"
+            ) {
+                Task { await driveManager.restoreDrive(drive) }
+            })
         } catch {
             deleteError = error.localizedDescription
             drivePendingDelete = nil

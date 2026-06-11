@@ -242,8 +242,15 @@ struct DriveDetailView: View {
         guard !isDeleting, let id = drive.id else { return }
         isDeleting = true
         defer { isDeleting = false }
+        let deletedDrive = drive
         do {
             try await driveManager.deleteDrive(id: id)
+            ToastManager.shared.show(ToastMessage(
+                text: "Drive deleted",
+                actionLabel: "Undo"
+            ) {
+                Task { await driveManager.restoreDrive(deletedDrive) }
+            })
             dismiss()
         } catch {
             deleteError = error.localizedDescription

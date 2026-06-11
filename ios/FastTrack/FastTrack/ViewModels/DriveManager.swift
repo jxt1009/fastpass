@@ -536,6 +536,21 @@ class DriveManager: ObservableObject {
         await refreshAchievementsFromServer()
     }
 
+    /// Re-upload a previously deleted drive. Used by the Undo affordance
+    /// on the delete-drive toast. Best-effort: if the server rejects the
+    /// re-create (e.g. the drive's id has been hard-deleted), we treat
+    /// the restore as a no-op.
+    @MainActor
+    func restoreDrive(_ drive: Drive) async {
+        do {
+            _ = try await apiService.createDrive(drive)
+            drives.insert(drive, at: 0)
+            CarStatsManager.shared.rebuildStats(from: drives)
+        } catch {
+            // Silent: a failed restore is rare and the user can re-record.
+        }
+    }
+
     // MARK: - Achievements
 
     /// Pulls the server-authoritative achievements list. Safe to call from
