@@ -15,6 +15,7 @@ class APIService {
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
+    var inflightFetchDrives: Task<[Drive], Error>?
 
     private init() {
         self.session = URLSession.shared
@@ -149,6 +150,18 @@ class APIService {
     }
 
     func fetchDrives() async throws -> [Drive] {
+        if let task = inflightFetchDrives {
+            return try await task.value
+        }
+        let task = Task<[Drive], Error> {
+            defer { Task { @MainActor in self.inflightFetchDrives = nil } }
+            return try await performFetchDrives()
+        }
+        await MainActor.run { self.inflightFetchDrives = task }
+        return try await task.value
+    }
+
+    private func performFetchDrives() async throws -> [Drive] {
         return try await get(endpoint: "/drives")
     }
 
