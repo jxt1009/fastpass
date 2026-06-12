@@ -203,6 +203,9 @@ struct AddCarView: View {
 }
 
 #Preview {
-    CarSelectorView()
-        .environmentObject(ProfileManager(apiService: APIService()))
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    return CarSelectorView()
+        .environmentObject(ProfileManager(apiService: apiService))
 }

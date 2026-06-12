@@ -1,9 +1,12 @@
 import Foundation
 import Security
 import Combine
+import os
 
 class AuthManager: ObservableObject {
     @Published var isAuthenticated: Bool = false
+
+    private static let log = Logger(subsystem: "app.fasttrack", category: "authManager")
 
     private let tokenKey = "com.fasttrack.auth_token"
     private let refreshTokenKey = "com.fasttrack.refresh_token"
@@ -141,19 +144,49 @@ class AuthManager: ObservableObject {
         await completeAuthentication(with: response)
     }
 
+    /// Google sign-in path: called from GoogleSignInManager.exchangeCode
+    /// with a fully-decoded AuthResponse. Follows the same session-token
+    /// pattern as signInWithApple so completeAuthentication's guard works
+    /// correctly when called from a non-isolated Task.
+    func signInWithGoogle(response: AuthResponse) async {
+        let myToken = UUID()
+        await MainActor.run { self.sessionToken = myToken }
+
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == myToken }
+        guard valid else { return }
+        await completeAuthentication(with: response)
+    }
+
     func completeAuthentication(with response: AuthResponse) async {
+        Self.log.debug("completeAuthentication: starting, sessionToken=\(self.sessionToken.uuidString.prefix(8))")
         let myToken = sessionToken
+        Self.log.debug("completeAuthentication: captured myToken=\(myToken.uuidString.prefix(8))")
         saveToken(response.token)
+        Self.log.debug("completeAuthentication: token saved")
         saveRefreshToken(response.refreshToken)
+        Self.log.debug("completeAuthentication: refreshToken saved")
         saveUser(response.user)
+        Self.log.debug("completeAuthentication: user saved")
         await MainActor.run {
-            guard self.sessionToken == myToken else { return }
+            Self.log.debug("completeAuthentication: on MainActor, sessionToken=\(self.sessionToken.uuidString.prefix(8)), myToken=\(myToken.uuidString.prefix(8)), match=\(self.sessionToken == myToken)")
+            guard self.sessionToken == myToken else {
+                Self.log.error("completeAuthentication: session token mismatch, bailing")
+                return
+            }
+            Self.log.debug("completeAuthentication: setting isAuthenticated = true")
             isAuthenticated = true
         }
         var valid = false
         await MainActor.run { valid = self.sessionToken == myToken }
-        guard valid else { return }
+        Self.log.debug("completeAuthentication: post-set check valid=\(valid)")
+        guard valid else {
+            Self.log.error("completeAuthentication: invalid after set")
+            return
+        }
+        Self.log.debug("completeAuthentication: restoring data from server")
         await restoreUserDataFromServer(serverUser: response.user)
+        Self.log.debug("completeAuthentication: done")
     }
 
     @MainActor

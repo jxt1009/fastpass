@@ -147,7 +147,12 @@ private struct UserSearchRow: View {
 }
 
 #Preview {
-    NavigationStack {
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    return NavigationStack {
         FindPeopleView()
+            .environmentObject(apiService)
+            .environmentObject(ProfileManager(apiService: apiService))
     }
 }

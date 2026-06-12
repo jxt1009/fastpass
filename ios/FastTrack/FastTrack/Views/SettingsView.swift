@@ -130,8 +130,11 @@ private struct SpeedometerCalibrationRow: View {
 }
 
 #Preview {
-    NavigationStack {
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    return NavigationStack {
         SettingsView()
-            .environmentObject(AppSettings())
+            .environmentObject(AppSettings(apiService: apiService))
     }
 }
