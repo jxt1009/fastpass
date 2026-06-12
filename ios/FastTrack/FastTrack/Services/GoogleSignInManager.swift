@@ -7,19 +7,19 @@ import Combine
 class GoogleSignInManager: NSObject, ObservableObject {
     @Published var error: String?
 
+    private static let log = Logger(subsystem: "app.fasttrack", category: "googleSignIn")
+
     static let clientID = Secrets.googleClientID
     static let redirectURI = "com.toper.fasttrack:/oauth2callback"
 
     private var codeVerifier: String = ""
     private var expectedState: String = ""
-    let authManager: AuthManager
+    var authManager: AuthManager?
     let apiService: APIService
 
     init(authManager: AuthManager? = nil, apiService: APIService? = nil) {
         let api = apiService ?? APIService()
-        let auth = authManager ?? AuthManager(apiService: api)
-        api.authManager = auth
-        self.authManager = auth
+        self.authManager = authManager
         self.apiService = api
     }
 
@@ -91,8 +91,12 @@ class GoogleSignInManager: NSObject, ObservableObject {
     }
 
     private func exchangeCode(_ code: String) async {
+        Self.log.debug("exchangeCode: starting with code=\(code.prefix(8))...")
         let base = apiService.baseURL.replacingOccurrences(of: "/api/v1", with: "")
-        guard let url = URL(string: "\(base)/api/v1/auth/google") else { return }
+        guard let url = URL(string: "\(base)/api/v1/auth/google") else {
+            Self.log.error("exchangeCode: failed to construct URL")
+            return
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -105,21 +109,37 @@ class GoogleSignInManager: NSObject, ObservableObject {
             "redirect_uri":  Self.redirectURI,
         ]
         request.httpBody = try? JSONEncoder().encode(body)
+        Self.log.debug("exchangeCode: sending request to \(url.absoluteString)")
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                os.Logger(subsystem: "FastTrack", category: "auth")
-                    .error("Sign-in error: \(String(data: data, encoding: .utf8) ?? "nil", privacy: .public)")
+            guard let http = response as? HTTPURLResponse else {
+                Self.log.error("exchangeCode: invalid response type")
+                await MainActor.run { self.error = "Invalid response from server" }
+                return
+            }
+            Self.log.debug("exchangeCode: HTTP \(http.statusCode)")
+            guard http.statusCode == 200 else {
+                let msg = String(data: data, encoding: .utf8) ?? "Unknown error"
+                Self.log.error("exchangeCode: non-200: \(msg)")
                 await MainActor.run { self.error = "Sign in failed. Please try again." }
                 return
             }
 
+            Self.log.debug("exchangeCode: decoding AuthResponse, body size=\(data.count)")
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let authResponse = try decoder.decode(AuthResponse.self, from: data)
-            await authManager.completeAuthentication(with: authResponse)
+            Self.log.debug("exchangeCode: decoded successfully, calling signInWithGoogle")
+            guard let authManager else {
+                Self.log.error("exchangeCode: authManager is nil")
+                await MainActor.run { self.error = "Internal error: auth not configured" }
+                return
+            }
+            await authManager.signInWithGoogle(response: authResponse)
+            Self.log.debug("exchangeCode: signInWithGoogle returned")
         } catch {
+            Self.log.error("exchangeCode: caught error: \(error.localizedDescription)")
             await MainActor.run { self.error = error.localizedDescription }
         }
     }

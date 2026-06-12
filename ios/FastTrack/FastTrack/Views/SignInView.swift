@@ -88,6 +88,10 @@ struct SignInView: View {
             .padding(.bottom, 24)
         }
         .background(Color.ftSurfaceBg.ignoresSafeArea())
+        .onAppear {
+            googleSignInManager.authManager = authManager
+            appleSignInManager.authManager  = authManager
+        }
     }
 }
 
