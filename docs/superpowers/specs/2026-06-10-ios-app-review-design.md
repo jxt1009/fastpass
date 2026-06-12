@@ -1,7 +1,7 @@
 # iOS App Review & Improvement Plan
 
-**Status:** Design — awaiting user approval
-**Date:** 2026-06-10
+**Status:** Active — R5 in progress (Workstreams 6+7)
+**Date:** 2026-06-10 (added 2026-06-11 release notes inline; see §11)
 **Audit type:** Read-only full-sweep across performance, security, UX/design system, and stability/architecture
 **Files audited:** 60+ Swift files in `ios/FastTrack/FastTrack/`, plus tests in `ios/FastTrack/FastTrackTests/`
 **Findings total:** ~85 unique issues (de-duplicated from ~120 raw findings across 4 parallel audits)
@@ -395,5 +395,115 @@ For each workstream, before merge:
 - Migrating to a different architecture (e.g. TCA) — too speculative for this pass.
 
 ---
+
+## 11. Release notes
+
+### R4 (2026-06-11) — Workstreams 5+8 — SHIPPED via PR #93
+
+**What landed:** Component consolidation (Workstream 5) and error/toast feedback (Workstream 8).
+
+**C-4 — Gauge consolidation**: `FTGauge` (`.hero` / `.compact` / `.statCell`) replaces `DashboardGauge`, `MetricGauge`, `CarDetailGauge`, `PublicCarDetailGauge`. 9 call sites migrated, 2 files deleted. Standardized corner radius on 12.
+
+**C-4b — CarPhotoView thumbnail**: Added `size: CGFloat?` parameter. Thumbnail mode swaps gradient+initials placeholder for car-icon. 3 call sites migrated.
+
+**C-5 — UserRow**: Generic `UserRow<Avatar, Primary, Secondary, Trailing>` with `@ViewBuilder` closures, extracted from 3 view files.
+
+**C-6 — BadgePill**: 6 styles (`.you`, `.selected`, `.pb060`, `.pbTopSpeed`, `.carChip`, `.count`). 5 view files migrated. The `ProfileView` "SELECTED" rounded-rect was intentionally **not** migrated (visual treatment differs by design).
+
+**C-7 — ContentUnavailableView**: 4 hand-rolled empty states replaced (CarDetailView sparkline, GarageView garage, RecentAchievementsStrip, PublicCarDetailView stats).
+
+**C-8 — StatsGrid**: Generic `StatsGrid<Content>` wrapper for 2-flexible-column `LazyVGrid`. 16 call sites migrated.
+
+**F-5 — Toast**: `ToastManager` (singleton `ObservableObject`), `ToastView`, `.toastOverlay()` modifier. Auto-dismiss 3s (4s with action). Wired into `WindowGroup` so it sits above sheets/fullScreenCovers.
+
+**F-1 — FollowButton + follow errors**: New `FollowButton(isFollowing:username:isSelf:onError:)` replaces two private implementations. Errors surface via Toast.
+
+**F-2 — Notification errors**: `NotificationsManager` exposes `@Published lastError`; 5 silent catch blocks (refresh, refreshUnreadCount, loadMore, markRead, markAllRead) now set it. `NotificationsView` observes and toasts.
+
+**F-3 — Delete-drive Undo**: `DriveManager.restoreDrive(_:)` re-uploads a captured `Drive`. 4 delete-drive sites (`CarDetailView`, `GarageView`, `DriveHistoryView`, `DriveDetailView`) enqueue "Drive deleted" toast with Undo action.
+
+**F-4 + P2-16 — Sign-out / privacy**: `ProfileView` shows toast on privacy toggle; sign-out gets confirmation dialog + "Signed out" toast.
+
+**PRs:**
+- #90 — R1 (P0 sweep) — MERGED
+- #91 — R2 (Recording reliability + Location) — MERGED
+- #92 — R3 (Design tokens + Accessibility) — MERGED
+- #93 — R4 (Component consolidation + Toasts) — MERGED
+
+**Quality issues caught + fixed during R4:**
+- Toast review: sheet overlay placement, `@MainActor` precedent, dead `Equatable` on `ToastMessage` (closures), fragile test sleep. Fixed in `ac9265a` before Task 2.
+- UserRow fidelity regression: lost bold-when-unread (notifications) and multi-line secondary (user search). Caught in self-review, fixed by switching `primary`/`secondary` to `@ViewBuilder` closures. Recorded in commit `4a5c515`.
+- Lost commits after rebase: `d41b6b2` (FTGauge) and `597818d` (CarPhotoView) were skipped by the rebase because they conflicted with PR #92's design-token swaps. Recovered via `git cherry-pick` from reflog; conflict markers cleaned up in `d506ad7` and `d3cb00c`.
+
+**Verification at merge:**
+- `xcodebuild build-for-testing` — passes
+- 11 new tests added (Toast, FollowButton, FTGauge, BadgePill, NotificationsManager `lastError`)
+- Full suite: 244 passed, 4 pre-existing `*Redesign` source-string regression failures (not introduced here)
+
+---
+
+### R5 (next) — Workstreams 6+7 — Hot-path performance + stability/concurrency
+
+**Scope:** D-1, D-3, D-4, D-7, D-9, D-10, D-11, D-13, D-14, D-15, D-8 (heading detection), E-1, E-3, E-4, E-5, E-7, E-8, E-9, E-10, E-12, E-14, E-2, E-15.
+
+**Excluded from R5** (already addressed by prior workstreams):
+- D-12 (background upload) — overlap with R2/Workstream 2.
+- E-6 (`processHeadingBackground` actor round-trips) — folded into D-8.
+- E-13 (sign-out clears recording) — fixed in R2/Workstream 2 (`cae92f4`).
+- E-11 (LiveActivity coalescing) — already implemented in R2/Workstream 2.
+
+**Why not a single PR:** Recording path is sensitive. D-2/D-3/D-4, D-7/D-11, E-2, E-3 all touch `DriveManager`/`APIService`/`RecordingActor`. Strictly parallel sub-branches on those files conflict. We split into tracks that share **no overlapping files**.
+
+**Execution plan — 4 tracks, 2 worktrees, 1 PR per track:**
+
+| Track | Worktree | Scope | Sequence | PR base |
+|---|---|---|---|---|
+| **A — WS6 perf (recording hot path)** | `feat/ws6-perf` | D-1, D-3, D-4, D-7, D-9, D-10, D-11, D-13, D-14, D-15 | Sequential within track | `main` |
+| **B — WS6 heading detection (D-8)** | `feat/ws6-d8-heading` | D-8 + folded E-6 | Standalone, runs concurrent with A/C | `main` |
+| **C — WS7 stability (non-recording)** | `feat/ws7-stability` | E-1, E-3, E-4, E-5, E-7, E-8, E-9, E-10, E-12, E-14 | Sequential within track | `main` |
+| **D — WS7 actor isolation** | `feat/ws7-actor-isolation` | E-2, E-15 (pinned-cert foundation) | **Last** — after A+B+C merge to a release branch | Release branch |
+
+**Cross-track file-touch map (enforced in plan files):**
+- Track A owns: `DriveManager+Processing.swift`, `DriveManager+LiveActivity.swift`, `LocationManager.swift`, `RecordingActor.swift`, `ContentView.swift` (LiveMap region), `DriveDetailView.swift` (parseRouteData), `APIService.swift` (createDrive payload).
+- Track B owns: `DriveManager+Processing.swift` (processHeadingBackground block), `Drive.swift` (turn/lane-change counts), `DriveDetailView.swift` (heading surface).
+- Track C owns: `AppleSignInManager.swift`, `GoogleSignInManager.swift`, `AuthManager.swift`, `NotificationsManager.swift`, `SocialView.swift:217`, `PublicCarDetailView.swift:113`, `CarPhotoEditorSection.swift:110`, `DriveDetailView.swift:322,328,550-555`, `Drive.swift:309-313` (Equatable), `DriveManager.swift:136`.
+- Track D owns: `DriveManager.swift` (actor annotation), `AuthManager.swift` (@MainActor), `APIService.swift` (URLSessionDelegate hook).
+
+A and B both touch `DriveManager+Processing.swift`; they must be merged sequentially (A first, then B rebases onto A's branch). A and B do NOT touch B's `Drive.swift` field changes, so no data-model conflict.
+
+**File-ownership rules in the orchestrator plan:**
+- A subagent dispatched to track A may NOT edit files in C's list.
+- A subagent dispatched to track C may NOT edit files in A's list.
+- Track B is a "sublane" of A: spawned after A's first commit lands locally; B rebases onto A's branch head, not main.
+
+**Operating model for subagents (per the user request "optimize for me to not get involved"):**
+- Per-task implementer subagent writes the diff and runs `xcodebuild build-for-testing`. **No per-task spec-compliance or code-quality review subagents** — that's what generated the most user-involvement in R4. One final code review per track before PR.
+- Subagents **decide autonomously** on minor design choices (e.g. method signature, test naming) and log the decision in the plan file under a `## Decisions` heading.
+- Q's only for **truly blocking** questions: compile errors, conflicting edits, missing API. These go into a `BLOCKING_QUESTIONS.md` file the orchestrator reads at checkpoint boundaries.
+
+**Verification at the end of R5:**
+- `xcodebuild build-for-testing` — passes per track.
+- `xcodebuild test` — full suite, all 244 prior tests still pass, new tests for the 23 items pass.
+- Manual drive-record-stop cycle on a real device (backgrounding, sign-out mid-drive, kill mid-upload) — required by spec §9.
+- `fastlane test` for UI-touching items.
+- Profiling: Instruments time-since-start + frame-time trace during a 10-minute drive (verifies D-2, D-3, D-4, D-13 outcomes).
+- Network payload before/after (verifies D-7).
+- Pinning test (verifies D-15 / E-15).
+
+**Risk to manage:**
+- D-2, D-3, D-4 stack — all incremental-stat changes. If implemented out of order, intermediate states are corrupt. Plan enforces **D-15 (RecordingActor allocation) → D-4 (runningDistanceMeters) → D-3 (drop redundant arrays) → D-2 (currentDrive copy diff) → D-1 (IMU queue)** order.
+- D-8 (heading) is L-sized on its own. Estimated 2-3 sub-tasks. Plan lists them.
+
+**Plans to be created for R5 (one per track):**
+- `docs/superpowers/plans/2026-06-12-ios-ws6-perf.md`
+- `docs/superpowers/plans/2026-06-12-ios-ws6-d8-heading.md`
+- `docs/superpowers/plans/2026-06-12-ios-ws7-stability.md`
+- `docs/superpowers/plans/2026-06-12-ios-ws7-actor-isolation.md`
+
+**Orchestrator:** a single subagent that owns the 4 worktrees, dispatches implementer subagents per track, runs the final code review per track, opens the PR, and returns the PR URLs.
+
+---
+
+**End of design.**
 
 **End of design.**
