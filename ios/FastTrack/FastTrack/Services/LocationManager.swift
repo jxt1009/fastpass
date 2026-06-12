@@ -36,6 +36,10 @@ class LocationManager: NSObject, ObservableObject {
     /// Latest GPS course (degrees clockwise from true north). -1 = unavailable.
     private var currentCourse: Double = -1
 
+    /// Weak reference to DriveManager so heading processing can be triggered
+    /// from the GPS callback path. Set externally during wiring.
+    weak var driveManager: DriveManager?
+
     // MARK: - Init
 
     override init() {
@@ -254,7 +258,18 @@ extension LocationManager: CLLocationManagerDelegate {
             zeroLockBrokeAt = location.timestamp
         }
         publishSpeedState(at: location.timestamp, forceSpeedUpdate: true)
-        
+
+        // Invoke heading detection on every valid GPS sample
+        if location.course >= 0, let driveManager = driveManager, driveManager.isRecording {
+            Task { [weak driveManager] in
+                _ = await driveManager?.processHeading(
+                    course: location.course,
+                    speed: max(location.speed, 0),
+                    timestamp: location.timestamp
+                )
+            }
+        }
+
         #if DEBUG
         print("🔄 Speed updated: GPS=\(location.speed), Fused=\(fusion.speed)")
         #endif

@@ -115,72 +115,25 @@ extension DriveManager {
         await RecordingActor.shared.ingest(update)
     }
 
-    func processHeadingBackground(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
-        let window = await MainActor.run { self.headingWindow }
-        guard let window = window else {
+    func processHeading(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
+        let result = await RecordingActor.shared.ingestHeading(
+            course: course,
+            speed: speed,
+            timestamp: timestamp.timeIntervalSince1970
+        )
+        if result.hasAny {
+            let left = result.leftTurns
+            let right = result.rightTurns
+            let lane = result.laneChanges
             await MainActor.run {
-                self.headingWindow = (course, timestamp)
-                self.headingHistory.append((course, timestamp))
+                self.leftTurns += left
+                self.rightTurns += right
+                self.laneChanges += lane
             }
-            return nil
+            let totals = await RecordingActor.shared.headingTotals()
+            return (totals.left, totals.right, totals.lane)
         }
-
-        let windowAge = timestamp.timeIntervalSince(window.time)
-        guard windowAge >= 2.0 else { return nil }
-
-        var delta = course - window.course
-        if delta > 180 { delta -= 360 }
-        if delta < -180 { delta += 360 }
-
-        let lastTurnTime = await MainActor.run { self.lastTurnOrLaneTime }
-        let gap = lastTurnTime.map { timestamp.timeIntervalSince($0) } ?? 100
-
-        // Append to rolling history and check for sustained curve before classifying
-        let inCurve = await MainActor.run { () -> Bool in
-            self.headingHistory.append((course, timestamp))
-            // Trim entries older than 10 seconds
-            let cutoff = timestamp.addingTimeInterval(-10)
-            self.headingHistory.removeAll { $0.time < cutoff }
-            return self.isSustainedCurve(upTo: timestamp)
-        }
-
-        var leftTurns = 0, rightTurns = 0, laneChanges = 0
-
-        if abs(delta) > 35 && gap > 4 {
-            if delta > 0 { rightTurns = 1 } else { leftTurns = 1 }
-        } else if abs(delta) >= 10 && abs(delta) <= 35 && speed > 6.7 && gap > 3 && !inCurve {
-            // Only count as lane change when NOT in a sustained ramp/curve
-            laneChanges = 1
-        }
-
-        await MainActor.run { self.headingWindow = (course, timestamp) }
-
-        return leftTurns + rightTurns + laneChanges > 0 ? (leftTurns, rightTurns, laneChanges) : nil
-    }
-
-    /// Returns true if the heading history shows a sustained curve (ramp, cloverleaf, etc.)
-    /// rather than a brief lane-change deflection. A sustained curve is defined as ≥5 seconds
-    /// of consistent heading rotation in a single direction totalling >40°.
-    func isSustainedCurve(upTo timestamp: Date) -> Bool {
-        let windowStart = timestamp.addingTimeInterval(-8)
-        let window = headingHistory.filter { $0.time >= windowStart }
-        guard window.count >= 4 else { return false }
-
-        var cumulative = 0.0
-        var signs: [Double] = []
-        for i in 1..<window.count {
-            var d = window[i].course - window[i-1].course
-            if d > 180 { d -= 360 }
-            if d < -180 { d += 360 }
-            if abs(d) > 0.5 {
-                cumulative += abs(d)
-                signs.append(d > 0 ? 1 : -1)
-            }
-        }
-        guard cumulative > 40, signs.count >= 3 else { return false }
-        // All deltas in same rotational direction = sustained curve
-        let allSame = signs.allSatisfy { $0 == signs[0] }
-        return allSame
+        return nil
     }
 
     // MARK: - Drive stats update
