@@ -1,6 +1,6 @@
 import Foundation
 
-struct SpeedSample: Equatable {
+struct SpeedSample: Equatable, Sendable {
     let speed: Double
     let rawGPSSpeed: Double
     let speedAccuracy: Double

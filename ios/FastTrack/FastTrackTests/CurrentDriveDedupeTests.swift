@@ -2,6 +2,7 @@ import XCTest
 import Combine
 @testable import FastTrack
 
+@MainActor
 final class CurrentDriveDedupeTests: XCTestCase {
     var cancellables: Set<AnyCancellable> = []
     override func tearDown() {

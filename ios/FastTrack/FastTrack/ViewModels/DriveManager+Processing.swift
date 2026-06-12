@@ -9,7 +9,7 @@ extension DriveManager {
         let age = abs(location.timestamp.timeIntervalSinceNow)
         if age > 5.0 { return }
 
-        let speed = routePointSpeed(for: location)
+        let speed = routePointSpeed(for: location, latestSample: latestSpeedSample)
         let speedMph = speed * 2.23694
 
         // Incremental distance: one O(1) delta per tick instead of O(n) re-sweep.
@@ -74,15 +74,15 @@ extension DriveManager {
         }
     }
 
-    func routePointSpeed(for location: CLLocation) -> Double {
-        guard let latestSpeedSample,
-              abs(latestSpeedSample.timestamp.timeIntervalSince(location.timestamp)) <= 1.0 else {
+    nonisolated func routePointSpeed(for location: CLLocation, latestSample: SpeedSample?) -> Double {
+        guard let latestSample,
+              abs(latestSample.timestamp.timeIntervalSince(location.timestamp)) <= 1.0 else {
             return max(location.speed, 0)
         }
-        return latestSpeedSample.speed
+        return latestSample.speed
     }
 
-    func processLocationHeavy(_ location: CLLocation, speed: Double, speedMph: Double) async {
+    nonisolated func processLocationHeavy(_ location: CLLocation, speed: Double, speedMph: Double) async {
         let ts = location.timestamp
 
         // Read prev from the actor — single hop, not seven.
@@ -115,7 +115,7 @@ extension DriveManager {
         await RecordingActor.shared.ingest(update)
     }
 
-    func processHeading(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
+    nonisolated func processHeading(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
         let result = await RecordingActor.shared.ingestHeading(
             course: course,
             speed: speed,

@@ -3,7 +3,7 @@ import CoreLocation
 
 /// Records a single 0-60 mph launch detected during a drive.
 /// A drive may contain many attempts; `best060Time` is the minimum of these.
-struct ZeroToSixtyAttempt: Codable, Identifiable, Equatable {
+struct ZeroToSixtyAttempt: Codable, Identifiable, Equatable, Sendable {
     var id: UUID = UUID()
     var startIndex: Int           // index into the rich route point array
     var endIndex: Int             // inclusive end index

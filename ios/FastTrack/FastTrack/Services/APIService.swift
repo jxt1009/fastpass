@@ -17,11 +17,14 @@ class APIService {
     private let encoder: JSONEncoder
     var inflightFetchDrives: Task<[Drive], Error>?
 
+    private let pinningDelegate = PinningURLSessionDelegate()
+
     private init() {
         URLCache.shared = URLCache(memoryCapacity: 50 * 1024 * 1024,
                                    diskCapacity: 250 * 1024 * 1024,
                                    diskPath: "fasttrack.avatar.cache")
-        self.session = URLSession.shared
+        let config = URLSessionConfiguration.default
+        self.session = URLSession(configuration: config, delegate: pinningDelegate, delegateQueue: nil)
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601
         self.encoder = JSONEncoder()
@@ -463,6 +466,18 @@ enum APIError: Error, LocalizedError {
         case .locationPermissionDenied:
             return "Location permission is required to record drives"
         }
+    }
+}
+
+// MARK: - PinningURLSessionDelegate
+
+final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
+    // Workstream 12 (J-1) will fill in the SPKI pinning rules.
+    // For now, accept all server certificates.
+    func urlSession(_ session: URLSession,
+                    didReceive challenge: URLAuthenticationChallenge,
+                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        completionHandler(.performDefaultHandling, nil)
     }
 }
 

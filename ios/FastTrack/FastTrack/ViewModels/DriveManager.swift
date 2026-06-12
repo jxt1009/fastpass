@@ -7,7 +7,8 @@ import ActivityKit
 // Processing logic lives in DriveManager+Processing.swift
 // Live Activity lifecycle lives in DriveManager+LiveActivity.swift
 
-class DriveManager: ObservableObject {
+@MainActor
+final class DriveManager: ObservableObject {
     @Published var isRecording = false
     private var _currentDrive: Drive?
     var currentDrive: Drive? {

@@ -2,76 +2,40 @@ import Foundation
 import Security
 import Combine
 
-class AuthManager: ObservableObject {
+@MainActor
+final class AuthManager: ObservableObject {
     static let shared = AuthManager()
 
     @Published var isAuthenticated: Bool = false
 
-    private let tokenKey = "com.fasttrack.auth_token"
-    private let refreshTokenKey = "com.fasttrack.refresh_token"
     private let userKey = "current_user"
     private var sessionToken: UUID = UUID()
 
     private init() {
-        isAuthenticated = getToken() != nil
-    }
-    
-    // MARK: - Keychain helpers
-
-    private func keychainSave(_ value: String, forKey key: String) {
-        let data = Data(value.utf8)
-        let query: [CFString: Any] = [
-            kSecClass:            kSecClassGenericPassword,
-            kSecAttrAccount:      key,
-            kSecValueData:        data,
-            kSecAttrAccessible:   kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        ]
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
-    }
-
-    private func keychainLoad(forKey key: String) -> String? {
-        let query: [CFString: Any] = [
-            kSecClass:       kSecClassGenericPassword,
-            kSecAttrAccount: key,
-            kSecReturnData:  true,
-            kSecMatchLimit:  kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    private func keychainDelete(forKey key: String) {
-        let query: [CFString: Any] = [
-            kSecClass:       kSecClassGenericPassword,
-            kSecAttrAccount: key
-        ]
-        SecItemDelete(query as CFDictionary)
+        isAuthenticated = KeychainStore.load(forKey: KeychainStore.tokenKey) != nil
     }
 
     // MARK: - Token Management
     
-    func saveToken(_ token: String) {
-        keychainSave(token, forKey: tokenKey)
+    nonisolated func saveToken(_ token: String) {
+        KeychainStore.save(token, forKey: KeychainStore.tokenKey)
     }
     
-    func saveRefreshToken(_ token: String) {
-        keychainSave(token, forKey: refreshTokenKey)
+    nonisolated func saveRefreshToken(_ token: String) {
+        KeychainStore.save(token, forKey: KeychainStore.refreshTokenKey)
     }
     
-    func getToken() -> String? {
-        return keychainLoad(forKey: tokenKey)
+    nonisolated func getToken() -> String? {
+        KeychainStore.load(forKey: KeychainStore.tokenKey)
     }
     
-    func getRefreshToken() -> String? {
-        return keychainLoad(forKey: refreshTokenKey)
+    nonisolated func getRefreshToken() -> String? {
+        KeychainStore.load(forKey: KeychainStore.refreshTokenKey)
     }
     
     func clearTokens() {
-        keychainDelete(forKey: tokenKey)
-        keychainDelete(forKey: refreshTokenKey)
+        KeychainStore.delete(forKey: KeychainStore.tokenKey)
+        KeychainStore.delete(forKey: KeychainStore.refreshTokenKey)
         UserDefaults.standard.removeObject(forKey: userKey)
         isAuthenticated = false
     }
@@ -185,6 +149,46 @@ class AuthManager: ObservableObject {
         clearTokens()
     }
     
+}
+
+// MARK: - Keychain helper
+
+private struct KeychainStore: Sendable {
+    static let tokenKey = "com.fasttrack.auth_token"
+    static let refreshTokenKey = "com.fasttrack.refresh_token"
+
+    static func save(_ value: String, forKey key: String) {
+        let data = Data(value.utf8)
+        let query: [CFString: Any] = [
+            kSecClass:            kSecClassGenericPassword,
+            kSecAttrAccount:      key,
+            kSecValueData:        data,
+            kSecAttrAccessible:   kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        SecItemDelete(query as CFDictionary)
+        SecItemAdd(query as CFDictionary, nil)
+    }
+
+    static func load(forKey key: String) -> String? {
+        let query: [CFString: Any] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrAccount: key,
+            kSecReturnData:  true,
+            kSecMatchLimit:  kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func delete(forKey key: String) {
+        let query: [CFString: Any] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrAccount: key
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
 }
 
 // MARK: - Models

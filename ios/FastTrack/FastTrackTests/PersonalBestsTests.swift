@@ -7,6 +7,7 @@ import XCTest
 /// `DriveHistoryView`. They prefer the server's authoritative
 /// `sourceDriveId` on a relevant achievement and fall back to a local
 /// scan with a deterministic tie-break.
+@MainActor
 final class PersonalBestsTests: XCTestCase {
 
     // MARK: - Helpers

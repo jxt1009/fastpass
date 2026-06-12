@@ -6,7 +6,7 @@ import Foundation
 ///
 /// Negative samples are filtered (treated as GPS glitches). Zero
 /// samples are kept — they reflect a stationary car.
-struct RunningSpeedStats: Equatable {
+struct RunningSpeedStats: Equatable, Sendable {
     private(set) var count: Int = 0
     private(set) var min: Double = 0
     private(set) var max: Double = 0
