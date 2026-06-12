@@ -132,14 +132,9 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     /// is true, `currentDrive` is set, `richRoutePoints` is non-empty
     /// (so the `guard` past serialization doesn't return).
     @MainActor
-    private static let testAPI = APIService()
-    @MainActor
-    private static let testAuth = { AuthManager(apiService: testAPI) }()
-    
-    @MainActor
     private func makeManagers(api: MockDriveAPI) -> (APIService, AuthManager) {
-        let realAPI = Self.testAPI
-        let authMgr = Self.testAuth
+        let realAPI = APIService()
+        let authMgr = AuthManager(apiService: realAPI)
         realAPI.authManager = authMgr
         return (realAPI, authMgr)
     }

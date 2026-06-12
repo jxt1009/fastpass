@@ -7,6 +7,8 @@ import XCTest
 
 final class DriveDeleteTests: XCTestCase {
 
+    private let apiService = APIService()
+
     // MARK: - URLSession stubbing
 
     private final class StubURLProtocol: URLProtocol {
@@ -39,7 +41,7 @@ final class DriveDeleteTests: XCTestCase {
     override func setUp() {
         super.setUp()
         URLProtocol.registerClass(StubURLProtocol.self)
-        CarStatsManager(apiService: APIService()).resetAllStats()
+        CarStatsManager(apiService: apiService).resetAllStats()
     }
 
     override func tearDown() {
@@ -93,7 +95,7 @@ final class DriveDeleteTests: XCTestCase {
     func testDriveManager_deleteDrive_removesFromArray() async throws {
         let drive1 = makeDrive(id: 1)
         let drive2 = makeDrive(id: 2)
-        let dm = DriveManager.forTesting(apiService: APIService())
+        let dm = DriveManager.forTesting(apiService: apiService)
         dm.drives = [drive1, drive2]
 
         StubURLProtocol.requestHandler = { req in
@@ -108,7 +110,7 @@ final class DriveDeleteTests: XCTestCase {
     @MainActor
     func testDriveManager_deleteDrive_treats404AsSuccess() async throws {
         let drive = makeDrive(id: 7)
-        let dm = DriveManager.forTesting(apiService: APIService())
+        let dm = DriveManager.forTesting(apiService: apiService)
         dm.drives = [drive]
 
         StubURLProtocol.requestHandler = { req in
@@ -122,7 +124,7 @@ final class DriveDeleteTests: XCTestCase {
     @MainActor
     func testDriveManager_deleteDrive_propagatesNon404Error() async {
         let drive = makeDrive(id: 8)
-        let dm = DriveManager.forTesting(apiService: APIService())
+        let dm = DriveManager.forTesting(apiService: apiService)
         dm.drives = [drive]
 
         StubURLProtocol.requestHandler = { req in
