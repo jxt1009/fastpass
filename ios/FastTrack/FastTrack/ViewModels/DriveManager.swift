@@ -92,6 +92,10 @@ final class DriveManager: ObservableObject {
         await drivePoller.recoverPendingDrives(in: directory)
     }
 
+    func processHeading(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
+        await recordingController.processHeading(course: course, speed: speed, timestamp: timestamp)
+    }
+
     var recordingLocations: [CLLocation] {
         get { recordingController.recordingLocations }
         set { recordingController.recordingLocations = newValue }

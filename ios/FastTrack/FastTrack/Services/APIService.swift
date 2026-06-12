@@ -19,6 +19,7 @@ class APIService: ObservableObject {
                                    diskCapacity: 250 * 1024 * 1024,
                                    diskPath: "fasttrack.avatar.cache")
         let delegate = PinningURLSessionDelegate()
+        delegate.authManager = authManager
         self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601

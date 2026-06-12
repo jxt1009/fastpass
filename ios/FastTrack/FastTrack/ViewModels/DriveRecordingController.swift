@@ -419,6 +419,22 @@ class DriveRecordingController: ObservableObject {
         await RecordingActor.shared.ingest(update)
     }
 
+    func processHeading(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
+        let result = await RecordingActor.shared.ingestHeading(
+            course: course,
+            speed: speed,
+            timestamp: timestamp.timeIntervalSince1970
+        )
+        if result.hasAny {
+            leftTurns += result.leftTurns
+            rightTurns += result.rightTurns
+            laneChanges += result.laneChanges
+            let totals = await RecordingActor.shared.headingTotals()
+            return (totals.left, totals.right, totals.lane)
+        }
+        return nil
+    }
+
     func processHeadingBackground(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
         let window = headingWindow
         guard let window = window else {
