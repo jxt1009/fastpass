@@ -80,6 +80,10 @@ class AppleSignInManager: NSObject, ObservableObject {
 
     func reauthorizeForAccountDeletion() async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
+            guard deletionContinuation == nil else {
+                continuation.resume(throwing: AuthError.invalidToken)
+                return
+            }
             deletionContinuation = continuation
 
             let request = ASAuthorizationAppleIDProvider().createRequest()

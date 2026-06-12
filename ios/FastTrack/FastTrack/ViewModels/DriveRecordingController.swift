@@ -297,6 +297,7 @@ class DriveRecordingController: ObservableObject {
 
         do {
             let saved = try await apiService.createDrive(drive)
+            currentDrive = drive
             currentDrive = nil
             recordingStartTime = nil
             attempts060 = []
