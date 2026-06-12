@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import os.lock
 
 final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
 
@@ -15,7 +16,13 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
         "8Pq14p0SF7i6pX268DDe8owa5TD+PGKhCfAasxKzM/E="
     ]
 
-    private var isProcessing401 = false
+    private var _lock = os_unfair_lock()
+    private var _isProcessing401 = false
+
+    private var isProcessing401: Bool {
+        get { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; return _isProcessing401 }
+        set { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; _isProcessing401 = newValue }
+    }
 
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
@@ -32,8 +39,11 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
             return
         }
 
-        var secResult: SecTrustResultType = .invalid
-        SecTrustEvaluate(serverTrust, &secResult)
+        var secError: CFError?
+        guard SecTrustEvaluateWithError(serverTrust, &secError) else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            return
+        }
         guard let cert = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
