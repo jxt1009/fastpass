@@ -122,10 +122,13 @@ extension DriveManager {
             timestamp: timestamp.timeIntervalSince1970
         )
         if result.hasAny {
+            let left = result.leftTurns
+            let right = result.rightTurns
+            let lane = result.laneChanges
             await MainActor.run {
-                self.leftTurns += result.leftTurns
-                self.rightTurns += result.rightTurns
-                self.laneChanges += result.laneChanges
+                self.leftTurns += left
+                self.rightTurns += right
+                self.laneChanges += lane
             }
             let totals = await RecordingActor.shared.headingTotals()
             return (totals.left, totals.right, totals.lane)

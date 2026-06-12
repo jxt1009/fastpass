@@ -322,3 +322,6 @@ Body: list the 5 tasks, note the rebase onto track A's branch head, link spec §
 ## Decision log
 
 - 2026-06-12: `isSustainedCurve` migrated to actor-scope — keep the original `Date`-based signature or move to `TimeInterval`? **Decision:** move to `TimeInterval` for actor consistency. The internal `headingHistory` storage changes from `[(course: Double, time: Date)]` to `[(course: Double, timestamp: TimeInterval)]`. Verify no other read site.
+- 2026-06-11: `processHeading` in DriveManager+Processing.swift also updates `self.leftTurns`/`rightTurns`/`laneChanges` via `MainActor.run` (not just returning the tuple), because the caller from LocationManager fires-and-forgets. The existing `updateCurrentDrive` method propagates these scalars to the in-flight `Drive` on its next call (from `processLocation`).
+- 2026-06-11: Added `weak var driveManager: DriveManager?` to `LocationManager` so the GPS callback can invoke `processHeading`. Set from `setLocationManager`.
+- 2026-06-11: `startRecording` now calls `RecordingActor.shared.resetHeading()` to clear heading state per-drive (since heading state moved into the actor).

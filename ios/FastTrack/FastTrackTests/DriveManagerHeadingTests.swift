@@ -13,16 +13,20 @@ final class DriveManagerHeadingTests: XCTestCase {
 
         await RecordingActor.shared.resetHeading()
 
-        for i in 0..<3 {
+        // Monotonic heading: baseline (0°) → right turn (50°) → settle → right (100°) → settle → right (150°)
+        let samples: [(course: Double, ts: TimeInterval)] = [
+            (0, 0),
+            (50, 3),
+            (50, 13),
+            (100, 16),
+            (100, 26),
+            (150, 29),
+        ]
+        for s in samples {
             _ = await dm.processHeading(
-                course: 0,
+                course: s.course,
                 speed: 10,
-                timestamp: Date().addingTimeInterval(TimeInterval(i * 10))
-            )
-            _ = await dm.processHeading(
-                course: 50,
-                speed: 10,
-                timestamp: Date().addingTimeInterval(TimeInterval(i * 10 + 1))
+                timestamp: Date().addingTimeInterval(s.ts)
             )
         }
 
