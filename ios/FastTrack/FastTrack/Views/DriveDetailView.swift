@@ -128,7 +128,7 @@ struct DriveDetailView: View {
                 }
 
                 // Extended Stats Grid
-                if drive.leftTurns > 0 || drive.rightTurns > 0 || drive.brakeEvents > 0 {
+                if drive.leftTurns > 0 || drive.rightTurns > 0 || drive.laneChanges > 0 || drive.brakeEvents > 0 {
                     InstrumentCard {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Driving Stats")
