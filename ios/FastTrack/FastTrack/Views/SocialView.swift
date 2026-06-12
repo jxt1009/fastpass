@@ -214,7 +214,7 @@ struct SocialView: View {
         errorMessage = nil
         // Parse committed car filter: first word = make, rest = model
         let parts = committedCarFilter.split(separator: " ", maxSplits: 1)
-        let make = parts.count > 0 ? String(parts[0]) : ""
+        let make = String(parts.first ?? "")
         let model = parts.count > 1 ? String(parts[1]) : ""
         do {
             let fetched = try await APIService.shared.fetchLeaderboard(
