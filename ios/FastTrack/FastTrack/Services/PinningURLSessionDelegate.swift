@@ -28,6 +28,20 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
         set { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; _isProcessing401 = newValue }
     }
 
+    /// Computes the SHA-256 hash of a certificate's Subject Public Key Info (SPKI).
+    /// Returns the base64-encoded hash, or `nil` if the public key cannot be extracted.
+    static func computeSPKIHash(from certificate: SecCertificate) -> String? {
+        var pubKey: SecKey?
+        if #available(iOS 14.0, *) {
+            pubKey = SecCertificateCopyKey(certificate)
+        } else {
+            pubKey = SecCertificateCopyPublicKey(certificate)
+        }
+        guard let publicKey = pubKey else { return nil }
+        guard let data = SecKeyCopyExternalRepresentation(publicKey, nil) as Data? else { return nil }
+        return Data(SHA256.hash(data: data)).base64EncodedString()
+    }
+
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
@@ -48,42 +62,21 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
             return
         }
 
-        var secError: CFError?
-        SecTrustSetNetworkFetchAllowed(serverTrust, false)
-        guard SecTrustEvaluateWithError(serverTrust, &secError) else {
-            log.error("authChallenge: trust evaluation failed: \(String(describing: secError), privacy: .public)")
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
-        }
         guard let cert = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
             log.error("authChallenge: no certificate at index 0")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
 
-        var pubKey: SecKey?
-        if #available(iOS 14.0, *) {
-            pubKey = SecCertificateCopyKey(cert)
-        } else {
-            pubKey = SecCertificateCopyPublicKey(cert)
-        }
-        guard let publicKey = pubKey else {
-            log.error("authChallenge: failed to extract public key")
+        guard let hash = Self.computeSPKIHash(from: cert) else {
+            log.error("authChallenge: failed to compute SPKI hash")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
 
-        let pubKeyData = SecKeyCopyExternalRepresentation(publicKey, nil) as Data?
-        guard let data = pubKeyData else {
-            log.error("authChallenge: failed to copy public key data")
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
-        }
-
-        let hash = Data(SHA256.hash(data: data)).base64EncodedString()
         if pinnedSPKIHashes.contains(hash) {
             log.debug("authChallenge: SPKI hash matched, allowing connection")
-            completionHandler(.performDefaultHandling, nil)
+            completionHandler(.useCredential, URLCredential(trust: serverTrust))
         } else {
             log.error("authChallenge: SPKI hash mismatch — got \(hash, privacy: .public)")
             completionHandler(.cancelAuthenticationChallenge, nil)

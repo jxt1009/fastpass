@@ -9,18 +9,19 @@ class APIService: ObservableObject {
     #endif
 
     private let session: URLSession
-    private let sessionDelegate: PinningURLSessionDelegate
+    let sessionDelegate: PinningURLSessionDelegate
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     var inflightFetchDrives: Task<[Drive], Error>?
-    weak var authManager: AuthManager?
+    weak var authManager: AuthManager? {
+        didSet { sessionDelegate.authManager = authManager }
+    }
 
     init(authManager: AuthManager? = nil) {
         URLCache.shared = URLCache(memoryCapacity: 50 * 1024 * 1024,
                                    diskCapacity: 250 * 1024 * 1024,
                                    diskPath: "fasttrack.avatar.cache")
         let delegate = PinningURLSessionDelegate()
-        delegate.authManager = authManager
         self.sessionDelegate = delegate
         self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         self.decoder = JSONDecoder()
