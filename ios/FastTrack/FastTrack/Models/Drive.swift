@@ -304,11 +304,41 @@ struct UserStats {
     }
 }
 
-// MARK: - CLLocationCoordinate2D Equatable
+// MARK: - Custom Equatable (avoids @retroactive conformance on CLLocationCoordinate2D)
 
-extension CLLocationCoordinate2D: @retroactive Equatable {
-    public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
-        lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
+extension Drive {
+    static func == (lhs: Drive, rhs: Drive) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.userID == rhs.userID &&
+        lhs.startTime == rhs.startTime &&
+        lhs.endTime == rhs.endTime &&
+        lhs.startLatitude == rhs.startLatitude &&
+        lhs.startLongitude == rhs.startLongitude &&
+        lhs.endLatitude == rhs.endLatitude &&
+        lhs.endLongitude == rhs.endLongitude &&
+        lhs.distance == rhs.distance &&
+        lhs.duration == rhs.duration &&
+        lhs.maxSpeed == rhs.maxSpeed &&
+        lhs.minSpeed == rhs.minSpeed &&
+        lhs.avgSpeed == rhs.avgSpeed &&
+        lhs.routeData == rhs.routeData &&
+        lhs.carId == rhs.carId &&
+        lhs.carMake == rhs.carMake &&
+        lhs.carModel == rhs.carModel &&
+        lhs.carYear == rhs.carYear &&
+        lhs.carTrim == rhs.carTrim &&
+        lhs.carNickname == rhs.carNickname &&
+        lhs.stoppedTime == rhs.stoppedTime &&
+        lhs.leftTurns == rhs.leftTurns &&
+        lhs.rightTurns == rhs.rightTurns &&
+        lhs.brakeEvents == rhs.brakeEvents &&
+        lhs.laneChanges == rhs.laneChanges &&
+        lhs.maxAcceleration == rhs.maxAcceleration &&
+        lhs.maxDeceleration == rhs.maxDeceleration &&
+        lhs.peakGForce == rhs.peakGForce &&
+        lhs.topCornerSpeed == rhs.topCornerSpeed &&
+        lhs.best060Time == rhs.best060Time &&
+        lhs.zeroToSixtyAttempts == rhs.zeroToSixtyAttempts
     }
 }
 
