@@ -8,6 +8,7 @@ struct CarDetailDrivesList: View {
     let settings: AppSettings
     let car: UserCar?
     let onDeleteDrive: (Drive) -> Void
+    @EnvironmentObject var authManager: AuthManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -139,7 +140,7 @@ struct CarDetailDrivesList: View {
                     }
                     .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
-                        if drive.userID == AuthManager.shared.getUser()?.id {
+                        if drive.userID == authManager.getUser()?.id {
                             Button(role: .destructive) {
                                 onDeleteDrive(drive)
                             } label: {

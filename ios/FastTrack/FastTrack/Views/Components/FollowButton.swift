@@ -22,7 +22,7 @@ struct FollowButton: View {
     /// Called on API failure with a user-presentable message.
     var onError: (String) -> Void = { _ in }
 
-    private let api = APIService.shared
+    @EnvironmentObject var apiService: APIService
 
     var body: some View {
         if isSelf {
@@ -55,10 +55,10 @@ struct FollowButton: View {
         let previous = isFollowing
         do {
             if isFollowing {
-                try await api.unfollowUser(username: username)
+                try await apiService.unfollowUser(username: username)
                 isFollowing = false
             } else {
-                try await api.followUser(username: username)
+                try await apiService.followUser(username: username)
                 isFollowing = true
             }
         } catch {

@@ -15,9 +15,10 @@ import SwiftUI
 
 struct GarageView: View {
     @EnvironmentObject var driveManager: DriveManager
-    @StateObject private var profileManager = ProfileManager.shared
-    @StateObject private var carStatsManager = CarStatsManager.shared
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var carStatsManager: CarStatsManager
+    @EnvironmentObject var settings: AppSettings
+    @EnvironmentObject var authManager: AuthManager
     @State private var showingAddCar = false
     @State private var drivePendingDelete: Drive?
     @State private var deleteError: String?
@@ -87,7 +88,7 @@ struct GarageView: View {
                     }
                     .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
-                        if drive.userID == AuthManager.shared.getUser()?.id {
+                        if drive.userID == authManager.getUser()?.id {
                             Button(role: .destructive) {
                                 drivePendingDelete = drive
                             } label: {
@@ -227,8 +228,8 @@ struct GarageCarCard: View, Equatable {
     let stats: CarStats?
 
     @EnvironmentObject var driveManager: DriveManager
-    @ObservedObject private var profileManager = ProfileManager.shared
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var settings: AppSettings
     @State private var editingCar: EditingCarTarget?
     @State private var showingRemoveAlert = false
 

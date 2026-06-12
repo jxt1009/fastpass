@@ -20,10 +20,10 @@ import Charts
 struct CarDetailView: View {
     let carId: String
 
-    @StateObject private var profileManager = ProfileManager.shared
-    @StateObject private var carStatsManager = CarStatsManager.shared
-    @StateObject private var achievementManager = AchievementManager.shared
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var carStatsManager: CarStatsManager
+    @EnvironmentObject var achievementManager: AchievementManager
+    @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var driveManager: DriveManager
 
     private var car: UserCar? {
@@ -56,7 +56,8 @@ struct CarDetailView: View {
             drives: driveManager.drives,
             carStats: carStatsManager.getStats(for: car.id),
             achievements: achievementManager.achievements,
-            now: Date()
+            now: Date(),
+            calculateSmoothness: carStatsManager.calculateSmoothnessScore
         )
     }
 

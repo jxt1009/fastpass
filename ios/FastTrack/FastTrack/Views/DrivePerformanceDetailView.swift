@@ -4,6 +4,7 @@ import SwiftUI
 
 struct DrivePerformanceDetailView: View {
     let drive: Drive
+    @EnvironmentObject var settings: AppSettings
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -16,9 +17,9 @@ struct DrivePerformanceDetailView: View {
                             .font(.headline)
                         
                         StatsGrid(spacing: 10) {
-                            PerformanceStatCard(title: "Max Speed", value: AppSettings.shared.speedDisplay(drive.maxSpeed), icon: "speedometer")
-                            PerformanceStatCard(title: "Avg Speed", value: AppSettings.shared.speedDisplay(drive.avgSpeed), icon: "gauge.medium")
-                            PerformanceStatCard(title: "Distance", value: AppSettings.shared.distanceDisplay(drive.distance), icon: "map")
+                            PerformanceStatCard(title: "Max Speed", value: settings.speedDisplay(drive.maxSpeed), icon: "speedometer")
+                            PerformanceStatCard(title: "Avg Speed", value: settings.speedDisplay(drive.avgSpeed), icon: "gauge.medium")
+                            PerformanceStatCard(title: "Distance", value: settings.distanceDisplay(drive.distance), icon: "map")
                             PerformanceStatCard(title: "Duration", value: formatDuration(drive.duration), icon: "clock")
                         }
                     }

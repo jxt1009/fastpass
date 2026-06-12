@@ -7,6 +7,7 @@ import XCTest
 /// `DriveHistoryView`. They prefer the server's authoritative
 /// `sourceDriveId` on a relevant achievement and fall back to a local
 /// scan with a deterministic tie-break.
+@MainActor
 final class PersonalBestsTests: XCTestCase {
 
     // MARK: - Helpers
@@ -72,7 +73,17 @@ final class PersonalBestsTests: XCTestCase {
     }
 
     private func makeManager(drives: [Drive] = [], unlocks: [UserAchievement] = []) -> DriveManager {
-        let m = DriveManager()
+        let realAPI = APIService()
+        let authMgr = AuthManager(apiService: realAPI)
+        realAPI.authManager = authMgr
+        let m = DriveManager(
+            authManager: authMgr,
+            profileManager: ProfileManager(apiService: realAPI),
+            settings: AppSettings(apiService: realAPI),
+            apiService: realAPI,
+            carStatsManager: CarStatsManager(apiService: realAPI),
+            achievementManager: AchievementManager()
+        )
         m.drives = drives
         m.userAchievements = unlocks
         return m
@@ -201,7 +212,7 @@ final class PersonalBestsTests: XCTestCase {
         // Use a fresh manager so we don't read prior test state from the
         // shared singleton. We never call saveCarStats / upload because
         // the public surface used here only mutates in-memory state.
-        let manager = CarStatsManager.shared
+        let manager = CarStatsManager(apiService: APIService())
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let drive = Drive(
             id: 1,

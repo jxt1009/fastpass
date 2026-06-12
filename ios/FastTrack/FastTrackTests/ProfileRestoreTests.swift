@@ -18,7 +18,7 @@ final class ProfileRestoreTests: XCTestCase {
 
     private func resetProfileManager() {
         UserDefaults.standard.removeObject(forKey: "user_profile_v2")
-        ProfileManager.shared.clearProfile()
+        ProfileManager(apiService: APIService()).clearProfile()
     }
 
     private func makeServerUser(
@@ -69,8 +69,8 @@ final class ProfileRestoreTests: XCTestCase {
     func testRestoreFromServer_preservesIsPublicFalse() async {
         resetProfileManager()
         let serverUser = makeServerUser(id: 1, username: "alice", isPublic: false)
-        await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
-        XCTAssertEqual(ProfileManager.shared.profile?.isPublic, false,
+        await ProfileManager(apiService: APIService()).restoreFromServer(serverUser: serverUser)
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.isPublic, false,
                        "restoreFromServer must preserve is_public=false from the server")
     }
 
@@ -79,8 +79,8 @@ final class ProfileRestoreTests: XCTestCase {
     func testRestoreFromServer_preservesIsPublicTrue() async {
         resetProfileManager()
         let serverUser = makeServerUser(id: 2, username: "bob", isPublic: true)
-        await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
-        XCTAssertEqual(ProfileManager.shared.profile?.isPublic, true)
+        await ProfileManager(apiService: APIService()).restoreFromServer(serverUser: serverUser)
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.isPublic, true)
     }
 
     // MARK: - Fix 2: Garage restore uses server data even on same-count edits
@@ -100,17 +100,17 @@ final class ProfileRestoreTests: XCTestCase {
             garage: [localCar],
             selectedCarId: "car-1"
         )
-        ProfileManager.shared.saveProfile(localProfile)
-        XCTAssertEqual(ProfileManager.shared.profile?.garage.count, 1, "precondition: 1 local car")
-        XCTAssertEqual(ProfileManager.shared.profile?.garage.first?.nickname, "Old Nickname", "precondition")
+        ProfileManager(apiService: APIService()).saveProfile(localProfile)
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.garage.count, 1, "precondition: 1 local car")
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.garage.first?.nickname, "Old Nickname", "precondition")
 
         // Server returns the same car count but with updated nickname
         let serverGarage = garageJSON(cars: [("car-1", "New Nickname")])
         let serverUser = makeServerUser(id: 1, username: "carol", garage: serverGarage)
-        await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
+        await ProfileManager(apiService: APIService()).restoreFromServer(serverUser: serverUser)
 
-        XCTAssertEqual(ProfileManager.shared.profile?.garage.count, 1)
-        XCTAssertEqual(ProfileManager.shared.profile?.garage.first?.nickname, "New Nickname",
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.garage.count, 1)
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.garage.first?.nickname, "New Nickname",
                        "server garage must win even when count matches local")
     }
 
@@ -126,15 +126,15 @@ final class ProfileRestoreTests: XCTestCase {
             garage: [localCar],
             selectedCarId: "car-1"
         )
-        ProfileManager.shared.saveProfile(localProfile)
+        ProfileManager(apiService: APIService()).saveProfile(localProfile)
 
         // Server returns no garage (nil)
         let serverUser = makeServerUser(id: 5, username: "dave", garage: nil)
-        await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
+        await ProfileManager(apiService: APIService()).restoreFromServer(serverUser: serverUser)
 
-        XCTAssertEqual(ProfileManager.shared.profile?.garage.count, 1,
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.garage.count, 1,
                        "local garage must be kept when server returns empty")
-        XCTAssertEqual(ProfileManager.shared.profile?.garage.first?.nickname, "Track Car")
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.garage.first?.nickname, "Track Car")
     }
 
     // MARK: - Fix 3: rebuildStats uploads exactly once
@@ -179,7 +179,7 @@ final class ProfileRestoreTests: XCTestCase {
     }
 
     func testRebuildStats_uploadsOnce() {
-        let manager = CarStatsManager.shared
+        let manager = CarStatsManager(apiService: APIService())
         manager.resetAllStats()
 
         let drives = (1...5).map { makeDrive(index: $0, carId: "car-A") }

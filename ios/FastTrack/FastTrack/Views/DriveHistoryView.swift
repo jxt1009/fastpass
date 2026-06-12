@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DriveHistoryView: View {
     @EnvironmentObject var driveManager: DriveManager
+    @EnvironmentObject var authManager: AuthManager
     @State private var drivePendingDelete: Drive?
     @State private var deleteError: String?
 
@@ -48,7 +49,7 @@ struct DriveHistoryView: View {
                             }
                             .listRowBackground(rowTint(isPB060: isPB060, isPBTopSpeed: isPBTopSpeed))
                             .swipeActions(edge: .trailing) {
-                                if drive.userID == AuthManager.shared.getUser()?.id {
+                                if drive.userID == authManager.getUser()?.id {
                                     Button(role: .destructive) {
                                         drivePendingDelete = drive
                                     } label: {
@@ -200,5 +201,5 @@ struct DriveRowView: View, Equatable {
 #Preview {
     DriveHistoryView()
         .environmentObject(DriveManager.preview())
-        .environmentObject(AppSettings.shared)
+        .environmentObject(AppSettings(apiService: APIService()))
 }

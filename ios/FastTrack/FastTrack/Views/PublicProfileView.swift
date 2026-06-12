@@ -3,7 +3,9 @@ import SwiftUI
 struct PublicProfileView: View {
     let username: String
 
-    @StateObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var settings: AppSettings
+    @EnvironmentObject var apiService: APIService
     @State private var profile: PublicProfile?
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -61,7 +63,7 @@ struct PublicProfileView: View {
 
             // Stats (Top Speed, Best 0-60, Total Distance)
             Section("Stats") {
-                ForEach(PublicProfileStats.rows(for: profile)) { row in
+                ForEach(PublicProfileStats.rows(for: profile, settings: settings)) { row in
                     statRow(
                         icon: row.icon,
                         color: row.color,
@@ -294,7 +296,7 @@ struct PublicProfileView: View {
         isLoading = true
         errorMessage = nil
         do {
-            let loaded = try await APIService.shared.fetchPublicProfile(username: username)
+            let loaded = try await apiService.fetchPublicProfile(username: username)
             profile = loaded
             isFollowing = loaded.isFollowedByMe
         } catch APIError.serverError(404) {

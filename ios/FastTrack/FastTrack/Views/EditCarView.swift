@@ -1,10 +1,11 @@
 import SwiftUI
 import PhotosUI
 import UIKit
-
 struct EditCarView: View {
     let carId: String
+
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var apiService: APIService
     @Environment(\.dismiss) private var dismiss
 
     @State private var nickname: String = ""
@@ -110,7 +111,7 @@ struct EditCarView: View {
                 return
             }
             do {
-                let url = try await APIService.shared.uploadCarPhoto(carId: carId, data: data)
+                let url = try await apiService.uploadCarPhoto(carId: carId, data: data)
                 updatedCar.photoUrl = url
             } catch {
                 photoError = "Photo upload failed"
@@ -118,7 +119,7 @@ struct EditCarView: View {
             }
         } else if workingPhotoUrl == nil && originalPhotoUrl != nil {
             do {
-                try await APIService.shared.deleteCarPhoto(carId: carId)
+                try await apiService.deleteCarPhoto(carId: carId)
                 updatedCar.photoUrl = nil
             } catch {
                 photoError = "Failed to remove photo"

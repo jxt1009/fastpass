@@ -1,11 +1,7 @@
 import Foundation
+import Combine
 
-class APIService {
-    static let shared = APIService()
-
-    // Production API endpoint - Change this before deployment
-    // Debug builds currently point at the same host as release; switch to a
-    // staging URL (e.g. "https://staging.fast.toper.dev/api/v1") once one exists.
+class APIService: ObservableObject {
     #if DEBUG
     let baseURL = "https://fast.toper.dev/api/v1"
     #else
@@ -15,9 +11,9 @@ class APIService {
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
-    var inflightFetchDrives: Task<[Drive], Error>?
+    weak var authManager: AuthManager?
 
-    private init() {
+    init(authManager: AuthManager? = nil) {
         URLCache.shared = URLCache(memoryCapacity: 50 * 1024 * 1024,
                                    diskCapacity: 250 * 1024 * 1024,
                                    diskPath: "fasttrack.avatar.cache")
@@ -27,13 +23,14 @@ class APIService {
         self.decoder.dateDecodingStrategy = .iso8601
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
+        self.authManager = authManager
     }
 
     // MARK: - Generic Methods
 
     private func authorizedRequest(url: URL) -> URLRequest {
         var request = URLRequest(url: url)
-        if let token = AuthManager.shared.getToken() {
+        if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         return request
@@ -64,7 +61,7 @@ class APIService {
         request.httpBody = try encoder.encode(body)
 
         if requiresAuth {
-            if let token = AuthManager.shared.getToken() {
+            if let token = authManager?.getToken() {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
         }
@@ -80,7 +77,7 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let token = AuthManager.shared.getToken() {
+        if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = try encoder.encode(body)
@@ -94,7 +91,7 @@ class APIService {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        if let token = AuthManager.shared.getToken() {
+        if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         let (_, response) = try await session.data(for: request)
@@ -107,7 +104,7 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let token = AuthManager.shared.getToken() {
+        if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = try encoder.encode(body)
@@ -132,7 +129,7 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let token = AuthManager.shared.getToken() {
+        if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         let driveData = try encoder.encode(drive)
@@ -277,7 +274,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/stats")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        if let token = AuthManager.shared.getToken() {
+        if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         let (data, response) = try await self.session.data(for: request)

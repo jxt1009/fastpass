@@ -39,7 +39,7 @@ final class DriveDeleteTests: XCTestCase {
     override func setUp() {
         super.setUp()
         URLProtocol.registerClass(StubURLProtocol.self)
-        CarStatsManager.shared.resetAllStats()
+        CarStatsManager(apiService: APIService()).resetAllStats()
     }
 
     override func tearDown() {
@@ -78,8 +78,8 @@ final class DriveDeleteTests: XCTestCase {
 
     // MARK: - APIService
     //
-    // `APIService` is a singleton (`APIService.shared`) with a private
-    // `URLSession.shared`. Direct assertions on `APIService.shared.deleteDrive`
+    // `APIService` is a singleton (`APIService()`) with a private
+    // `URLSession.shared`. Direct assertions on `APIService().deleteDrive`
     // would need a session-injection seam on the production class to be done
     // safely (URLProtocol.registerClass is process-global and would bleed into
     // other tests in the suite). The DriveManager tests below exercise the
@@ -93,7 +93,7 @@ final class DriveDeleteTests: XCTestCase {
     func testDriveManager_deleteDrive_removesFromArray() async throws {
         let drive1 = makeDrive(id: 1)
         let drive2 = makeDrive(id: 2)
-        let dm = DriveManager(apiService: APIService.shared)
+        let dm = DriveManager.forTesting(apiService: APIService())
         dm.drives = [drive1, drive2]
 
         StubURLProtocol.requestHandler = { req in
@@ -108,7 +108,7 @@ final class DriveDeleteTests: XCTestCase {
     @MainActor
     func testDriveManager_deleteDrive_treats404AsSuccess() async throws {
         let drive = makeDrive(id: 7)
-        let dm = DriveManager(apiService: APIService.shared)
+        let dm = DriveManager.forTesting(apiService: APIService())
         dm.drives = [drive]
 
         StubURLProtocol.requestHandler = { req in
@@ -122,7 +122,7 @@ final class DriveDeleteTests: XCTestCase {
     @MainActor
     func testDriveManager_deleteDrive_propagatesNon404Error() async {
         let drive = makeDrive(id: 8)
-        let dm = DriveManager(apiService: APIService.shared)
+        let dm = DriveManager.forTesting(apiService: APIService())
         dm.drives = [drive]
 
         StubURLProtocol.requestHandler = { req in

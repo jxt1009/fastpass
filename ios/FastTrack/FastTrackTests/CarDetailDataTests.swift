@@ -3,7 +3,7 @@ import XCTest
 
 // Phase 2 / Track E: tests for the pure `CarDetailData` derivation.
 // The view itself is a thin wrapper over `CarDetailData` (constructed
-// via `CarDetailData.derive(car:drives:carStats:achievements:now:)`),
+// via `CarDetailData.derive(car:drives:carStats:achievements:now:, calculateSmoothness: { _ in 0 })`),
 // so we exercise the heuristic in isolation. The `now` parameter is
 // injected so the confetti-eligible test can pin the clock.
 
@@ -27,7 +27,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: stats,
             achievements: [],
             now: Date()
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.drivingStyle, .sporty)
     }
 
@@ -47,7 +47,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: stats,
             achievements: [],
             now: Date()
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.drivingStyle, .smooth)
     }
 
@@ -67,7 +67,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: stats,
             achievements: [],
             now: Date()
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.drivingStyle, .balanced)
     }
 
@@ -80,7 +80,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [],
             now: Date()
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.drivingStyle, .unknown)
     }
 
@@ -110,7 +110,7 @@ final class CarDetailDataTests: XCTestCase {
 
         let data = CarDetailData.derive(
             car: car, drives: drives, carStats: nil, achievements: [], now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.sparklinePoints, [10, 20, 30])
     }
 
@@ -129,7 +129,7 @@ final class CarDetailDataTests: XCTestCase {
 
         let data = CarDetailData.derive(
             car: car, drives: drives, carStats: nil, achievements: [], now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.sparklinePoints.count, 30)
         // The last 30 of an increasing series start at index 20
         XCTAssertEqual(data.sparklinePoints.first, 20)
@@ -150,7 +150,7 @@ final class CarDetailDataTests: XCTestCase {
 
         let data = CarDetailData.derive(
             car: car, drives: drives, carStats: nil, achievements: [], now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.pbSparklineIndex, 1)
     }
 
@@ -191,7 +191,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: achievements,
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.achievementPBs.map(\.id), ["mine"])
     }
 
@@ -217,7 +217,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [achievement],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertTrue(data.confettiEligible)
     }
 
@@ -240,7 +240,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [achievement],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertFalse(data.confettiEligible)
     }
 
@@ -254,7 +254,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertFalse(data.confettiEligible)
     }
 
@@ -279,7 +279,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [achievement],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertFalse(data.confettiEligible)
     }
 
@@ -300,7 +300,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [stale],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertNil(data.confettiTriggerToken)
         XCTAssertEqual(data.recentPBCount, 0)
     }
@@ -328,14 +328,14 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [freshA, freshB],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         let reordered = CarDetailData.derive(
             car: car,
             drives: [drive],
             carStats: nil,
             achievements: [freshB, freshA],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(first.confettiTriggerToken, reordered.confettiTriggerToken)
         XCTAssertEqual(first.recentPBCount, 2)
 
@@ -350,7 +350,7 @@ final class CarDetailDataTests: XCTestCase {
             carStats: nil,
             achievements: [freshA, freshB, freshC],
             now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertNotEqual(first.confettiTriggerToken, withNewUnlock.confettiTriggerToken)
         XCTAssertEqual(withNewUnlock.recentPBCount, 3)
     }
@@ -377,7 +377,7 @@ final class CarDetailDataTests: XCTestCase {
 
         let data = CarDetailData.derive(
             car: car, drives: drives, carStats: nil, achievements: [], now: now
-        )
+        , calculateSmoothness: { _ in 0 })
         XCTAssertEqual(data.bestZeroToSixty, 4.5)
     }
 

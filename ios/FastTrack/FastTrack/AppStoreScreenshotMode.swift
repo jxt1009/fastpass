@@ -30,16 +30,43 @@ enum AppStoreScreenshotMode {
 }
 
 struct AppStoreScreenshotRootView: View {
+    @StateObject private var authManager: AuthManager
+    @StateObject private var profileManager: ProfileManager
+    @StateObject private var appSettings: AppSettings
+    @StateObject private var carStatsManager: CarStatsManager
+    @StateObject private var achievementManager: AchievementManager
     @StateObject private var locationManager: LocationManager
     @StateObject private var driveManager: DriveManager
 
     init() {
         let screen = AppStoreScreenshotMode.Screen.current
+        let apiService = APIService()
+        let authManager = AuthManager(apiService: apiService)
+        apiService.authManager = authManager
+        let profileManager = ProfileManager(apiService: apiService)
+        let appSettings = AppSettings(apiService: apiService)
+        let carStatsManager = CarStatsManager(apiService: apiService)
+        let achievementManager = AchievementManager()
         let locationManager = LocationManager.screenshotPreview()
-        let driveManager = DriveManager.screenshotPreview(for: screen)
+        let driveManager = DriveManager(
+            authManager: authManager,
+            profileManager: profileManager,
+            settings: appSettings,
+            apiService: apiService,
+            carStatsManager: carStatsManager,
+            achievementManager: achievementManager
+        )
+        _authManager = StateObject(wrappedValue: authManager)
+        _profileManager = StateObject(wrappedValue: profileManager)
+        _appSettings = StateObject(wrappedValue: appSettings)
+        _carStatsManager = StateObject(wrappedValue: carStatsManager)
+        _achievementManager = StateObject(wrappedValue: achievementManager)
         _locationManager = StateObject(wrappedValue: locationManager)
         _driveManager = StateObject(wrappedValue: driveManager)
-        seedScreenshotData(using: driveManager)
+        self.driveManager.drives = Self.screenshotDrives
+        self.driveManager.isLoadingDrives = false
+        if screen == .track { setupTrackScreen(self.driveManager) }
+        seedScreenshotData(using: self.driveManager)
     }
 
     var body: some View {
@@ -49,9 +76,11 @@ struct AppStoreScreenshotRootView: View {
         }
             .environmentObject(locationManager)
             .environmentObject(driveManager)
-            .environmentObject(AuthManager.shared)
-            .environmentObject(ProfileManager.shared)
-            .environmentObject(AppSettings.shared)
+            .environmentObject(authManager)
+            .environmentObject(profileManager)
+            .environmentObject(appSettings)
+            .environmentObject(carStatsManager)
+            .environmentObject(achievementManager)
             .environment(\.colorScheme, .dark)
             .preferredColorScheme(.dark)
     }
@@ -73,7 +102,7 @@ struct AppStoreScreenshotRootView: View {
             AppStoreLeaderboardScreenshotView()
         case .driveoverview:
             NavigationStack {
-                DriveDetailView(drive: DriveManager.screenshotDrives[0])
+                DriveDetailView(drive: Self.screenshotDrives[0])
             }
         }
     }
@@ -90,15 +119,84 @@ struct AppStoreScreenshotRootView: View {
             isPublic: true
         )
 
-        ProfileManager.shared.profile = profile
-        AchievementManager.shared.resetProgress()
-        AchievementManager.shared.updateProgress(with: driveManager.drives)
-        CarStatsManager.shared.clearLocalData()
-        driveManager.drives.forEach { CarStatsManager.shared.updateStats(for: $0) }
+        profileManager.profile = profile
+        achievementManager.resetProgress()
+        achievementManager.updateProgress(with: driveManager.drives)
+        carStatsManager.clearLocalData()
+        driveManager.drives.forEach { carStatsManager.updateStats(for: $0) }
+    }
+
+    private func setupTrackScreen(_ driveManager: DriveManager) {
+        driveManager.isRecording = true
+        driveManager.recordingStartTime = Date().addingTimeInterval(-812)
+        driveManager.routeCoordinates = [
+            CLLocationCoordinate2D(latitude: 37.3320, longitude: -122.0300),
+            CLLocationCoordinate2D(latitude: 37.3332, longitude: -122.0245),
+            CLLocationCoordinate2D(latitude: 37.3346, longitude: -122.0185),
+            CLLocationCoordinate2D(latitude: 37.3362, longitude: -122.0130),
+            CLLocationCoordinate2D(latitude: 37.3384, longitude: -122.0082)
+        ]
+        driveManager.currentDrive = Drive(
+            id: nil,
+            userID: 1,
+            startTime: Date().addingTimeInterval(-812),
+            endTime: Date(),
+            startLatitude: 37.3320,
+            startLongitude: -122.0300,
+            endLatitude: 37.3384,
+            endLongitude: -122.0082,
+            distance: 12420,
+            duration: 812,
+            maxSpeed: 25.5,
+            minSpeed: 0.0,
+            avgSpeed: 16.1,
+            routeData: nil,
+            carId: "gt3",
+            carMake: "Porsche",
+            carModel: "911",
+            carYear: 2023,
+            carTrim: "GT3",
+            carNickname: "Track Car",
+            stoppedTime: 38,
+            leftTurns: 9,
+            rightTurns: 11,
+            brakeEvents: 2,
+            laneChanges: 4,
+            maxAcceleration: 4.2,
+            maxDeceleration: 5.1,
+            peakGForce: 0.88,
+            topCornerSpeed: 29.8,
+            best060Time: 4.1
+        )
+    }
+
+    private static var screenshotDrives: [Drive] {
+        [
+            makeDrive(id: 101, daysAgo: 1, distance: 18200, duration: 1180, maxSpeed: 24.1, avgSpeed: 15.7, best060: nil, carId: "gt3", carMake: "Porsche", carModel: "911", carYear: 2023, trim: "GT3", nickname: "Track Car"),
+            makeDrive(id: 102, daysAgo: 3, distance: 14600, duration: 980, maxSpeed: 22.8, avgSpeed: 14.8, best060: nil, carId: "gt3", carMake: "Porsche", carModel: "911", carYear: 2023, trim: "GT3", nickname: "Track Car"),
+            makeDrive(id: 103, daysAgo: 7, distance: 21400, duration: 1420, maxSpeed: 23.6, avgSpeed: 14.4, best060: nil, carId: "m3", carMake: "Tesla", carModel: "Model 3", carYear: 2024, trim: "Performance", nickname: "Daily"),
+            makeDrive(id: 104, daysAgo: 12, distance: 12800, duration: 760, maxSpeed: 20.6, avgSpeed: 13.2, best060: nil, carId: "m3", carMake: "Tesla", carModel: "Model 3", carYear: 2024, trim: "Performance", nickname: "Daily"),
+        ]
+    }
+
+    private static func makeDrive(id: Int, daysAgo: Int, distance: Double, duration: Double, maxSpeed: Double, avgSpeed: Double, best060: Double?, carId: String, carMake: String, carModel: String, carYear: Int, trim: String, nickname: String) -> Drive {
+        let start = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+        let route = """
+        {"v":2,"points":[{"lat":37.3320,"lng":-122.0300,"speed":18.2,"ts":0},{"lat":37.3340,"lng":-122.0240,"speed":31.4,"ts":120},{"lat":37.3384,"lng":-122.0082,"speed":26.8,"ts":240}],"events":[{"type":"hard_brake","lat":37.3346,"lng":-122.0185,"ts":150}]}
+        """
+        return Drive(
+            id: id, userID: 1, startTime: start, endTime: start.addingTimeInterval(duration),
+            startLatitude: 37.3320, startLongitude: -122.0300, endLatitude: 37.3384, endLongitude: -122.0082,
+            distance: distance, duration: duration, maxSpeed: maxSpeed, minSpeed: 0.0, avgSpeed: avgSpeed,
+            routeData: route, carId: carId, carMake: carMake, carModel: carModel, carYear: carYear,
+            carTrim: trim, carNickname: nickname, stoppedTime: 42, leftTurns: 8 + daysAgo, rightTurns: 6 + daysAgo,
+            brakeEvents: 2 + (daysAgo % 2), laneChanges: 3 + (daysAgo % 3), maxAcceleration: 3.8, maxDeceleration: 4.7,
+            peakGForce: 0.81, topCornerSpeed: 27.2, best060Time: best060
+        )
     }
 
     private struct AppStoreLeaderboardScreenshotView: View {
-        @ObservedObject private var settings = AppSettings.shared
+        @EnvironmentObject var settings: AppSettings
 
         private let entries: [AppStoreLeaderboardEntry] = [
             AppStoreLeaderboardEntry(rank: 1, username: "apexdriver", mphValue: 82.0, trend: "up"),
@@ -258,181 +356,6 @@ private extension LocationManager {
         manager.currentLocation = CLLocation(latitude: 37.3346, longitude: -122.0090)
         manager.authorizationStatus = .authorizedAlways
         return manager
-    }
-}
-
-private extension DriveManager {
-    static func screenshotPreview(for screen: AppStoreScreenshotMode.Screen) -> DriveManager {
-        let manager = DriveManager()
-        manager.drives = screenshotDrives
-        manager.isLoadingDrives = false
-
-        if screen == .track {
-            manager.isRecording = true
-            manager.recordingStartTime = Date().addingTimeInterval(-812)
-            let coords = [
-                CLLocationCoordinate2D(latitude: 37.3320, longitude: -122.0300),
-                CLLocationCoordinate2D(latitude: 37.3332, longitude: -122.0245),
-                CLLocationCoordinate2D(latitude: 37.3346, longitude: -122.0185),
-                CLLocationCoordinate2D(latitude: 37.3362, longitude: -122.0130),
-                CLLocationCoordinate2D(latitude: 37.3384, longitude: -122.0082)
-            ]
-            for c in coords {
-                manager.richRoutePoints.append((lat: c.latitude, lng: c.longitude, speed: 0, ts: Date().timeIntervalSince1970))
-            }
-            manager.currentDrive = Drive(
-                id: nil,
-                userID: 1,
-                startTime: Date().addingTimeInterval(-812),
-                endTime: Date(),
-                startLatitude: 37.3320,
-                startLongitude: -122.0300,
-                endLatitude: 37.3384,
-                endLongitude: -122.0082,
-                distance: 12420,
-                duration: 812,
-                maxSpeed: 25.5,
-                minSpeed: 0.0,
-                avgSpeed: 16.1,
-                routeData: nil,
-                carId: "gt3",
-                carMake: "Porsche",
-                carModel: "911",
-                carYear: 2023,
-                carTrim: "GT3",
-                carNickname: "Track Car",
-                stoppedTime: 38,
-                leftTurns: 9,
-                rightTurns: 11,
-                brakeEvents: 2,
-                laneChanges: 4,
-                maxAcceleration: 4.2,
-                maxDeceleration: 5.1,
-                peakGForce: 0.88,
-                topCornerSpeed: 29.8,
-                best060Time: 4.1
-            )
-        }
-
-        return manager
-    }
-
-    static var screenshotDrives: [Drive] {
-        [
-            makeDrive(
-                id: 101,
-                daysAgo: 1,
-                distance: 18200,
-                duration: 1180,
-                maxSpeed: 24.1,
-                avgSpeed: 15.7,
-                best060: nil,
-                carId: "gt3",
-                carMake: "Porsche",
-                carModel: "911",
-                carYear: 2023,
-                trim: "GT3",
-                nickname: "Track Car"
-            ),
-            makeDrive(
-                id: 102,
-                daysAgo: 3,
-                distance: 14600,
-                duration: 980,
-                maxSpeed: 22.8,
-                avgSpeed: 14.8,
-                best060: nil,
-                carId: "gt3",
-                carMake: "Porsche",
-                carModel: "911",
-                carYear: 2023,
-                trim: "GT3",
-                nickname: "Track Car"
-            ),
-            makeDrive(
-                id: 103,
-                daysAgo: 7,
-                distance: 21400,
-                duration: 1420,
-                maxSpeed: 23.6,
-                avgSpeed: 14.4,
-                best060: nil,
-                carId: "m3",
-                carMake: "Tesla",
-                carModel: "Model 3",
-                carYear: 2024,
-                trim: "Performance",
-                nickname: "Daily"
-            ),
-            makeDrive(
-                id: 104,
-                daysAgo: 12,
-                distance: 12800,
-                duration: 760,
-                maxSpeed: 20.6,
-                avgSpeed: 13.2,
-                best060: nil,
-                carId: "m3",
-                carMake: "Tesla",
-                carModel: "Model 3",
-                carYear: 2024,
-                trim: "Performance",
-                nickname: "Daily"
-            )
-        ]
-    }
-
-    static func makeDrive(
-        id: Int,
-        daysAgo: Int,
-        distance: Double,
-        duration: Double,
-        maxSpeed: Double,
-        avgSpeed: Double,
-        best060: Double?,
-        carId: String,
-        carMake: String,
-        carModel: String,
-        carYear: Int,
-        trim: String,
-        nickname: String
-    ) -> Drive {
-        let start = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
-        let route = """
-        {"v":2,"points":[{"lat":37.3320,"lng":-122.0300,"speed":18.2,"ts":0},{"lat":37.3340,"lng":-122.0240,"speed":31.4,"ts":120},{"lat":37.3384,"lng":-122.0082,"speed":26.8,"ts":240}],"events":[{"type":"hard_brake","lat":37.3346,"lng":-122.0185,"ts":150}]}
-        """
-        return Drive(
-            id: id,
-            userID: 1,
-            startTime: start,
-            endTime: start.addingTimeInterval(duration),
-            startLatitude: 37.3320,
-            startLongitude: -122.0300,
-            endLatitude: 37.3384,
-            endLongitude: -122.0082,
-            distance: distance,
-            duration: duration,
-            maxSpeed: maxSpeed,
-            minSpeed: 0.0,
-            avgSpeed: avgSpeed,
-            routeData: route,
-            carId: carId,
-            carMake: carMake,
-            carModel: carModel,
-            carYear: carYear,
-            carTrim: trim,
-            carNickname: nickname,
-            stoppedTime: 42,
-            leftTurns: 8 + daysAgo,
-            rightTurns: 6 + daysAgo,
-            brakeEvents: 2 + (daysAgo % 2),
-            laneChanges: 3 + (daysAgo % 3),
-            maxAcceleration: 3.8,
-            maxDeceleration: 4.7,
-            peakGForce: 0.81,
-            topCornerSpeed: 27.2,
-            best060Time: best060
-        )
     }
 }
 #endif

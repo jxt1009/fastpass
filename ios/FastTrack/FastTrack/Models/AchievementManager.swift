@@ -4,14 +4,12 @@ import Combine
 // MARK: - Achievement Manager
 
 class AchievementManager: ObservableObject {
-    static let shared = AchievementManager()
-
     @Published var achievements: [Achievement] = []
     @Published var recentUnlocks: [Achievement] = []
 
     private let userDefaultsKey = "user_achievements_v2"
 
-    private init() {
+    init() {
         loadAchievements()
         setupDefaultAchievements()
     }

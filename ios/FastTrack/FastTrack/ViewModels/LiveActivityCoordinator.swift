@@ -1,11 +1,12 @@
 import Foundation
 import ActivityKit
 
-extension DriveManager {
+@MainActor
+class LiveActivityCoordinator {
+    var liveActivity: Activity<DriveActivityAttributes>?
+    var lastLiveActivityUpdate: Date?
 
-    // MARK: - Live Activity
-
-    internal func startLiveActivity() {
+    func startLiveActivity(recordingStartTime: Date?) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled,
               let startDate = recordingStartTime else { return }
         lastLiveActivityUpdate = nil
@@ -19,16 +20,11 @@ extension DriveManager {
                 pushType: nil
             )
         } catch {
-            #if DEBUG
-            print("⚡ Live Activity start failed: \(error)")
-            #endif
         }
     }
 
-    internal func updateLiveActivity(speedMph: Double, distanceMiles: Double) {
+    func updateLiveActivity(speedMph: Double, distanceMiles: Double, currentGForce: Double, currentMaxSpeed: Double) {
         guard let activity = liveActivity else { return }
-        // 1 Hz cap — Lock Screen widgets render at 1Hz, and the OS
-        // throttles update requests beyond a few per minute anyway.
         let now = Date()
         if let last = lastLiveActivityUpdate, now.timeIntervalSince(last) < 1.0 {
             return
@@ -38,7 +34,7 @@ extension DriveManager {
             speedMph: speedMph,
             gForce: currentGForce,
             distanceMiles: distanceMiles,
-            maxSpeedMph: currentMaxSpeed * 2.23694  // m/s → mph
+            maxSpeedMph: currentMaxSpeed * 2.23694
         )
         let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(10))
         Task {
@@ -46,13 +42,12 @@ extension DriveManager {
         }
     }
 
-    internal func endLiveActivity() {
+    func endLiveActivity() {
         guard let activity = liveActivity else { return }
         lastLiveActivityUpdate = nil
         let state = DriveActivityAttributes.DriveActivityState(speedMph: 0, gForce: 0, distanceMiles: 0, maxSpeedMph: 0)
         let content = ActivityContent(state: state, staleDate: Date())
         Task {
-            // .immediate removes the activity banner/pill right away instead of lingering
             await activity.end(content, dismissalPolicy: .immediate)
             await MainActor.run { self.liveActivity = nil }
         }

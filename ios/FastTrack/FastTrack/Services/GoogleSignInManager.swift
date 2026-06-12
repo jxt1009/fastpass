@@ -12,6 +12,16 @@ class GoogleSignInManager: NSObject, ObservableObject {
 
     private var codeVerifier: String = ""
     private var expectedState: String = ""
+    let authManager: AuthManager
+    let apiService: APIService
+
+    init(authManager: AuthManager? = nil, apiService: APIService? = nil) {
+        let api = apiService ?? APIService()
+        let auth = authManager ?? AuthManager(apiService: api)
+        api.authManager = auth
+        self.authManager = auth
+        self.apiService = api
+    }
 
     func signInWithGoogle() {
         guard Self.clientID.contains(".apps.googleusercontent.com"),
@@ -81,7 +91,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
     }
 
     private func exchangeCode(_ code: String) async {
-        let base = APIService.shared.baseURL.replacingOccurrences(of: "/api/v1", with: "")
+        let base = apiService.baseURL.replacingOccurrences(of: "/api/v1", with: "")
         guard let url = URL(string: "\(base)/api/v1/auth/google") else { return }
 
         var request = URLRequest(url: url)
@@ -108,7 +118,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let authResponse = try decoder.decode(AuthResponse.self, from: data)
-            await AuthManager.shared.completeAuthentication(with: authResponse)
+            await authManager.completeAuthentication(with: authResponse)
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }

@@ -13,7 +13,7 @@ struct RecentAchievementsStrip: View {
     @ObservedObject var driveManager: DriveManager
     let maxCount: Int
 
-    init(achievementManager: AchievementManager = .shared,
+    init(achievementManager: AchievementManager,
          driveManager: DriveManager,
          maxCount: Int = 5) {
         self.achievementManager = achievementManager

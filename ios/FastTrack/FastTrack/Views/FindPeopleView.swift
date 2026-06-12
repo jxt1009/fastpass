@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct FindPeopleView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var apiService: APIService
+    @EnvironmentObject var profileManager: ProfileManager
 
     @State private var query = ""
     @State private var results: [UserSearchResult] = []
@@ -68,7 +69,7 @@ struct FindPeopleView: View {
         isLoading = true
         errorMessage = nil
         do {
-            results = try await APIService.shared.searchUsers(query: trimmed)
+            results = try await apiService.searchUsers(query: trimmed)
             hasSearched = true
         } catch {
             errorMessage = error.localizedDescription

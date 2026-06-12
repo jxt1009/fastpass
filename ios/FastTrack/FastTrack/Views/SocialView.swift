@@ -2,6 +2,9 @@ import SwiftUI
 
 struct SocialView: View {
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var settings: AppSettings
+    @EnvironmentObject var apiService: APIService
+    @EnvironmentObject var notificationsManager: NotificationsManager
 
     @State private var entries: [LeaderboardEntry] = []
     @State private var isLoading = false
@@ -26,7 +29,7 @@ struct SocialView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: NotificationsView()) {
-                        NotificationsBell(manager: NotificationsManager.shared)
+                        NotificationsBell(manager: notificationsManager)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -217,7 +220,7 @@ struct SocialView: View {
         let make = String(parts.first ?? "")
         let model = parts.count > 1 ? String(parts[1]) : ""
         do {
-            let fetched = try await APIService.shared.fetchLeaderboard(
+            let fetched = try await apiService.fetchLeaderboard(
                 category: selectedCategory,
                 scope: selectedScope,
                 period: selectedPeriod,
@@ -261,6 +264,7 @@ private struct LeaderboardQuickFilterChip: View {
 private struct LeaderboardYourPositionCard: View {
     let entry: LeaderboardEntry
     let category: LeaderboardCategory
+    @EnvironmentObject var settings: AppSettings
 
     var body: some View {
         HStack(spacing: 12) {
@@ -280,7 +284,7 @@ private struct LeaderboardYourPositionCard: View {
 
             Spacer()
 
-            Text(category.formattedValue(entry.value))
+            Text(category.formattedValue(entry.value, settings: settings))
                 .font(.headline)
                 .monospacedDigit()
         }
@@ -294,6 +298,7 @@ private struct LeaderboardRow: View, Equatable {
     let entry: LeaderboardEntry
     let category: LeaderboardCategory
     let isCurrentUserRow: Bool
+    @EnvironmentObject var settings: AppSettings
 
     var body: some View {
         HStack(spacing: 12) {
@@ -351,7 +356,7 @@ private struct LeaderboardRow: View, Equatable {
             Spacer(minLength: 4)
 
             // Stat value
-            Text(category.formattedValue(entry.value))
+            Text(category.formattedValue(entry.value, settings: settings))
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
@@ -371,6 +376,13 @@ private struct LeaderboardRow: View, Equatable {
 }
 
 #Preview {
-    SocialView()
-        .environmentObject(ProfileManager.shared)
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    let settings = AppSettings(apiService: apiService)
+    return SocialView()
+        .environmentObject(ProfileManager(apiService: apiService))
+        .environmentObject(settings)
+        .environmentObject(apiService)
+        .environmentObject(NotificationsManager(apiService: apiService))
 }

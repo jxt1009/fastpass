@@ -6,8 +6,11 @@ class AppleSignInManager: NSObject, ObservableObject {
     @Published var isSignedIn = false
     @Published var error: String?
     
-    private let authManager = AuthManager.shared
+    weak var authManager: AuthManager?
     private var deletionContinuation: CheckedContinuation<String, Error>?
+
+    override init() {
+    }
     
     func handleSignInResult(_ result: Result<ASAuthorization, Error>) {
         switch result {
@@ -22,7 +25,7 @@ class AppleSignInManager: NSObject, ObservableObject {
                 .compactMap { $0 }.joined(separator: " ")
             Task {
                 do {
-                    try await authManager.signInWithApple(
+                    try await authManager?.signInWithApple(
                         identityToken: identityToken,
                         authCode: credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) },
                         fullName: fullName.isEmpty ? nil : fullName,
@@ -50,11 +53,11 @@ class AppleSignInManager: NSObject, ObservableObject {
     }
     
     func checkSignInStatus() {
-        if let token = authManager.getToken() {
+        if let token = authManager?.getToken() {
             // Token exists, verify it's still valid
             Task {
                 do {
-                    try await authManager.refreshTokenIfNeeded()
+                    try await authManager?.refreshTokenIfNeeded()
                     await MainActor.run {
                         self.isSignedIn = true
                     }
@@ -71,7 +74,7 @@ class AppleSignInManager: NSObject, ObservableObject {
     
     @MainActor
     func signOut() {
-        authManager.signOut()
+        authManager?.signOut()
         isSignedIn = false
     }
 
@@ -123,7 +126,7 @@ extension AppleSignInManager: ASAuthorizationControllerDelegate {
         // Send to backend
         Task {
             do {
-                try await authManager.signInWithApple(
+                try await authManager?.signInWithApple(
                     identityToken: identityTokenString,
                     authCode: appleIDCredential.authorizationCode.map { String(data: $0, encoding: .utf8) } ?? nil,
                     fullName: fullName.isEmpty ? nil : fullName,

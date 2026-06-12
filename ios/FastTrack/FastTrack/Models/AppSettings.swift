@@ -46,7 +46,6 @@ enum UnitSystem: String, CaseIterable, Identifiable {
 // MARK: - AppSettings
 
 class AppSettings: ObservableObject {
-    static let shared = AppSettings()
     private var suppressServerSync = false
 
     @Published var keepScreenOn: Bool {
@@ -77,7 +76,10 @@ class AppSettings: ObservableObject {
         }
     }
 
-    init() {
+    let apiService: APIService
+
+    init(apiService: APIService = APIService()) {
+        self.apiService = apiService
         if UserDefaults.standard.object(forKey: "settings_keepScreenOn") == nil {
             keepScreenOn = true
         } else {
@@ -100,7 +102,7 @@ class AppSettings: ObservableObject {
         let u = unitSystem.rawValue
         let c = preferredColorScheme.rawValue
         Task {
-            try? await APIService.shared.uploadDisplaySettings(unitSystem: u, colorScheme: c)
+            try? await apiService.uploadDisplaySettings(unitSystem: u, colorScheme: c)
         }
     }
 

@@ -89,7 +89,7 @@ func deriveCarDetailData(
     carStats: CarStats?,
     achievements: [Achievement],
     now: Date,
-    calculateSmoothness: ([Drive]) -> Double = { CarStatsManager.shared.calculateSmoothnessScore(for: $0) }
+    calculateSmoothness: ([Drive]) -> Double
 ) -> CarDetailData {
     let carDrives = drives
         .filter { $0.carId == car.id }
@@ -210,14 +210,16 @@ extension CarDetailData {
         drives: [Drive],
         carStats: CarStats?,
         achievements: [Achievement],
-        now: Date
+        now: Date,
+        calculateSmoothness: @escaping ([Drive]) -> Double
     ) -> CarDetailData {
         deriveCarDetailData(
             car: car,
             drives: drives,
             carStats: carStats,
             achievements: achievements,
-            now: now
+            now: now,
+            calculateSmoothness: calculateSmoothness
         )
     }
 }

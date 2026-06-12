@@ -20,7 +20,7 @@ struct PublicGarageCard: View {
     let car: UserCar
     let stats: CarStats?
 
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
 
     var body: some View {
         InstrumentCard {

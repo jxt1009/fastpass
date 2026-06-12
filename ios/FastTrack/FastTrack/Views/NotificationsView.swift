@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct NotificationsView: View {
-    @StateObject private var manager = NotificationsManager.shared
+    @EnvironmentObject var manager: NotificationsManager
 
     var body: some View {
         Group {

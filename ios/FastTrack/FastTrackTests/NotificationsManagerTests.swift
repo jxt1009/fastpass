@@ -140,7 +140,7 @@ final class NotificationsManagerTests: XCTestCase {
     /// nil, and accepts a new value.
     @MainActor
     func testLastError_StartsNilAndAcceptsAssignment() {
-        let manager = NotificationsManager.shared
+        let manager = NotificationsManager(apiService: APIService())
         // Reset in case a prior test surfaced an error.
         manager.lastError = nil
         XCTAssertNil(manager.lastError)
@@ -160,7 +160,7 @@ final class NotificationsManagerTests: XCTestCase {
     /// APIService (which would require a protocol refactor), so this
     /// test only guards the lifecycle boundary itself.
     func testPollingStartsAndStops() {
-        let manager = NotificationsManager.shared
+        let manager = NotificationsManager(apiService: APIService())
         manager.stopPolling()  // ensure clean slate
         manager.startPolling()
         // Give the loop a moment to begin.

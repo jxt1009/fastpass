@@ -428,9 +428,13 @@ struct LiveMapView: View {
 }
 
 #Preview {
-    ContentView()
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    return ContentView()
         .environmentObject(LocationManager.preview())
         .environmentObject(DriveManager.preview())
-        .environmentObject(AppSettings.shared)
-        .environmentObject(ProfileManager.shared)
+        .environmentObject(AppSettings(apiService: apiService))
+        .environmentObject(ProfileManager(apiService: apiService))
+        .environmentObject(authManager)
 }

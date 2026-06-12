@@ -23,6 +23,7 @@ struct CarHeroPhotoEditorSheet: View {
     let existingPhotoURL: String?
     var onUploadComplete: (URL) -> Void
 
+    @EnvironmentObject var apiService: APIService
     @Environment(\.dismiss) private var dismiss
 
     @State private var pickedPhoto: PhotosPickerItem?
@@ -229,7 +230,7 @@ struct CarHeroPhotoEditorSheet: View {
         }
 
         do {
-            let urlString = try await APIService.shared.uploadCarPhoto(carId: carId, data: data)
+            let urlString = try await apiService.uploadCarPhoto(carId: carId, data: data)
             guard let url = URL(string: urlString) else {
                 errorMessage = "Server returned an invalid photo URL"
                 return
