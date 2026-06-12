@@ -315,13 +315,19 @@ class APIService {
         carMake: String = "",
         carModel: String = ""
     ) async throws -> [LeaderboardEntry] {
-        var endpoint = "/leaderboard?category=\(category.rawValue)&scope=\(scope.rawValue)&period=\(period.rawValue)"
-        if !carMake.isEmpty, let enc = carMake.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            endpoint += "&car_make=\(enc)"
+        var components = URLComponents(string: "\(baseURL)/leaderboard")!
+        components.queryItems = [
+            URLQueryItem(name: "category", value: category.rawValue),
+            URLQueryItem(name: "scope", value: scope.rawValue),
+            URLQueryItem(name: "period", value: period.rawValue),
+        ]
+        if !carMake.isEmpty {
+            components.queryItems!.append(URLQueryItem(name: "car_make", value: carMake))
         }
-        if !carModel.isEmpty, let enc = carModel.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            endpoint += "&car_model=\(enc)"
+        if !carModel.isEmpty {
+            components.queryItems!.append(URLQueryItem(name: "car_model", value: carModel))
         }
+        let endpoint = String(components.url!.absoluteString.dropFirst(baseURL.count))
         return try await get(endpoint: endpoint)
     }
 
@@ -368,8 +374,10 @@ class APIService {
     }
 
     func searchUsers(query: String) async throws -> [UserSearchResult] {
-        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        return try await get(endpoint: "/users/search?q=\(encoded)")
+        var components = URLComponents(string: "\(baseURL)/users/search")!
+        components.queryItems = [URLQueryItem(name: "q", value: query)]
+        let endpoint = String(components.url!.absoluteString.dropFirst(baseURL.count))
+        return try await get(endpoint: endpoint)
     }
 
     func deleteAccount(appleAuthorizationCode: String?) async throws {
@@ -406,11 +414,13 @@ class APIService {
     // MARK: - Notification Methods
 
     func fetchNotifications(cursor: String? = nil, limit: Int = 50) async throws -> InAppNotificationsListResponse {
-        var query = "limit=\(limit)"
-        if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            query += "&cursor=\(encoded)"
+        var components = URLComponents(string: "\(baseURL)/me/notifications")!
+        components.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        if let cursor {
+            components.queryItems!.append(URLQueryItem(name: "cursor", value: cursor))
         }
-        return try await get(endpoint: "/me/notifications?\(query)")
+        let endpoint = String(components.url!.absoluteString.dropFirst(baseURL.count))
+        return try await get(endpoint: endpoint)
     }
 
     func fetchUnreadNotificationCount() async throws -> Int {
