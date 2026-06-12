@@ -107,7 +107,7 @@ struct CarPhotoEditorSection: View {
     // MARK: - Helpers
 
     private var hasPhoto: Bool {
-        pickedImage != nil || (existingPhotoURL != nil && !(existingPhotoURL!.isEmpty))
+        pickedImage != nil || (existingPhotoURL?.isEmpty == false)
     }
 
     private var photoButtonTitle: String {
