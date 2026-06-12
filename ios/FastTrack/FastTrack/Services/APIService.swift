@@ -9,6 +9,7 @@ class APIService: ObservableObject {
     #endif
 
     private let session: URLSession
+    private let sessionDelegate: PinningURLSessionDelegate
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     var inflightFetchDrives: Task<[Drive], Error>?
@@ -20,6 +21,7 @@ class APIService: ObservableObject {
                                    diskPath: "fasttrack.avatar.cache")
         let delegate = PinningURLSessionDelegate()
         delegate.authManager = authManager
+        self.sessionDelegate = delegate
         self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601
