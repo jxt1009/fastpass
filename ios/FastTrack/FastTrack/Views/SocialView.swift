@@ -290,7 +290,7 @@ private struct LeaderboardYourPositionCard: View {
 
 // MARK: - Leaderboard Row
 
-private struct LeaderboardRow: View {
+private struct LeaderboardRow: View, Equatable {
     let entry: LeaderboardEntry
     let category: LeaderboardCategory
     let isCurrentUserRow: Bool

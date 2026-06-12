@@ -53,7 +53,7 @@ struct NotificationsView: View {
     }
 }
 
-private struct NotificationRow: View {
+private struct NotificationRow: View, Equatable {
     let notification: InAppNotification
 
     var body: some View {

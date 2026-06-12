@@ -222,7 +222,7 @@ struct GarageView: View {
 // - Context menu offers Edit / Select as Active (matching the
 //   legacy card's behavior on the profile)
 
-struct GarageCarCard: View {
+struct GarageCarCard: View, Equatable {
     let car: UserCar
     let stats: CarStats?
 
@@ -231,6 +231,10 @@ struct GarageCarCard: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var editingCar: EditingCarTarget?
     @State private var showingRemoveAlert = false
+
+    static func == (lhs: GarageCarCard, rhs: GarageCarCard) -> Bool {
+        lhs.car == rhs.car && lhs.stats == rhs.stats
+    }
 
     private var isSelected: Bool {
         profileManager.profile?.selectedCarId == car.id
