@@ -223,7 +223,6 @@ struct DriveDetailView: View {
         }
         .onAppear {
             parseRouteData()
-            parseZeroToSixtyAttempts()
         }
         .onDisappear { stopPlayback() }
         .sheet(isPresented: $showingCarPicker) {
@@ -569,31 +568,65 @@ struct DriveDetailView: View {
 
     // MARK: - Route parsing
 
+struct RouteParseResult: Sendable {
+    let rawCoordinates: [(lat: Double, lng: Double)]
+    let rawPoints: [(lat: Double, lng: Double, speed: Double, ts: Double)]
+    let rawEvents: [(type: String, lat: Double, lng: Double, ts: Double)]
+}
+
+private func parseRouteDataFromString(_ routeData: String) -> RouteParseResult {
+    guard let data = routeData.data(using: .utf8),
+          let json = try? JSONSerialization.jsonObject(with: data) else {
+        return RouteParseResult(rawCoordinates: [], rawPoints: [], rawEvents: [])
+    }
+
+    if let v2 = json as? [String: Any], (v2["v"] as? Int) == 2 {
+        var rawPoints: [(lat: Double, lng: Double, speed: Double, ts: Double)] = []
+        if let pts = v2["points"] as? [[String: Double]] {
+            rawPoints = pts.compactMap { d in
+                guard let lat = d["lat"], let lng = d["lng"] else { return nil }
+                return (lat: lat, lng: lng, speed: d["speed"] ?? 0, ts: d["ts"] ?? 0)
+            }
+        }
+        var rawEvents: [(type: String, lat: Double, lng: Double, ts: Double)] = []
+        if let evts = v2["events"] as? [[String: Any]] {
+            rawEvents = evts.compactMap { d in
+                guard let typeStr = d["type"] as? String,
+                      let lat = d["lat"] as? Double,
+                      let lng = d["lng"] as? Double else { return nil }
+                return (type: typeStr, lat: lat, lng: lng, ts: d["ts"] as? Double ?? 0)
+            }
+        }
+        let rawCoords = rawPoints.map { (lat: $0.lat, lng: $0.lng) }
+        return RouteParseResult(rawCoordinates: rawCoords, rawPoints: rawPoints, rawEvents: rawEvents)
+    } else if let v1 = json as? [[String: Double]] {
+        let rawCoords = v1.compactMap { d -> (lat: Double, lng: Double)? in
+            guard let lat = d["lat"], let lng = d["lng"] else { return nil }
+            return (lat: lat, lng: lng)
+        }
+        return RouteParseResult(rawCoordinates: rawCoords, rawPoints: [], rawEvents: [])
+    }
+    return RouteParseResult(rawCoordinates: [], rawPoints: [], rawEvents: [])
+}
+
     private func parseRouteData() {
-        guard let routeData = drive.routeData,
-              let data = routeData.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) else {
+        guard let routeData = drive.routeData else {
             routeCoordinates = []
             return
         }
-
-        // v2 format: {"v":2,"points":[{lat,lng,speed,ts}],"events":[{type,lat,lng,ts}]}
-        if let v2 = json as? [String: Any], (v2["v"] as? Int) == 2 {
-            if let pts = v2["points"] as? [[String: Double]] {
-                routePoints = pts.compactMap { d in
-                    guard let lat = d["lat"], let lng = d["lng"] else { return nil }
-                    return RoutePoint(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-                                      speed: d["speed"] ?? 0, timestamp: d["ts"] ?? 0)
+        Task.detached(priority: .userInitiated) {
+            let result = parseRouteDataFromString(routeData)
+            await MainActor.run {
+                self.routeCoordinates = result.rawCoordinates.map {
+                    CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
                 }
-                routeCoordinates = routePoints.map(\.coordinate)
-            }
-            if let evts = v2["events"] as? [[String: Any]] {
-                routeEvents = evts.compactMap { d in
-                    guard let typeStr = d["type"] as? String,
-                          let lat = d["lat"] as? Double,
-                          let lng = d["lng"] as? Double else { return nil }
+                self.routePoints = result.rawPoints.map {
+                    RoutePoint(coordinate: CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng),
+                               speed: $0.speed, timestamp: $0.ts)
+                }
+                self.routeEvents = result.rawEvents.compactMap { raw -> RouteEvent? in
                     let evtType: RouteEvent.EventType
-                    switch typeStr {
+                    switch raw.type {
                     case "brake":       evtType = .brake
                     case "turn_left":   evtType = .turnLeft
                     case "turn_right":  evtType = .turnRight
@@ -601,15 +634,10 @@ struct DriveDetailView: View {
                     default:            return nil
                     }
                     return RouteEvent(type: evtType,
-                                      coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-                                      timestamp: d["ts"] as? Double ?? 0)
+                                      coordinate: CLLocationCoordinate2D(latitude: raw.lat, longitude: raw.lng),
+                                      timestamp: raw.ts)
                 }
-            }
-        } else if let v1 = json as? [[String: Double]] {
-            // v1 format: [{lat,lng}]
-            routeCoordinates = v1.compactMap { d in
-                guard let lat = d["lat"], let lng = d["lng"] else { return nil }
-                return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+                self.parseZeroToSixtyAttempts()
             }
         }
     }
