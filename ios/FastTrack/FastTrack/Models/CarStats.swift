@@ -3,7 +3,7 @@ import Combine
 
 // MARK: - Car Statistics Model
 
-struct CarStats: Codable {
+struct CarStats: Codable, Equatable {
     let carId: String
     var totalDrives: Int = 0
     var totalDistance: Double = 0  // meters

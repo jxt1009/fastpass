@@ -125,11 +125,17 @@ struct DriveRowSkeleton: View {
     }
 }
 
-struct DriveRowView: View {
+struct DriveRowView: View, Equatable {
     let drive: Drive
     var isPersonalBest060: Bool = false
     var isPersonalBestTopSpeed: Bool = false
     @EnvironmentObject var settings: AppSettings
+
+    static func == (lhs: DriveRowView, rhs: DriveRowView) -> Bool {
+        lhs.drive == rhs.drive
+        && lhs.isPersonalBest060 == rhs.isPersonalBest060
+        && lhs.isPersonalBestTopSpeed == rhs.isPersonalBestTopSpeed
+    }
 
     /// A stable key for the visible PB pills; when it changes (e.g. the
     /// PB id flips after a drives refresh), the pills animate in/out via

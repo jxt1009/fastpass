@@ -6,7 +6,7 @@ import Foundation
 /// can appear on the board up to three times — once per car. The optional
 /// car fields are decoded additively so an older server that doesn't emit
 /// them (e.g. an interim deploy during a backend cutover) still decodes.
-struct LeaderboardEntry: Identifiable, Codable {
+struct LeaderboardEntry: Identifiable, Codable, Equatable {
     let rank: Int
     let userId: Int
     let username: String
