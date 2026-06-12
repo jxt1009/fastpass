@@ -23,8 +23,9 @@ final class CurrentDriveDedupeTests: XCTestCase {
         )
     }
 
+    @MainActor
     func test_noFiringWhenDriveUnchanged() {
-        let mgr = DriveManager()
+        let mgr = DriveManager.forTesting(apiService: APIService())
         let drive = makeDrive()
         mgr.currentDrive = drive
         var count = 0

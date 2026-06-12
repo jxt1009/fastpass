@@ -96,8 +96,8 @@ enum LeaderboardCategory: String, CaseIterable, Codable {
     /// Lower value is better (used for 0-60).
     var isAscending: Bool { self == .best060 }
 
-    func formattedValue(_ value: Double) -> String {
-        let s = AppSettings.shared
+    func formattedValue(_ value: Double, settings: AppSettings) -> String {
+        let s = settings
         switch self {
         case .topSpeed:
             return s.speedDisplay(value)

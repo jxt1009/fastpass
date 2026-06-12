@@ -15,11 +15,11 @@ struct Achievement: Identifiable, Codable {
     var progress: Double = 0.0
     var sourceDriveId: Int?
 
-    var progressText: String {
+    func progressText(with settings: AppSettings) -> String {
         if isUnlocked {
             return "Completed!"
         }
-        return requirement.progressDescription(progress)
+        return requirement.progressDescription(progress, settings: settings)
     }
 
     var badgeIcon: String {
@@ -71,10 +71,10 @@ struct AchievementRequirement: Codable {
     let value: Double
     let condition: String?
 
-    func progressDescription(_ progress: Double) -> String {
+    func progressDescription(_ progress: Double, settings: AppSettings) -> String {
         let current = Int(progress * value)
         let target = Int(value)
-        let s = AppSettings.shared
+        let s = settings
 
         switch type {
         case .maxSpeed:

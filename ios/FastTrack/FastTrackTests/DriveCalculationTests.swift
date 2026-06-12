@@ -520,7 +520,7 @@ final class DriveCalculationTests: XCTestCase {
     }
 
     func testAchievementManager_AppliesServerUnlocksWithSourceDrive() {
-        let manager = AchievementManager.shared
+        let manager = AchievementManager()
         // Reset any prior state for the test
         manager.achievements = manager.achievements.map {
             var copy = $0

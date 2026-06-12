@@ -4,12 +4,18 @@ import SwiftUI
 // MARK: - Main Profile View
 
 struct ProfileView: View {
-    @StateObject private var profileManager = ProfileManager.shared
-    @StateObject private var achievementManager = AchievementManager.shared
-    @StateObject private var appleSignInManager = AppleSignInManager()
+    @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var achievementManager: AchievementManager
+    @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var locationManager: LocationManager
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
+    @StateObject private var appleSignInManager: AppleSignInManager
+
+    init(onSwitchToGarage: (() -> Void)? = nil) {
+        self.onSwitchToGarage = onSwitchToGarage
+        _appleSignInManager = StateObject(wrappedValue: AppleSignInManager())
+    }
     @State private var showingSetup = false
     @State private var showingAddCar = false
     @State private var showingDeleteAccountConfirmation = false
@@ -31,7 +37,7 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
                         garageLinkRow
-                        RecentAchievementsStrip(driveManager: driveManager)
+                        RecentAchievementsStrip(achievementManager: achievementManager, driveManager: driveManager)
                         if driveManager.isLoadingDrives {
                             profileStatsSkeleton
                         } else {
@@ -52,7 +58,6 @@ struct ProfileView: View {
                     HStack(spacing: 16) {
                         NavigationLink {
                             SettingsView()
-                                .environmentObject(AppSettings.shared)
                         } label: {
                             Image(systemName: "gearshape")
                                 .foregroundColor(.ftBlue)
@@ -104,6 +109,7 @@ struct ProfileView: View {
                 Text(deleteAccountError ?? "Unknown error")
             }
             .onAppear {
+                appleSignInManager.authManager = authManager
                 if !profileManager.isProfileComplete {
                     showingSetup = true
                 }
@@ -368,7 +374,7 @@ struct ProfileView: View {
             titleVisibility: .visible
         ) {
             Button("Sign Out", role: .destructive) {
-                AuthManager.shared.signOut()
+                authManager.signOut()
                 ToastManager.shared.show(ToastMessage(text: "Signed out"))
             }
             Button("Cancel", role: .cancel) {}
@@ -395,10 +401,10 @@ struct ProfileView: View {
         defer { isDeletingAccount = false }
 
         do {
-            let authProvider = AuthManager.shared.getUser()?.authProvider?.lowercased()
+            let authProvider = authManager.getUser()?.authProvider?.lowercased()
             let isAppleUser =
                 authProvider == "apple" ||
-                (authProvider == nil && AuthManager.shared.getUser()?.appleUserID != nil)
+                (authProvider == nil && authManager.getUser()?.appleUserID != nil)
 
             let appleAuthorizationCode: String?
             if isAppleUser {
@@ -407,7 +413,7 @@ struct ProfileView: View {
                 appleAuthorizationCode = nil
             }
 
-            try await AuthManager.shared.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
+            try await authManager.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
             driveManager.clearLocalData()
         } catch {
             deleteAccountError = error.localizedDescription
@@ -424,6 +430,7 @@ struct ProfileView: View {
 /// drive isn't in the local cache.
 struct RemoteDriveDetailLoader: View {
     let driveId: Int
+    @EnvironmentObject var apiService: APIService
     @State private var drive: Drive?
     @State private var error: String?
     @State private var isLoading = true
@@ -448,7 +455,7 @@ struct RemoteDriveDetailLoader: View {
 
     private func load() async {
         do {
-            let fetched = try await APIService.shared.fetchPublicDrive(id: driveId)
+            let fetched = try await apiService.fetchPublicDrive(id: driveId)
             await MainActor.run {
                 self.drive = fetched
                 self.isLoading = false
@@ -467,7 +474,7 @@ struct CarGarageCard: View {
     let isSelected: Bool
     let onSelect: () -> Void
 
-    @StateObject private var carStatsManager = CarStatsManager.shared
+    @EnvironmentObject var carStatsManager: CarStatsManager
     @State private var showingStats = false
     @State private var editingCar: EditingCarTarget?
 
@@ -567,7 +574,7 @@ private struct EditingCarTarget: Identifiable {
 
 struct CarStatsRow: View {
     let stats: CarStats
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
 
     var body: some View {
         StatsGrid(spacing: 8) {

@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct AchievementsView: View {
-    @StateObject private var achievementManager = AchievementManager.shared
+    @EnvironmentObject var achievementManager: AchievementManager
     @EnvironmentObject var driveManager: DriveManager
+    @EnvironmentObject var settings: AppSettings
     @State private var selectedCategory: AchievementCategory?
     @State private var showingUnlockedOnly = false
     
@@ -155,6 +156,7 @@ struct CategoryFilterChip: View {
 
 struct AchievementCard: View {
     let achievement: Achievement
+    @EnvironmentObject var settings: AppSettings
     @State private var showingDetail = false
     
     var body: some View {
@@ -201,7 +203,7 @@ struct AchievementCard: View {
                 // Progress section
                 if !achievement.isUnlocked {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(achievement.progressText)
+                        Text(achievement.progressText(with: settings))
                             .font(.caption2)
                             .foregroundColor(.secondary)
                         
@@ -231,6 +233,7 @@ struct AchievementCard: View {
 
 struct AchievementDetailView: View {
     let achievement: Achievement
+    @EnvironmentObject var settings: AppSettings
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -277,7 +280,7 @@ struct AchievementDetailView: View {
                             Text("Progress")
                                 .font(.headline)
                             
-                            Text(achievement.progressText)
+                            Text(achievement.progressText(with: settings))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
@@ -318,6 +321,18 @@ struct AchievementDetailView: View {
 // MARK: - Preview
 
 #Preview {
-    AchievementsView()
-        .environmentObject(DriveManager())
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    return AchievementsView()
+        .environmentObject(DriveManager(
+            authManager: authManager,
+            profileManager: ProfileManager(apiService: apiService),
+            settings: AppSettings(apiService: apiService),
+            apiService: apiService,
+            carStatsManager: CarStatsManager(apiService: apiService),
+            achievementManager: AchievementManager()
+        ))
+        .environmentObject(AppSettings(apiService: apiService))
+        .environmentObject(AchievementManager())
 }

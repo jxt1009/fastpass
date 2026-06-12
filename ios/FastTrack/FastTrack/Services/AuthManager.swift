@@ -3,16 +3,21 @@ import Security
 import Combine
 
 class AuthManager: ObservableObject {
-    static let shared = AuthManager()
-
     @Published var isAuthenticated: Bool = false
 
     private let tokenKey = "com.fasttrack.auth_token"
     private let refreshTokenKey = "com.fasttrack.refresh_token"
     private let userKey = "current_user"
     private var sessionToken: UUID = UUID()
+    let apiService: APIService
+    weak var profileManager: ProfileManager?
+    weak var carStatsManager: CarStatsManager?
+    weak var achievementManager: AchievementManager?
+    weak var appSettings: AppSettings?
+    weak var notificationsManager: NotificationsManager?
 
-    private init() {
+    init(apiService: APIService) {
+        self.apiService = apiService
         isAuthenticated = getToken() != nil
     }
     
@@ -102,7 +107,7 @@ class AuthManager: ObservableObject {
             email: email
         )
         
-        let response: AuthResponse = try await APIService.shared.post(
+        let response: AuthResponse = try await apiService.post(
             endpoint: "/auth/apple",
             body: request,
             requiresAuth: false
@@ -124,7 +129,7 @@ class AuthManager: ObservableObject {
         
         let request = RefreshTokenRequest(refreshToken: refreshToken)
         
-        let response: AuthResponse = try await APIService.shared.post(
+        let response: AuthResponse = try await apiService.post(
             endpoint: "/auth/refresh",
             body: request,
             requiresAuth: false
@@ -155,15 +160,15 @@ class AuthManager: ObservableObject {
     func signOut() {
         // Best-effort server logout — don't block local sign-out on network failure.
         Task {
-            try? await APIService.shared.post(endpoint: "/auth/logout", body: EmptyResponse(), requiresAuth: true) as EmptyResponse
+            try? await apiService.post(endpoint: "/auth/logout", body: EmptyResponse(), requiresAuth: true) as EmptyResponse
         }
         sessionToken = UUID()
-        NotificationsManager.shared.cancelInFlight()
+        notificationsManager?.cancelInFlight()
         clearSessionData()
     }
 
     func deleteAccount(appleAuthorizationCode: String?) async throws {
-        try await APIService.shared.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
+        try await apiService.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
         await MainActor.run {
             self.sessionToken = UUID()
             self.clearSessionData()
@@ -172,9 +177,9 @@ class AuthManager: ObservableObject {
 
     /// Syncs profile, garage, car stats, and display settings from the server into local storage.
     func restoreUserDataFromServer(serverUser: User) async {
-        await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
-        await CarStatsManager.shared.restoreFromServer()
-        await AppSettings.shared.restoreFromServer(
+        await profileManager?.restoreFromServer(serverUser: serverUser)
+        await carStatsManager?.restoreFromServer()
+        await appSettings?.restoreFromServer(
             unitSystem: serverUser.unitSystem,
             colorScheme: serverUser.colorScheme
         )
@@ -182,10 +187,10 @@ class AuthManager: ObservableObject {
 
     @MainActor
     private func clearSessionData() {
-        ProfileManager.shared.clearProfile()
-        CarStatsManager.shared.clearLocalData()
-        AchievementManager.shared.resetProgress()
-        AppSettings.shared.resetAccountScopedPreferences()
+        profileManager?.clearProfile()
+        carStatsManager?.clearLocalData()
+        achievementManager?.resetProgress()
+        appSettings?.resetAccountScopedPreferences()
         clearTokens()
     }
     

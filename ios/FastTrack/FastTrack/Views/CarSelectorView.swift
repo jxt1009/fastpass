@@ -4,9 +4,10 @@ import UIKit
 
 struct CarSelectorView: View {
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var apiService: APIService
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddCar = false
-    
+
     var body: some View {
         NavigationStack {
             Group {
@@ -66,6 +67,7 @@ struct CarSelectorView: View {
 
 struct AddCarView: View {
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var apiService: APIService
     @Environment(\.dismiss) private var dismiss
     @State private var carSelection = CarSelection()
     @State private var nickname = ""
@@ -185,7 +187,7 @@ struct AddCarView: View {
             return
         }
         do {
-            let url = try await APIService.shared.uploadCarPhoto(carId: carId, data: data)
+            let url = try await apiService.uploadCarPhoto(carId: carId, data: data)
             await MainActor.run {
                 guard var p = self.profileManager.profile else { return }
                 p.updateCarPhotoUrl(id: carId, url: url)
@@ -202,5 +204,5 @@ struct AddCarView: View {
 
 #Preview {
     CarSelectorView()
-        .environmentObject(ProfileManager.shared)
+        .environmentObject(ProfileManager(apiService: APIService()))
 }

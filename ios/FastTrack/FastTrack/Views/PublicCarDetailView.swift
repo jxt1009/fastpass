@@ -38,7 +38,7 @@ struct PublicCarDetailView: View {
     /// keep working; pass it through from the public profile.
     let carStatsData: String?
 
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
 
     init(
         username: String,

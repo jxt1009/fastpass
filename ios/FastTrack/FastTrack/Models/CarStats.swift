@@ -49,13 +49,13 @@ struct CarStats: Codable, Equatable {
 // MARK: - Car Statistics Manager
 
 class CarStatsManager: ObservableObject {
-    static let shared = CarStatsManager()
-    
     @Published var carStats: [String: CarStats] = [:]
     
     private let userDefaultsKey = "car_stats_v1"
+    let apiService: APIService
     
-    private init() {
+    init(apiService: APIService = APIService()) {
+        self.apiService = apiService
         loadCarStats()
     }
     
@@ -186,7 +186,7 @@ class CarStatsManager: ObservableObject {
             // Sync to server in background so data survives reinstall/device switch
             if let json = String(data: encoded, encoding: .utf8) {
                 Task {
-                    try? await APIService.shared.uploadCarStats(json)
+                    try? await apiService.uploadCarStats(json)
                 }
             }
         }
@@ -195,7 +195,7 @@ class CarStatsManager: ObservableObject {
     /// Restores car stats from the server. Call after sign-in or token refresh.
     func restoreFromServer() async {
         do {
-            let json = try await APIService.shared.fetchCarStats()
+            let json = try await apiService.fetchCarStats()
             guard let data = json.data(using: .utf8),
                   let decoded = try? JSONDecoder().decode([String: CarStats].self, from: data),
                   !decoded.isEmpty else { return }
@@ -270,9 +270,3 @@ func smoothnessScore(for drive: Drive) -> Double {
 }
 
 // MARK: - Drive Extension
-
-extension Drive {
-    func updateCarStats() {
-        CarStatsManager.shared.updateStats(for: self)
-    }
-}

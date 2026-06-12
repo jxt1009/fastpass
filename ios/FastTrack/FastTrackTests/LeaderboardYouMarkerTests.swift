@@ -89,15 +89,15 @@ final class LeaderboardYouMarkerTests: XCTestCase {
             garage: [UserCar(make: "Honda", model: "Civic")],
             selectedCarId: nil
         )
-        ProfileManager.shared.saveProfile(local)
-        XCTAssertNil(ProfileManager.shared.profile?.id, "precondition: local profile has no id")
+        ProfileManager(apiService: APIService()).saveProfile(local)
+        XCTAssertNil(ProfileManager(apiService: APIService()).profile?.id, "precondition: local profile has no id")
 
         let serverUser = makeServerUser(id: 42, username: "alice", garage: nil)
-        await ProfileManager.shared.restoreFromServer(serverUser: serverUser)
+        await ProfileManager(apiService: APIService()).restoreFromServer(serverUser: serverUser)
 
-        XCTAssertEqual(ProfileManager.shared.profile?.id, 42)
-        XCTAssertEqual(ProfileManager.shared.profile?.username, "alice")
-        XCTAssertEqual(ProfileManager.shared.profile?.garage.count, 1,
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.id, 42)
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.username, "alice")
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.garage.count, 1,
                        "garage should be preserved when the server returns a smaller one")
     }
 
@@ -105,15 +105,15 @@ final class LeaderboardYouMarkerTests: XCTestCase {
     /// subsequent relaunch sees the new id.
     func testRestoreFromServer_IdBackfillPersistsToUserDefaults() async {
         resetProfileManager()
-        ProfileManager.shared.saveProfile(
+        ProfileManager(apiService: APIService()).saveProfile(
             UserProfile(username: "bob", country: "", garage: [], selectedCarId: nil)
         )
-        XCTAssertNil(ProfileManager.shared.profile?.id)
+        XCTAssertNil(ProfileManager(apiService: APIService()).profile?.id)
 
-        await ProfileManager.shared.restoreFromServer(
+        await ProfileManager(apiService: APIService()).restoreFromServer(
             serverUser: makeServerUser(id: 7, username: "bob", garage: nil)
         )
-        XCTAssertEqual(ProfileManager.shared.profile?.id, 7)
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.id, 7)
 
         // Re-load from UserDefaults to confirm the id was actually written.
         let saved = UserDefaults.standard.data(forKey: "user_profile_v2")
@@ -126,7 +126,7 @@ final class LeaderboardYouMarkerTests: XCTestCase {
     /// server-side value, even if it disagrees.)
     func testRestoreFromServer_DoesNotOverwriteExistingId() async {
         resetProfileManager()
-        ProfileManager.shared.saveProfile(
+        ProfileManager(apiService: APIService()).saveProfile(
             UserProfile(
                 id: 99,
                 username: "carol",
@@ -136,10 +136,10 @@ final class LeaderboardYouMarkerTests: XCTestCase {
             )
         )
 
-        await ProfileManager.shared.restoreFromServer(
+        await ProfileManager(apiService: APIService()).restoreFromServer(
             serverUser: makeServerUser(id: 1, username: "carol", garage: nil)
         )
-        XCTAssertEqual(ProfileManager.shared.profile?.id, 99)
+        XCTAssertEqual(ProfileManager(apiService: APIService()).profile?.id, 99)
     }
 
     // MARK: - UserProfile id round-trip
@@ -166,7 +166,7 @@ final class LeaderboardYouMarkerTests: XCTestCase {
 
     private func resetProfileManager() {
         UserDefaults.standard.removeObject(forKey: "user_profile_v2")
-        ProfileManager.shared.clearProfile()
+        ProfileManager(apiService: APIService()).clearProfile()
     }
 
     private func makeServerUser(id: Int, username: String, garage: String?) -> User {

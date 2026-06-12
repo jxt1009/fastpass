@@ -20,7 +20,7 @@ final class ProfileRedesignTests: XCTestCase {
             totalDistance: 1609.344,  // 1.0 mi
             best060: 4.25
         )
-        let rows = PublicProfileStats.rows(for: profile)
+        let rows = PublicProfileStats.rows(for: profile, settings: AppSettings(apiService: APIService()))
         XCTAssertEqual(rows.map(\.label), ["Top Speed", "Best 0-60", "Total Distance"])
     }
 
@@ -28,7 +28,7 @@ final class ProfileRedesignTests: XCTestCase {
     func testPublicProfileStats_DoesNotIncludeTotalDrives() {
         let rows = PublicProfileStats.rows(for: sampleProfile(
             topSpeed: 30, totalDistance: 0, best060: nil
-        ))
+        ), settings: AppSettings(apiService: APIService()))
         XCTAssertFalse(rows.contains(where: { $0.label == "Total Drives" }))
         XCTAssertEqual(rows.count, 3)
     }

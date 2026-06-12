@@ -1,10 +1,3 @@
-//
-//  FastTrackApp.swift
-//  FastTrack
-//
-//  Created by Jameson Toper on 3/31/26.
-//
-
 import SwiftUI
 import os
 
@@ -16,15 +9,35 @@ struct FastTrackApp: App {
     @StateObject private var settings: AppSettings
     @StateObject private var profileManager: ProfileManager
     @StateObject private var notificationsManager: NotificationsManager
+    @StateObject private var carStatsManager: CarStatsManager
+    @StateObject private var achievementManager: AchievementManager
+    @StateObject private var apiService: APIService
 
     init() {
+        let apiService = APIService()
+        let authMgr = AuthManager(apiService: apiService)
+        apiService.authManager = authMgr
+        let appSettings = AppSettings(apiService: apiService)
+        let profMgr = ProfileManager(apiService: apiService)
+        let carStatMgr = CarStatsManager(apiService: apiService)
+        let achievementMgr = AchievementManager()
+        let notifMgr = NotificationsManager(apiService: apiService)
         let locMgr = LocationManager()
-        let drvMgr = DriveManager()
+        let drvMgr = DriveManager(
+            authManager: authMgr,
+            profileManager: profMgr,
+            settings: appSettings,
+            apiService: apiService,
+            carStatsManager: carStatMgr,
+            achievementManager: achievementMgr
+        )
         drvMgr.setLocationManager(locMgr)
-        let authMgr = AuthManager.shared
-        let appSettings = AppSettings.shared
-        let profMgr = ProfileManager.shared
-        let notifMgr = NotificationsManager.shared
+
+        authMgr.profileManager = profMgr
+        authMgr.carStatsManager = carStatMgr
+        authMgr.achievementManager = achievementMgr
+        authMgr.appSettings = appSettings
+        authMgr.notificationsManager = notifMgr
 
         _locationManager = StateObject(wrappedValue: locMgr)
         _driveManager = StateObject(wrappedValue: drvMgr)
@@ -32,6 +45,9 @@ struct FastTrackApp: App {
         _settings = StateObject(wrappedValue: appSettings)
         _profileManager = StateObject(wrappedValue: profMgr)
         _notificationsManager = StateObject(wrappedValue: notifMgr)
+        _carStatsManager = StateObject(wrappedValue: carStatMgr)
+        _achievementManager = StateObject(wrappedValue: achievementMgr)
+        _apiService = StateObject(wrappedValue: apiService)
     }
 
     var body: some Scene {
@@ -48,6 +64,9 @@ struct FastTrackApp: App {
                         .environmentObject(settings)
                         .environmentObject(profileManager)
                         .environmentObject(notificationsManager)
+                        .environmentObject(carStatsManager)
+                        .environmentObject(achievementManager)
+                        .environmentObject(apiService)
                 }
 #else
                 RootView()
@@ -57,6 +76,8 @@ struct FastTrackApp: App {
                     .environmentObject(settings)
                     .environmentObject(profileManager)
                     .environmentObject(notificationsManager)
+                    .environmentObject(carStatsManager)
+                    .environmentObject(achievementManager)
 #endif
             }
             .toastOverlay()
@@ -71,12 +92,13 @@ struct RootView: View {
     @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var profileManager: ProfileManager
     @EnvironmentObject var notificationsManager: NotificationsManager
+    @EnvironmentObject var carStatsManager: CarStatsManager
+    @EnvironmentObject var achievementManager: AchievementManager
+    @EnvironmentObject var apiService: APIService
     @Environment(\.scenePhase) private var scenePhase
     @State private var isInitializing = true
     @State private var selectedTab = 0
     @State private var showingProfileSetup = false
-    /// Per-tab UUIDs. Changing a UUID causes that tab's content to be recreated (nav reset).
-    /// Index 0 (Track) is intentionally never reset so active recordings survive tab switches.
     @State private var tabResetIDs = (0..<4).map { _ in UUID() }
 
     private static let signOutLog = Logger(subsystem: "app.fasttrack", category: "signOut")
@@ -101,25 +123,16 @@ struct RootView: View {
                     authManager.signOut()
                 }
             }
-            // Small minimum display time so the splash doesn't flash on fast devices
             try? await Task.sleep(nanoseconds: 800_000_000)
             isInitializing = false
         }
         .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
             if !isAuthenticated {
                 Task { @MainActor in
-                    // If the user was recording when they signed out, stop
-                    // the drive first so its route data is flushed to disk
-                    // and the upload is attempted. The upload may still fail
-                    // (no network, etc.); see the lastError log below.
                     if driveManager.isRecording {
                         await driveManager.stopRecording()
                     }
                     if let err = driveManager.lastError {
-                        // The in-flight drive didn't make it to the server
-                        // before sign-out. Don't block sign-out on it; the
-                        // route data is on disk and will be retried on the
-                        // next sign-in.
                         Self.signOutLog.error("Drive upload failed during sign-out: \(err.localizedDescription, privacy: .public)")
                     }
                     driveManager.clearLocalData()
@@ -147,14 +160,11 @@ struct RootView: View {
         if authManager.isAuthenticated {
             TabView(selection: $selectedTab) {
                 ContentView()
-                    // Tab 0 (Track) is NOT reset — preserves active recordings across tab switches
                     .tabItem { Label("Track", systemImage: "location.fill") }.tag(0)
                 GarageView()
                     .id(tabResetIDs[1])
                     .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(1)
                 SocialView()
-                    // NOT reset on tab switch — leaderboard data is expensive to reload and
-                    // the view manages its own nav stack; internal filter changes re-fetch via .task(id:)
                     .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(2)
                 ProfileView(onSwitchToGarage: { selectedTab = 1 })
                     .id(tabResetIDs[3])
@@ -176,16 +186,14 @@ struct RootView: View {
                 }
             }
             .onChange(of: selectedTab) { oldTab, _ in
-                // Reset the tab being left (but never Track (0) or Social (2))
                 if oldTab != 0 && oldTab != 2 {
                     tabResetIDs[oldTab] = UUID()
                 }
             }
             .onOpenURL { url in
-                // Handle deep links from Live Activity controls
                 if url.scheme == "fasttrack", url.host == "stop-recording" {
                     Task { await driveManager.stopRecording() }
-                    selectedTab = 0  // Switch to Track tab
+                    selectedTab = 0
                 }
             }
             .onAppear {
@@ -216,7 +224,6 @@ struct SplashView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                // Icon
                 ZStack {
                     Circle()
                         .fill(Color(.systemGray5))
@@ -228,7 +235,6 @@ struct SplashView: View {
                 .scaleEffect(iconScale)
                 .opacity(iconOpacity)
 
-                // Wordmark
                 VStack(spacing: 6) {
                     Text("FastTrack")
                         .font(FTFont.wordmark).minimumScaleFactor(0.6)
@@ -241,7 +247,6 @@ struct SplashView: View {
 
                 Spacer()
 
-                // Loading indicator
                 HStack(spacing: 6) {
                     ForEach(0..<3) { i in
                         Circle()

@@ -77,11 +77,13 @@ struct DriveDetailView: View {
     @State private var deleteError: String?
     @Environment(\.dismiss) private var dismiss
 
-    @ObservedObject private var settings = AppSettings.shared
+    @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var driveManager: DriveManager
+    @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var carStatsManager: CarStatsManager
 
     private var isOwner: Bool {
-        drive.userID == AuthManager.shared.getUser()?.id
+        drive.userID == authManager.getUser()?.id
     }
 
     var body: some View {
@@ -442,7 +444,9 @@ private func parseRouteDataFromString(_ routeData: String) -> RouteParseResult {
 
 struct DriveCarSelectorView: View {
     let drive: Drive
-    @ObservedObject private var profileManager = ProfileManager.shared
+    @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var apiService: APIService
+    @EnvironmentObject var carStatsManager: CarStatsManager
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var driveManager: DriveManager
 
@@ -511,11 +515,13 @@ struct DriveCarSelectorView: View {
         guard let driveId = drive.id else { return }
         Task {
             do {
-                let updatedDrive = try await APIService.shared.updateDriveCarAssignment(driveId: driveId, car: car)
+                let updatedDrive = try await apiService.updateDriveCarAssignment(driveId: driveId, car: car)
+
                 if let index = driveManager.drives.firstIndex(where: { $0.id == drive.id }) {
                     driveManager.drives[index] = updatedDrive
                 }
-                CarStatsManager.shared.rebuildStats(from: driveManager.drives)
+                carStatsManager.rebuildStats(from: driveManager.drives)
+
 
                 await MainActor.run {
                     dismiss()

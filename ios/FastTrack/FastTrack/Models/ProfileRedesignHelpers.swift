@@ -28,12 +28,12 @@ enum PublicProfileStats {
     /// The locked-in display order. Top Speed first, Best 0-60 second
     /// (moved up from below Total Distance), Total Distance last. Total
     /// Drives is dropped entirely.
-    static func rows(for profile: PublicProfile) -> [PublicProfileStatRow] {
+    static func rows(for profile: PublicProfile, settings: AppSettings) -> [PublicProfileStatRow] {
         [
             PublicProfileStatRow(
                 icon: "speedometer", color: .red,
                 label: "Top Speed",
-                value: AppSettings.shared.speedDisplay(profile.topSpeed)
+                value: settings.speedDisplay(profile.topSpeed)
             ),
             PublicProfileStatRow(
                 icon: "timer", color: .orange,
@@ -43,7 +43,7 @@ enum PublicProfileStats {
             PublicProfileStatRow(
                 icon: "map.fill", color: .blue,
                 label: "Total Distance",
-                value: AppSettings.shared.distanceDisplay(profile.totalDistance)
+                value: settings.distanceDisplay(profile.totalDistance)
             ),
         ]
     }

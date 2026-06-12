@@ -3,8 +3,6 @@ import Combine
 import UIKit
 
 final class NotificationsManager: ObservableObject {
-    static let shared = NotificationsManager()
-
     @Published private(set) var notifications: [InAppNotification] = []
     @Published private(set) var unreadCount: Int = 0
     @Published private(set) var isLoading: Bool = false
@@ -13,8 +11,11 @@ final class NotificationsManager: ObservableObject {
     private var pollingTask: Task<Void, Never>?
     private var nextCursor: String?
     private var sessionToken: UUID = UUID()
+    let apiService: APIService
 
-    private init() {}
+    init(apiService: APIService = APIService()) {
+        self.apiService = apiService
+    }
 
     /// Polls the server every 30 seconds while the app is in the foreground.
     /// Stops automatically on sign-out. Idempotent — calling start on an
@@ -40,7 +41,7 @@ final class NotificationsManager: ObservableObject {
         let myToken = UUID()
         await MainActor.run { self.sessionToken = myToken }
         do {
-            let count = try await APIService.shared.fetchUnreadNotificationCount()
+            let count = try await apiService.fetchUnreadNotificationCount()
             var valid = false
             await MainActor.run { valid = self.sessionToken == myToken }
             guard valid else { return }
@@ -62,7 +63,7 @@ final class NotificationsManager: ObservableObject {
             Task { @MainActor in self.isLoading = false }
         }
         do {
-            let resp = try await APIService.shared.fetchNotifications(cursor: nil, limit: 50)
+            let resp = try await apiService.fetchNotifications(cursor: nil, limit: 50)
             var valid = false
             await MainActor.run { valid = self.sessionToken == myToken }
             guard valid else { return }
@@ -85,7 +86,7 @@ final class NotificationsManager: ObservableObject {
         let myToken = UUID()
         await MainActor.run { self.sessionToken = myToken }
         do {
-            let resp = try await APIService.shared.fetchNotifications(cursor: cursor, limit: 50)
+            let resp = try await apiService.fetchNotifications(cursor: cursor, limit: 50)
             var valid = false
             await MainActor.run { valid = self.sessionToken == myToken }
             guard valid else { return }
@@ -104,7 +105,7 @@ final class NotificationsManager: ObservableObject {
 
     func markRead(_ notification: InAppNotification) async {
         do {
-            try await APIService.shared.markNotificationRead(id: notification.id)
+            try await apiService.markNotificationRead(id: notification.id)
             await MainActor.run {
                 if let idx = self.notifications.firstIndex(where: { $0.id == notification.id }) {
                     var updated = self.notifications[idx]
@@ -129,7 +130,7 @@ final class NotificationsManager: ObservableObject {
 
     func markAllRead() async {
         do {
-            try await APIService.shared.markAllNotificationsRead()
+            try await apiService.markAllNotificationsRead()
             await MainActor.run { self.unreadCount = 0 }
         } catch {
             await MainActor.run { self.lastError = "Couldn't mark all as read" }

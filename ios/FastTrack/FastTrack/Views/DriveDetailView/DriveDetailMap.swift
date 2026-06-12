@@ -8,6 +8,7 @@ struct DriveDetailMap: View {
     let routeCoordinates: [CLLocationCoordinate2D]
     let routePoints: [RoutePoint]
     let routeEvents: [RouteEvent]
+    @EnvironmentObject var settings: AppSettings
     let speedSegments: [SpeedSegment]
     let zeroToSixtyAttempts: [ZeroToSixtyAttemptDisplay]
     @Binding var playbackProgress: Double
@@ -140,7 +141,7 @@ struct DriveDetailMap: View {
         VStack(spacing: 10) {
             HStack {
                 if let pt = playbackPoint {
-                    Label(AppSettings.shared.speedDisplay(pt.speed), systemImage: "speedometer")
+                    Label(settings.speedDisplay(pt.speed), systemImage: "speedometer")
                         .font(.subheadline).fontWeight(.semibold)
                     Spacer()
                     Text(playbackTimeLabel)

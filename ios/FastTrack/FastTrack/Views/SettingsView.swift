@@ -132,6 +132,6 @@ private struct SpeedometerCalibrationRow: View {
 #Preview {
     NavigationStack {
         SettingsView()
-            .environmentObject(AppSettings.shared)
+            .environmentObject(AppSettings())
     }
 }

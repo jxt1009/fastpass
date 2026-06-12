@@ -148,15 +148,15 @@ struct UserProfile: Codable {
 // MARK: - ProfileManager
 
 class ProfileManager: ObservableObject {
-    static let shared = ProfileManager()
-
     @Published var profile: UserProfile?
     @Published var profileImage: UIImage?
 
     private let profileKey = "user_profile_v2"
     private let avatarFilename = "profile_avatar.jpg"
+    let apiService: APIService
 
-    private init() {
+    init(apiService: APIService = APIService()) {
+        self.apiService = apiService
         loadProfile()
         loadAvatar()
     }
@@ -234,7 +234,7 @@ class ProfileManager: ObservableObject {
         }
         return Task {
             do {
-                try await APIService.shared.updateProfile(p)
+                try await apiService.updateProfile(p)
                 print("✅ Profile saved to server successfully")
             } catch {
                 print("❌ Failed to save profile to server: \(error)")
@@ -313,7 +313,7 @@ class ProfileManager: ObservableObject {
             // Upload to server so it's visible on public profile
             Task {
                 do {
-                    try await APIService.shared.uploadAvatar(imageData: data)
+                    try await apiService.uploadAvatar(imageData: data)
                     print("✅ Avatar uploaded to server")
                 } catch {
                     print("❌ Failed to upload avatar: \(error)")

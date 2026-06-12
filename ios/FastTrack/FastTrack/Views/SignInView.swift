@@ -92,5 +92,5 @@ struct SignInView: View {
 }
 
 #Preview {
-    SignInView().environmentObject(AuthManager.shared)
+    SignInView().environmentObject(AuthManager(apiService: APIService()))
 }

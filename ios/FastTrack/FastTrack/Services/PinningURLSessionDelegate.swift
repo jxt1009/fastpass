@@ -3,6 +3,7 @@ import CryptoKit
 import os.lock
 
 final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
+    weak var authManager: AuthManager?
 
     // SPKI pin for fast.toper.dev — update when the leaf cert rotates.
     // Generated from:
@@ -84,7 +85,7 @@ extension PinningURLSessionDelegate: @preconcurrency URLSessionTaskDelegate {
               !isProcessing401 else { return }
         isProcessing401 = true
         Task { @MainActor in
-            AuthManager.shared.signOut()
+            authManager?.signOut()
             ToastManager.shared.show(ToastMessage(text: "Session expired"))
             isProcessing401 = false
         }

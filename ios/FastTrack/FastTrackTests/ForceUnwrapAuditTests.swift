@@ -188,7 +188,7 @@ final class ForceUnwrapAuditTests: XCTestCase {
     // MARK: - E-12: NotificationsManager token guard
 
     func test_NotificationsManager_cancelInFlightStopsRefresh() async {
-        let nm = NotificationsManager.shared
+        let nm = NotificationsManager(apiService: APIService())
         nm.cancelInFlight()
         // After cancellation, refresh should bail before writing state.
         // We can't fully mock APIService here, but we can verify

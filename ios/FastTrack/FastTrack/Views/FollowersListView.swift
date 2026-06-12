@@ -8,12 +8,13 @@ import SwiftUI
 
 struct FollowersListView: View {
     let username: String
+    @EnvironmentObject var apiService: APIService
 
     var body: some View {
         FollowListView(
             username: username,
             title: "Followers",
-            fetcher: APIService.shared.fetchFollowers(username:)
+            fetcher: { try await apiService.fetchFollowers(username: $0) }
         )
     }
 }
@@ -22,12 +23,13 @@ struct FollowersListView: View {
 
 struct FollowingListView: View {
     let username: String
+    @EnvironmentObject var apiService: APIService
 
     var body: some View {
         FollowListView(
             username: username,
             title: "Following",
-            fetcher: APIService.shared.fetchFollowing(username:)
+            fetcher: { try await apiService.fetchFollowing(username: $0) }
         )
     }
 }

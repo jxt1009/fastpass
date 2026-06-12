@@ -132,15 +132,31 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     /// is true, `currentDrive` is set, `richRoutePoints` is non-empty
     /// (so the `guard` past serialization doesn't return).
     @MainActor
+    private func makeManagers(api: MockDriveAPI) -> (APIService, AuthManager) {
+        let realAPI = APIService()
+        let authMgr = AuthManager(apiService: realAPI)
+        realAPI.authManager = authMgr
+        return (realAPI, authMgr)
+    }
+
+    @MainActor
     private func makeRecordingManager(
         api: MockDriveAPI,
         drive: Drive
     ) -> DriveManager {
-        let dm = DriveManager(apiService: api)
+        let (realAPI, authMgr) = makeManagers(api: api)
+        let dm = DriveManager(
+            authManager: authMgr,
+            profileManager: ProfileManager(apiService: realAPI),
+            settings: AppSettings(apiService: realAPI),
+            apiService: api,
+            carStatsManager: CarStatsManager(apiService: realAPI),
+            achievementManager: AchievementManager()
+        )
         dm.isRecording = true
         dm.currentDrive = drive
-        dm.richRoutePoints = [
-            (lat: 37.0, lng: -122.0, speed: 0, ts: Date().timeIntervalSince1970)
+        dm.recordingLocations = [
+            CLLocation(latitude: 37.0, longitude: -122.0)
         ]
         return dm
     }
@@ -206,7 +222,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         // previous drive, so the UI doesn't show a banner that no longer
         // applies.
         let mock = MockDriveAPI()
-        let dm = DriveManager(apiService: mock)
+        let (realAPI, authMgr) = makeManagers(api: mock)
+        let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
         let locMgr = LocationManager()
         locMgr.authorizationStatus = .authorizedAlways
         dm.setLocationManager(locMgr)
@@ -234,7 +251,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     @MainActor
     func testStartRecording_refusesWhenHasRecordingPermissionIsFalse() {
         let mock = MockDriveAPI()
-        let dm = DriveManager(apiService: mock)
+        let (realAPI, authMgr) = makeManagers(api: mock)
+        let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
         let locMgr = LocationManager()
         // Default value is .notDetermined; explicit here for clarity.
         locMgr.authorizationStatus = .notDetermined
@@ -257,7 +275,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         // The user previously granted only WhenInUse (the HIG-friendly
         // path); we still require .authorizedAlways to actually record.
         let mock = MockDriveAPI()
-        let dm = DriveManager(apiService: mock)
+        let (realAPI, authMgr) = makeManagers(api: mock)
+        let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
         let locMgr = LocationManager()
         locMgr.authorizationStatus = .authorizedWhenInUse
         dm.setLocationManager(locMgr)
@@ -277,7 +296,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     func testRecoverPendingDrives_retriesAndDeletesOnSuccess() async throws {
         let mock = MockDriveAPI()
         // Default createDrive impl succeeds.
-        let dm = DriveManager(apiService: mock)
+        let (realAPI, authMgr) = makeManagers(api: mock)
+        let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
 
         // Create a temp dir + a valid in-flight file.
         let dir = FileManager.default.temporaryDirectory
@@ -306,7 +326,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     func testRecoverPendingDrives_leavesFileOnFailure() async throws {
         let mock = MockDriveAPI()
         mock.createDriveImpl = { _ in throw APIError.serverError(503) }
-        let dm = DriveManager(apiService: mock)
+        let (realAPI, authMgr) = makeManagers(api: mock)
+        let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
 
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("drive_recover_fail_\(UUID().uuidString)")
@@ -329,7 +350,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     @MainActor
     func testRecoverPendingDrives_isNoOpWhenNoPendingFiles() async {
         let mock = MockDriveAPI()
-        let dm = DriveManager(apiService: mock)
+        let (realAPI, authMgr) = makeManagers(api: mock)
+        let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
 
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("drive_recover_empty_\(UUID().uuidString)")
@@ -347,7 +369,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         // A file with the right prefix but garbage contents would otherwise
         // wedge the recovery loop forever. Verify we drop it instead.
         let mock = MockDriveAPI()
-        let dm = DriveManager(apiService: mock)
+        let (realAPI, authMgr) = makeManagers(api: mock)
+        let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
 
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("drive_recover_corrupt_\(UUID().uuidString)")
