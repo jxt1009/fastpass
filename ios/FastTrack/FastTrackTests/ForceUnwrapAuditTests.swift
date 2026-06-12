@@ -6,28 +6,67 @@ final class ForceUnwrapAuditTests: XCTestCase {
     // MARK: - E-10: Drive custom Equatable
 
     func test_DriveEquatable_sameDrivesEqual() {
-        let a = Drive.example
-        let b = Drive.example
+        let now = Date()
+        let a = makeDrive(now: now)
+        let b = makeDrive(now: now)
         XCTAssertEqual(a, b)
     }
 
+    private func makeDrive(now: Date) -> Drive {
+        Drive(
+            id: 1,
+            userID: 1,
+            startTime: now.addingTimeInterval(-3600),
+            endTime: now,
+            startLatitude: 37.7749,
+            startLongitude: -122.4194,
+            endLatitude: 37.8044,
+            endLongitude: -122.2712,
+            distance: 15000,
+            duration: 1800,
+            maxSpeed: 35.7632,
+            minSpeed: 0,
+            avgSpeed: 22.352,
+            routeData: nil,
+            carId: "example-car",
+            carMake: "Porsche",
+            carModel: "911",
+            carYear: 2023,
+            carTrim: "GT3",
+            carNickname: "Track Car",
+            stoppedTime: 180,
+            leftTurns: 12,
+            rightTurns: 10,
+            brakeEvents: 3,
+            laneChanges: 5,
+            maxAcceleration: 3.2,
+            maxDeceleration: 4.1,
+            peakGForce: 0.42,
+            topCornerSpeed: 20.0,
+            best060Time: 8.4
+        )
+    }
+
     func test_DriveEquatable_differentDrivesNotEqual() {
-        let a = Drive.example
-        var b = Drive.example
+        let now = Date()
+        let a = makeDrive(now: now)
+        var b = makeDrive(now: now)
         b.distance = 99999
         XCTAssertNotEqual(a, b)
     }
 
     func test_DriveEquatable_differentStartLatitude() {
-        let a = Drive.example
-        var b = Drive.example
+        let now = Date()
+        let a = makeDrive(now: now)
+        var b = makeDrive(now: now)
         b.startLatitude = 0
         XCTAssertNotEqual(a, b)
     }
 
     func test_DriveEquatable_zeroToSixtyAttemptsDiffers() {
-        let a = Drive.example
-        var b = Drive.example
+        let now = Date()
+        let a = makeDrive(now: now)
+        var b = makeDrive(now: now)
         b.zeroToSixtyAttempts = []
         XCTAssertNotEqual(a, b)
     }

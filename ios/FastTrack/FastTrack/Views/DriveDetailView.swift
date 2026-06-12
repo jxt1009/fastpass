@@ -569,12 +569,12 @@ struct DriveDetailView: View {
         }
         let lats = routeCoordinates.map(\.latitude)
         let lngs = routeCoordinates.map(\.longitude)
-        let center = CLLocationCoordinate2D(latitude: (lats.min() + lats.max()) / 2,
-                                            longitude: (lngs.min() + lngs.max()) / 2)
+        let center = CLLocationCoordinate2D(latitude: (lats.min()! + lats.max()!) / 2,
+                                            longitude: (lngs.min()! + lngs.max()!) / 2)
         return MKCoordinateRegion(
             center: center,
-            span: MKCoordinateSpan(latitudeDelta:  max(0.001, (lats.max() - lats.min()) * 1.3),
-                                   longitudeDelta: max(0.001, (lngs.max() - lngs.min()) * 1.3))
+            span: MKCoordinateSpan(latitudeDelta:  max(0.001, (lats.max()! - lats.min()!) * 1.3),
+                                   longitudeDelta: max(0.001, (lngs.max()! - lngs.min()!) * 1.3))
         )
     }
 
