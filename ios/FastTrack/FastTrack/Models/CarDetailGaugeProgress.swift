@@ -4,7 +4,7 @@ import Foundation
 //
 // Pure math helpers that turn the raw personal-best values from
 // `CarDetailData` into a `[0, 1]` progress fraction for
-// `CarDetailGauge`. Kept as a `case`-less `enum` (namespacing only —
+// `FTGauge.hero`. Kept as a `case`-less `enum` (namespacing only —
 // no instances) so the call sites read as
 // `CarDetailGaugeProgress.topSpeedProgress(...)` and so the math is
 // unit-testable without spinning up SwiftUI.

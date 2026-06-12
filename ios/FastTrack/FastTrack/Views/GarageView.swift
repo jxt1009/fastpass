@@ -43,7 +43,7 @@ struct GarageView: View {
     }
 
     private var allCarsSummary: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+        StatsGrid(spacing: 10) {
             InstrumentStatCell(
                 icon: "flag.fill", iconColor: .ftGreen,
                 label: "Total Drives",
@@ -177,30 +177,14 @@ struct GarageView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
-        InstrumentCard {
-            VStack(spacing: 14) {
-                Image(systemName: "car")
-                    .font(FTFont.scoreboard).minimumScaleFactor(0.6)
-                    .foregroundColor(.secondary)
-                Text("No cars in your garage yet")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Text("Add a car to start tracking drives, photos, and personal bests.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                Button {
-                    showingAddCar = true
-                } label: {
-                    Text("Add Your First Car")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(InstrumentButtonStyle(color: .ftBlue))
-                .padding(.top, 4)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+        ContentUnavailableView {
+            Label("No cars in your garage yet", systemImage: "car")
+        } description: {
+            Text("Add a car to start tracking drives, photos, and personal bests.")
+        } actions: {
+            Button("Add Your First Car") { showingAddCar = true }
+                .buttonStyle(.borderedProminent)
+                .tint(.ftBlue)
         }
     }
 
@@ -210,6 +194,12 @@ struct GarageView: View {
         do {
             try await driveManager.deleteDrive(id: id)
             drivePendingDelete = nil
+            ToastManager.shared.show(ToastMessage(
+                text: "Drive deleted",
+                actionLabel: "Undo"
+            ) {
+                Task { await driveManager.restoreDrive(drive) }
+            })
         } catch {
             deleteError = error.localizedDescription
             drivePendingDelete = nil
@@ -295,16 +285,7 @@ struct GarageCarCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
-                        Text("SELECTED")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule()
-                                    .fill(Color.ftBlue)
-                            )
+                        BadgePill("SELECTED", style: .selected)
                             .padding(8)
                     }
                 }
@@ -348,10 +329,7 @@ struct GarageCarCard: View {
     }
 
     private var statsGrid: some View {
-        LazyVGrid(
-            columns: [GridItem(.flexible()), GridItem(.flexible())],
-            spacing: 6
-        ) {
+        StatsGrid(spacing: 6) {
             StatMini(title: "Drives", value: "\(stats?.totalDrives ?? 0)")
             StatMini(
                 title: settings.distanceUnit == "mi" ? "Miles" : "KM",
@@ -392,7 +370,7 @@ struct GarageCarCard: View {
 
 struct GarageDriveRow: View {
     let drive: Drive
-    var badge: GarageDriveBadge? = nil
+    var badge: BadgePill? = nil
     @EnvironmentObject var settings: AppSettings
 
     var body: some View {
@@ -404,14 +382,7 @@ struct GarageDriveRow: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                         if !drive.carDisplayString.isEmpty && drive.carDisplayString != "Unknown Car" {
-                            Text(drive.carDisplayString)
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.ftBlue.opacity(0.8))
-                                .clipShape(Capsule())
+                            BadgePill(drive.carDisplayString, style: .carChip)
                         }
                     }
                     HStack(spacing: 12) {
@@ -425,17 +396,7 @@ struct GarageDriveRow: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 8) {
                     if let badge {
-                        HStack(spacing: 3) {
-                            Image(systemName: badge.icon)
-                                .font(FTFont.pill).minimumScaleFactor(0.7)
-                            Text(badge.text)
-                                .font(.caption2.weight(.bold))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(badge.background)
-                        .foregroundColor(badge.foreground)
-                        .clipShape(Capsule())
+                        badge
                     }
                     Image(systemName: "chevron.right")
                         .font(.caption)
@@ -444,13 +405,6 @@ struct GarageDriveRow: View {
             }
         }
     }
-}
-
-struct GarageDriveBadge {
-    let text: String
-    let icon: String
-    let background: Color
-    let foreground: Color
 }
 
 // MARK: - Analytics Card (hoisted from AnalyticsView)

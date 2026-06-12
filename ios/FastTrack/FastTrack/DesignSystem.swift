@@ -159,77 +159,6 @@ extension View {
     }
 }
 
-// ─── Dashboard Gauge (web stat-card look) ─────────────────
-
-struct DashboardGauge: View {
-    let value: String
-    let label: String
-    let color: Color
-    var compact: Bool = false
-
-    var body: some View {
-        if compact {
-            HStack(spacing: 6) {
-                Text(value)
-                    .font(.system(.body, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(color)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-
-                Text(label.uppercased())
-                    .font(FTFont.gaugeLabelCompact)
-                    .foregroundColor(.secondary)
-                    .tracking(0.5)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.sm)
-                    .stroke(Color.ftSectionBg, lineWidth: 1)
-            )
-            .background(
-                RoundedRectangle(cornerRadius: Radius.sm)
-                    .fill(Color.ftCardBg)
-            )
-        } else {
-            VStack(spacing: 8) {
-                Text(value)
-                    .font(FTFont.gaugeValue)
-                    .foregroundColor(color)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-
-                Rectangle()
-                    .fill(LinearGradient(
-                        colors: [.ftBlue, .ftAmber],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ))
-                    .frame(width: 32, height: 3)
-                    .cornerRadius(Radius.xxxs)
-
-                Text(label.uppercased())
-                    .font(.caption2.weight(.semibold))
-                    .minimumScaleFactor(0.75)
-                    .foregroundColor(.secondary)
-                    .tracking(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .padding(.horizontal, 8)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .stroke(Color.ftSectionBg, lineWidth: 1)
-            )
-            .background(
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color.ftCardBg)
-            )
-        }
-    }
-}
-
 // ─── Color-coded stat value (for inline stat rows) ──────
 
 struct StatValue: View {
@@ -270,24 +199,8 @@ struct InstrumentCard<Content: View>: View {
 }
 
 // ─── Gauge Arc ──────────────────────────────────────────
-
-struct GaugeArc: Shape {
-    var startAngle: Angle = .degrees(180)
-    var endAngle: Angle = .degrees(360)
-
-    func path(in rect: CGRect) -> Path {
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let radius = min(rect.width, rect.height) / 2
-
-        let start = Angle.degrees(startAngle.degrees - 90)
-        let end = Angle.degrees(endAngle.degrees - 90)
-
-        return Path { path in
-            path.addArc(center: center,
-                       radius: radius,
-                       startAngle: start,
-                       endAngle: end,
-                       clockwise: true)
-        }
-    }
-}
+//
+// `FTGaugeArc` (in `Views/Components/FTGauge.swift`) is the
+// consolidated shape used by the per-car PB hero gauge.
+// The legacy `GaugeArc` previously defined here was removed in
+// the C-4 consolidation.

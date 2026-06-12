@@ -8,7 +8,6 @@ struct PublicProfileView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var isFollowing = false
-    @State private var followLoading = false
     @State private var zoomedAvatar: AvatarZoomTarget?
     @State private var followNavigation: FollowDestination?
 
@@ -203,28 +202,14 @@ struct PublicProfileView: View {
     }
 
     private var followButton: some View {
-        Button {
-            Task { await toggleFollow() }
-        } label: {
-            if followLoading {
-                ProgressView()
-                    .frame(minWidth: 80, minHeight: 44)
-            } else {
-                Text(isFollowing ? "Following" : "Follow")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(isFollowing ? .secondary : .white)
-                    .frame(minWidth: 80, minHeight: 44)
-                    .background(
-                        isFollowing
-                            ? Color(.systemFill)
-                            : Color.ftBlue,
-                        in: Capsule()
-                    )
+        FollowButton(
+            isFollowing: $isFollowing,
+            username: username,
+            isSelf: false,
+            onError: { message in
+                ToastManager.shared.show(ToastMessage(text: message))
             }
-        }
-        .buttonStyle(.plain)
-        .disabled(followLoading)
+        )
     }
 
     // MARK: - Bio helpers
@@ -318,44 +303,6 @@ struct PublicProfileView: View {
             errorMessage = error.localizedDescription
         }
         isLoading = false
-    }
-
-    private func toggleFollow() async {
-        followLoading = true
-        defer { followLoading = false }
-        guard var current = profile else { return }
-        do {
-            if isFollowing {
-                try await APIService.shared.unfollowUser(username: username)
-                isFollowing = false
-                current = PublicProfile(
-                    username: current.username, fullName: current.fullName, country: current.country,
-                    avatarURL: current.avatarURL, memberSince: current.memberSince,
-                    topSpeed: current.topSpeed, totalDistance: current.totalDistance,
-                    driveCount: current.driveCount, best060Time: current.best060Time,
-                    followerCount: max(0, current.followerCount - 1),
-                    followingCount: current.followingCount,
-                    isFollowedByMe: false,
-                    garage: current.garage, carStatsData: current.carStatsData
-                )
-            } else {
-                try await APIService.shared.followUser(username: username)
-                isFollowing = true
-                current = PublicProfile(
-                    username: current.username, fullName: current.fullName, country: current.country,
-                    avatarURL: current.avatarURL, memberSince: current.memberSince,
-                    topSpeed: current.topSpeed, totalDistance: current.totalDistance,
-                    driveCount: current.driveCount, best060Time: current.best060Time,
-                    followerCount: current.followerCount + 1,
-                    followingCount: current.followingCount,
-                    isFollowedByMe: true,
-                    garage: current.garage, carStatsData: current.carStatsData
-                )
-            }
-            profile = current
-        } catch {
-            // Silently ignore; state stays unchanged
-        }
     }
 }
 

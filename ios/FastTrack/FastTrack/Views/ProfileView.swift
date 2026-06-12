@@ -15,6 +15,7 @@ struct ProfileView: View {
     @State private var showingDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @State private var deleteAccountError: String?
+    @State private var showingSignOutConfirmation = false
     @State private var zoomedAvatar: AvatarZoomTarget?
     @State private var croppingAvatar: CropImageSource?
     var onSwitchToGarage: (() -> Void)? = nil
@@ -224,7 +225,7 @@ struct ProfileView: View {
     private var profileStatsSkeleton: some View {
         VStack(spacing: 16) {
             // Stats grid skeleton (4 cells)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            StatsGrid(spacing: 12) {
                 ForEach(0..<6, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: Radius.lg)
                         .fill(Color.ftCardBg.opacity(0.2))
@@ -246,7 +247,7 @@ struct ProfileView: View {
     // MARK: Main Stats Grid
 
     private var mainStatsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+        StatsGrid(spacing: 10) {
             InstrumentStatCell(
                 icon: "location.fill", iconColor: .cyan,
                 label: "Total Distance",
@@ -277,7 +278,7 @@ struct ProfileView: View {
     // MARK: Headline Speed Grid (Top Speed + Best 0-60)
 
     private var headlineSpeedGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+        StatsGrid(spacing: 10) {
             InstrumentStatCell(
                 icon: "bolt.fill", iconColor: .yellow,
                 label: "Top Speed",
@@ -305,6 +306,9 @@ struct ProfileView: View {
                         guard var p = profileManager.profile else { return }
                         p.isPublic = newValue
                         profileManager.saveProfile(p)
+                        ToastManager.shared.show(ToastMessage(
+                            text: newValue ? "Profile is now public" : "Profile is now private"
+                        ))
                     }
                 )) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -348,7 +352,7 @@ struct ProfileView: View {
 
     private var signOutButton: some View {
         Button(role: .destructive) {
-            AuthManager.shared.signOut()
+            showingSignOutConfirmation = true
         } label: {
             Text("Sign Out")
                 .fontWeight(.semibold)
@@ -357,6 +361,19 @@ struct ProfileView: View {
                 .padding()
                 .background(Color.ftCardBg)
                 .cornerRadius(Radius.lg)
+        }
+        .confirmationDialog(
+            "Sign out of FastTrack?",
+            isPresented: $showingSignOutConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Sign Out", role: .destructive) {
+                AuthManager.shared.signOut()
+                ToastManager.shared.show(ToastMessage(text: "Signed out"))
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll need to sign in again to view drives.")
         }
         .padding(.top, 8)
     }
@@ -463,7 +480,12 @@ struct CarGarageCard: View {
             VStack(spacing: 8) {
                 // Main car info
                 HStack(spacing: 12) {
-                    CarPhotoThumbnail(photoURL: car.photoUrl, size: 56)
+                    CarPhotoView(
+                        car: car,
+                        url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+                        cornerRadius: 10,
+                        size: 56
+                    )
                     VStack(alignment: .leading, spacing: 4) {
                         Text(car.shortDisplay)
                             .font(.headline)
@@ -543,56 +565,12 @@ private struct EditingCarTarget: Identifiable {
     let id: String
 }
 
-/// Small rounded thumbnail for a car's photo. Falls back to a tinted car icon
-/// placeholder when no usable photo URL is set.
-struct CarPhotoThumbnail: View {
-    let photoURL: String?
-    var size: CGFloat = 56
-
-    var body: some View {
-        Group {
-            if let photoURL, !photoURL.isEmpty, let url = URL(string: photoURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        placeholder
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        placeholder
-                    @unknown default:
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.md)
-                .stroke(Color.secondary.opacity(0.15), lineWidth: 0.5)
-        )
-    }
-
-    private var placeholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.md)
-                .fill(Color.ftBlue.opacity(0.15))
-            Image(systemName: "car.fill")
-                .font(.system(size: size * 0.45))
-                .foregroundColor(.ftBlue)
-        }
-    }
-}
-
 struct CarStatsRow: View {
     let stats: CarStats
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+        StatsGrid(spacing: 8) {
             StatMini(title: "Drives", value: "\(stats.totalDrives)")
             StatMini(title: settings.distanceUnit == "mi" ? "Miles" : "KM",
                      value: String(format: "%.0f", settings.distanceValue(stats.totalDistance)))

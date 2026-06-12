@@ -305,7 +305,20 @@ private struct LeaderboardRow: View {
                 .frame(width: 32, alignment: .leading)
 
             // Car photo thumbnail (40pt, rounded) — falls back to tinted car icon
-            CarThumbnail(urlString: entry.carPhotoUrl, size: 40)
+            CarPhotoView(
+                car: UserCar(
+                    id: entry.carId ?? entry.carKey,
+                    make: entry.carMake,
+                    model: entry.carModel,
+                    year: entry.carYear,
+                    trim: entry.carTrim ?? "",
+                    nickname: entry.carNickname ?? "",
+                    photoUrl: entry.carPhotoUrl
+                ),
+                url: entry.carPhotoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+                cornerRadius: 6,
+                size: 40
+            )
 
             // Car info (primary) + username (supporting)
             VStack(alignment: .leading, spacing: 2) {
@@ -315,13 +328,7 @@ private struct LeaderboardRow: View {
                         .fontWeight(isCurrentUserRow ? .semibold : .regular)
                         .lineLimit(1)
                     if isCurrentUserRow {
-                        Text("You")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.ftBlue, in: Capsule())
+                        BadgePill("You", style: .you)
                     }
                 }
                 HStack(spacing: 6) {
@@ -359,44 +366,6 @@ private struct LeaderboardRow: View {
         case 2: return Color(white: 0.7)
         case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
         default: return .secondary
-        }
-    }
-}
-
-// MARK: - Car Thumbnail
-
-/// 40-48pt rounded thumbnail for a car photo. Falls back to a tinted
-/// car icon when the URL is nil/empty or the image fails to load.
-private struct CarThumbnail: View {
-    let urlString: String?
-    let size: CGFloat
-
-    var body: some View {
-        Group {
-            if let urlString, !urlString.isEmpty, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.xs + 2))
-    }
-
-    private var placeholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.xs + 2)
-                .fill(Color.ftBlue.opacity(0.15))
-            Image(systemName: "car.fill")
-                .foregroundStyle(Color.ftBlue)
-                .font(.system(size: size * 0.5))
         }
     }
 }

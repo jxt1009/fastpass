@@ -83,23 +83,11 @@ private struct UserSearchRow: View {
     @Binding var result: UserSearchResult
     let currentUsername: String?
 
-    private func avatarCircle(initial: String) -> some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(
-                    colors: [.ftBlue, .purple],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .frame(width: 42, height: 42)
-            Text(initial)
-                .font(.headline)
-                .foregroundStyle(.white)
-        }
-    }
-
     var body: some View {
-        HStack(spacing: 12) {
+        UserRow(
+            avatarSize: 42,
+            isYou: result.username == currentUsername
+        ) {
             // Avatar
             Group {
                 if !result.avatarURL.isEmpty, let url = URL(string: result.avatarURL) {
@@ -107,103 +95,53 @@ private struct UserSearchRow: View {
                         switch phase {
                         case .success(let image):
                             image.resizable().scaledToFill()
-                                .frame(width: 42, height: 42)
-                                .clipShape(Circle())
                         default:
-                            avatarCircle(initial: result.username.prefix(1).uppercased())
+                            avatarPlaceholder
                         }
                     }
                 } else {
-                    avatarCircle(initial: result.username.prefix(1).uppercased())
+                    avatarPlaceholder
                 }
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text("@\(result.username)")
-                        .font(.body)
-                    if result.username == currentUsername {
-                        Text("You")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.ftBlue, in: Capsule())
-                    }
-                }
+            .clipShape(Circle())
+        } primaryContent: {
+            Text("@\(result.username)").font(.body)
+        } secondaryContent: {
+            VStack(alignment: .leading, spacing: 1) {
                 if !result.fullName.isEmpty {
-                    Text(result.fullName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(result.fullName).font(.caption).foregroundStyle(.secondary)
                 }
                 if !result.country.isEmpty {
-                    Text(result.country)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(result.country).font(.caption).foregroundStyle(.secondary)
                 }
             }
-
-            Spacer()
-
-            // Follow/Following button — only for other users
-            if result.username != currentUsername {
-                FollowToggleButton(result: $result)
-            }
+        } trailing: {
+            FollowButton(
+                isFollowing: Binding(
+                    get: { result.isFollowedByMe },
+                    set: { result.isFollowedByMe = $0 }
+                ),
+                username: result.username,
+                isSelf: result.username == currentUsername,
+                onError: { message in
+                    ToastManager.shared.show(ToastMessage(text: message))
+                }
+            )
         }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Follow Toggle Button
-
-private struct FollowToggleButton: View {
-    @Binding var result: UserSearchResult
-    @State private var isLoading = false
-
-    var body: some View {
-        Button {
-            Task { await toggle() }
-        } label: {
-            if isLoading {
-                ProgressView()
-                    .frame(minWidth: 80, minHeight: 44)
-            } else if result.isFollowedByMe {
-                Text("Following")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemFill), in: Capsule())
-            } else {
-                Text("Follow")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.ftBlue, in: Capsule())
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(isLoading)
     }
 
-    private func toggle() async {
-        isLoading = true
-        do {
-            if result.isFollowedByMe {
-                try await APIService.shared.unfollowUser(username: result.username)
-                result.isFollowedByMe = false
-            } else {
-                try await APIService.shared.followUser(username: result.username)
-                result.isFollowedByMe = true
-            }
-        } catch {
-            // Silently ignore — the button state stays unchanged
+    private var avatarPlaceholder: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [.ftBlue, .purple],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+            Text(result.username.prefix(1).uppercased())
+                .font(.headline)
+                .foregroundStyle(.white)
         }
-        isLoading = false
     }
 }
 

@@ -110,13 +110,7 @@ struct CarDetailView: View {
                         }
                     }
                     if isActiveCar {
-                        Text("Active")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(Color.ftBlue))
+                        BadgePill("Active", style: .selected)
                     } else if car != nil {
                         Button("Set Active") {
                             setActiveCar()
@@ -269,28 +263,30 @@ struct CarDetailView: View {
     @ViewBuilder
     private var pbGauges: some View {
         HStack(spacing: 12) {
-            CarDetailGauge(
-                title: "Top Speed",
-                value: topSpeedDisplay,
-                unit: settings.speedUnit,
-                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0),
-                setOn: data?.topSpeedPBDate,
-                progress: data.map { d in
-                    let raw = d.bestTopSpeed.map { CarDetailGaugeProgress.topSpeedProgress(speedMps: $0) } ?? 0
-                    return CarDetailGaugeProgress.visualProgress(raw)
-                }
+            FTGauge(
+                style: .hero(
+                    progress: data.map { d in
+                        let raw = d.bestTopSpeed.map { CarDetailGaugeProgress.topSpeedProgress(speedMps: $0) } ?? 0
+                        return CarDetailGaugeProgress.visualProgress(raw)
+                    },
+                    setOn: data?.topSpeedPBDate
+                ),
+                label: "Top Speed",
+                value: "\(topSpeedDisplay) \(settings.speedUnit)",
+                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0)
             )
-            CarDetailGauge(
-                title: "Best 0-60",
-                value: zeroSixtyDisplay,
-                unit: "sec",
-                color: .ftAmber,
-                setOn: data?.zeroSixtyPBDate,
-                progress: data.map { d in
-                    CarDetailGaugeProgress.visualProgress(
-                        CarDetailGaugeProgress.zeroSixtyProgress(seconds: d.bestZeroToSixty)
-                    )
-                }
+            FTGauge(
+                style: .hero(
+                    progress: data.map { d in
+                        CarDetailGaugeProgress.visualProgress(
+                            CarDetailGaugeProgress.zeroSixtyProgress(seconds: d.bestZeroToSixty)
+                        )
+                    },
+                    setOn: data?.zeroSixtyPBDate
+                ),
+                label: "Best 0-60",
+                value: "\(zeroSixtyDisplay) sec",
+                color: .ftAmber
             )
         }
     }
@@ -386,15 +382,11 @@ struct CarDetailView: View {
     }
 
     private var sparklineEmptyState: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "chart.line.uptrend.xyaxis")
-                .font(.title2)
-                .foregroundColor(.secondary)
-            Text("Record more drives to see the trend")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
+        ContentUnavailableView(
+            "No trend data",
+            systemImage: "chart.line.uptrend.xyaxis",
+            description: Text("Record more drives to see the trend")
+        )
         .frame(height: 120)
     }
 
@@ -536,7 +528,7 @@ struct CarDetailView: View {
             Text("Performance")
                 .font(.headline)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            StatsGrid(spacing: 10) {
                 PerformanceBreakdownCard(
                     title: "Best 0-60",
                     value: data?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
@@ -725,12 +717,12 @@ struct CarDetailView: View {
         }
     }
 
-    private func driveBadge(for drive: Drive, topSpeedPBDriveId: Int?, zeroSixtyPBDriveId: Int?) -> GarageDriveBadge? {
+    private func driveBadge(for drive: Drive, topSpeedPBDriveId: Int?, zeroSixtyPBDriveId: Int?) -> BadgePill? {
         if drive.id == zeroSixtyPBDriveId {
-            return GarageDriveBadge(text: "PB 0-60", icon: "trophy.fill", background: .yellow, foreground: .black)
+            return BadgePill("PB 0-60", icon: "trophy.fill", style: .pb060)
         }
         if drive.id == topSpeedPBDriveId {
-            return GarageDriveBadge(text: "PB Speed", icon: "flame.fill", background: .red, foreground: .white)
+            return BadgePill("PB Speed", icon: "flame.fill", style: .pbTopSpeed)
         }
         return nil
     }
@@ -848,6 +840,12 @@ struct CarDetailView: View {
         do {
             try await driveManager.deleteDrive(id: id)
             drivePendingDelete = nil
+            ToastManager.shared.show(ToastMessage(
+                text: "Drive deleted",
+                actionLabel: "Undo"
+            ) {
+                Task { await driveManager.restoreDrive(drive) }
+            })
         } catch {
             deleteError = error.localizedDescription
             drivePendingDelete = nil

@@ -26,7 +26,12 @@ struct PublicGarageCard: View {
         InstrumentCard {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
-                    CarPhotoThumbnail(photoURL: car.photoUrl, size: 80)
+                    CarPhotoView(
+                        car: car,
+                        url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+                        cornerRadius: 10,
+                        size: 80
+                    )
                     VStack(alignment: .leading, spacing: 4) {
                         // Nickname (in quotes, when present) is the headline.
                         if !car.nickname.isEmpty {

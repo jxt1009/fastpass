@@ -59,6 +59,7 @@ struct FastTrackApp: App {
                     .environmentObject(notificationsManager)
 #endif
             }
+            .toastOverlay()
         }
     }
 }

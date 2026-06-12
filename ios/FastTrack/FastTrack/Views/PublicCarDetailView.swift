@@ -119,16 +119,16 @@ struct PublicCarDetailView: View {
 
     private var pbgaugeRow: some View {
         HStack(spacing: 12) {
-            PublicCarDetailGauge(
-                title: "TOP SPEED",
-                value: topSpeedDisplay,
-                unit: settings.speedUnit,
+            FTGauge(
+                style: .statCell(unit: settings.speedUnit),
+                label: "TOP SPEED",
+                value: topSpeedDisplay ?? "—",
                 color: .ftRed
             )
-            PublicCarDetailGauge(
-                title: "BEST 0-60",
-                value: zeroToSixtyDisplay,
-                unit: "sec",
+            FTGauge(
+                style: .statCell(unit: "sec"),
+                label: "BEST 0-60",
+                value: zeroToSixtyDisplay ?? "—",
                 color: .ftAmber
             )
         }
@@ -173,23 +173,12 @@ struct PublicCarDetailView: View {
                 }
             }
         } else {
-            InstrumentCard {
-                HStack(spacing: 10) {
-                    Image(systemName: "chart.bar")
-                        .foregroundColor(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(statsNotSyncedCopy)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        if statsNotSyncedCopy != noDataCopy {
-                            Text("Stats will appear here once they sync from the device that recorded them.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    Spacer()
-                }
-            }
+            ContentUnavailableView(
+                "Stats not synced",
+                systemImage: "chart.bar",
+                description: Text(statsNotSyncedCopy)
+            )
+            .frame(maxWidth: .infinity)
         }
     }
 
