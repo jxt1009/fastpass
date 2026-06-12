@@ -148,6 +148,7 @@ class AuthManager: ObservableObject {
     @MainActor
     func signOut() {
         sessionToken = UUID()
+        NotificationsManager.shared.cancelInFlight()
         clearSessionData()
     }
 
