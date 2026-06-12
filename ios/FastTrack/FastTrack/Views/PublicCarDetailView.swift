@@ -110,7 +110,7 @@ struct PublicCarDetailView: View {
     private var heroBackground: some View {
         CarPhotoView(
             car: car,
-            url: car.hasPhoto ? URL(string: car.photoUrl ?? "") : nil,
+            url: car.hasPhoto ? (car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) }) : nil,
             cornerRadius: 0
         )
     }
