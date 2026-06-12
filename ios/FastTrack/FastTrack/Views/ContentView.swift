@@ -377,6 +377,7 @@ struct LiveMapView: View {
     let useFlatElevation: Bool
 
     @State private var cameraPosition: MapCameraPosition
+    @State private var regionUpdateTask: Task<Void, Never>?
 
     init(
         userLocation: CLLocationCoordinate2D,
@@ -411,11 +412,16 @@ struct LiveMapView: View {
             MapCompass()
         }
         .onChange(of: userLocation) { oldValue, newValue in
-            withAnimation(.easeInOut(duration: 0.5)) {
-                cameraPosition = .region(MKCoordinateRegion(
-                    center: newValue,
-                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                ))
+            regionUpdateTask?.cancel()
+            regionUpdateTask = Task {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    cameraPosition = .region(MKCoordinateRegion(
+                        center: newValue,
+                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                    ))
+                }
             }
         }
     }
