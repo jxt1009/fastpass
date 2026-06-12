@@ -69,16 +69,19 @@ struct CarDetailView: View {
                         EditCarView(carId: carId)
                     }
                     .sheet(isPresented: $showingHeroPhotoEditor) {
-                        CarHeroPhotoEditorSheet(
+                        CarDetailPhotoEditor(
                             carId: carId,
                             existingPhotoURL: car?.photoUrl,
-                            onUploadComplete: handleHeroPhotoUpload
+                            onUploadComplete: handleHeroPhotoUpload,
+                            isPresented: $showingHeroPhotoEditor
                         )
                     }
                     .sheet(isPresented: $showingDrivingStyleGuide) {
-                        drivingStyleGuideSheet
+                        CarDetailStyleGuide(isPresented: $showingDrivingStyleGuide)
                     }
-                    .overlay(alignment: .top, content: confettiOverlay)
+                    .overlay(alignment: .top, content: {
+                        ConfettiOverlay(show: showConfetti)
+                    })
                     .modifier(LifecycleModifier(
                         onAppear: handleAppear,
                         onDisappear: handleDisappear,
@@ -125,15 +128,28 @@ struct CarDetailView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                hero
-                pbGauges
-                topSummaryRow
-                performanceBreakdown
-                periodComparison
-                trendSparklines
-                sparklineSection
-                perCarAchievementsSection
-                recentDrivesSection
+                CarDetailHero(
+                    car: car,
+                    data: data,
+                    settings: settings,
+                    onTapPhoto: presentPhotoZoom,
+                    onTapEditPhoto: { showingHeroPhotoEditor = true },
+                    onTapStyleGuide: { showingDrivingStyleGuide = true }
+                )
+                CarDetailSparkline(data: data, settings: settings)
+                CarDetailStatsGrid(
+                    data: data,
+                    settings: settings,
+                    car: car,
+                    drives: driveManager.drives
+                )
+                CarDetailDrivesList(
+                    data: data,
+                    driveManager: driveManager,
+                    settings: settings,
+                    car: car,
+                    onDeleteDrive: { drive in drivePendingDelete = drive }
+                )
                 Spacer(minLength: 16)
             }
             .padding(.horizontal)
@@ -176,69 +192,6 @@ struct CarDetailView: View {
         profileManager.saveProfile(profile)
     }
 
-    // MARK: - Hero
-
-    @ViewBuilder
-    private var hero: some View {
-        ZStack(alignment: .bottomLeading) {
-            photo
-                .frame(maxWidth: .infinity)
-                .frame(height: 260)
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
-
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.65)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
-            .frame(height: 260)
-            .allowsHitTesting(false)
-
-            VStack(alignment: .leading, spacing: 4) {
-                if let nickname = car?.nickname, !nickname.isEmpty {
-                    Text(nickname)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                }
-                Text(car?.displayString ?? "")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.9))
-                    .lineLimit(1)
-            }
-            .padding(16)
-
-            heroPhotoEditButton
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { presentPhotoZoom() }
-    }
-
-    private var heroPhotoEditButton: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                Button {
-                    showingHeroPhotoEditor = true
-                } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(FTFont.sectionCaption).minimumScaleFactor(0.6)
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(Circle().fill(Color.ftScrim))
-                }
-                .frame(width: 44, height: 44)
-                .accessibilityLabel("Edit car photo")
-            }
-        }
-        .padding(8)
-    }
-
     @MainActor
     private func handleHeroPhotoUpload(newURL: URL) {
         guard var profile = profileManager.profile else { return }
@@ -247,543 +200,7 @@ struct CarDetailView: View {
         refresh()
     }
 
-    @ViewBuilder
-    private var photo: some View {
-        if let car {
-            CarPhotoView(
-                car: car,
-                url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
-                cornerRadius: 0
-            )
-        }
-    }
-
-    // MARK: - PB gauges
-
-    @ViewBuilder
-    private var pbGauges: some View {
-        HStack(spacing: 12) {
-            FTGauge(
-                style: .hero(
-                    progress: data.map { d in
-                        let raw = d.bestTopSpeed.map { CarDetailGaugeProgress.topSpeedProgress(speedMps: $0) } ?? 0
-                        return CarDetailGaugeProgress.visualProgress(raw)
-                    },
-                    setOn: data?.topSpeedPBDate
-                ),
-                label: "Top Speed",
-                value: "\(topSpeedDisplay) \(settings.speedUnit)",
-                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0)
-            )
-            FTGauge(
-                style: .hero(
-                    progress: data.map { d in
-                        CarDetailGaugeProgress.visualProgress(
-                            CarDetailGaugeProgress.zeroSixtyProgress(seconds: d.bestZeroToSixty)
-                        )
-                    },
-                    setOn: data?.zeroSixtyPBDate
-                ),
-                label: "Best 0-60",
-                value: "\(zeroSixtyDisplay) sec",
-                color: .ftAmber
-            )
-        }
-    }
-
-    // MARK: - Sparkline
-
-    @ViewBuilder
-    private var sparklineSection: some View {
-        InstrumentCard {
-            VStack(alignment: .leading, spacing: 8) {
-                sparklineHeader
-                sparklineChart
-            }
-        }
-    }
-
-    private var sparklineHeader: some View {
-        HStack {
-            Text("Max Speed Trend")
-                .font(.headline)
-            Spacer()
-            if (data?.sparklinePoints.count ?? 0) > 1 {
-                Text("Last \(data?.sparklinePoints.count ?? 0) drives")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var sparklineChart: some View {
-        if (data?.sparklinePoints.count ?? 0) > 1 {
-            if #available(iOS 16.0, *) {
-                sparklineChartBody
-            } else {
-                sparklineEmptyState
-            }
-        } else {
-            sparklineEmptyState
-        }
-    }
-
-    @ViewBuilder
-    private var sparklineChartBody: some View {
-        if #available(iOS 16.0, *) {
-            Chart {
-                ForEach(Array((data?.sparklinePoints ?? []).enumerated()), id: \.offset) { item in
-                    sparklineLineMark(index: item.offset, speed: item.element)
-                }
-                if let pbIndex = data?.pbSparklineIndex {
-                    sparklinePBPointMark(index: pbIndex)
-                }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading)
-            }
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                    AxisGridLine()
-                    AxisValueLabel()
-                }
-            }
-            .frame(height: 160)
-        }
-    }
-
-    @available(iOS 16.0, *)
-    private func sparklineLineMark(index: Int, speed: Double) -> some ChartContent {
-        LineMark(
-            x: .value("Drive", index),
-            y: .value("Max Speed", settings.speedValue(speed)),
-            series: .value("Series", "speed")
-        )
-        .foregroundStyle(Color.ftBlue)
-        .interpolationMethod(.monotone)
-    }
-
-    @available(iOS 16.0, *)
-    private func sparklinePBPointMark(index: Int) -> some ChartContent {
-        let speed = data?.sparklinePoints[index] ?? 0
-        return PointMark(
-            x: .value("Drive", index),
-            y: .value("Max Speed", settings.speedValue(speed))
-        )
-        .foregroundStyle(Color.ftRed)
-        .symbolSize(120)
-        .annotation(position: .top) {
-            Text("PB")
-                .font(.caption2)
-                .fontWeight(.bold)
-                .foregroundColor(.red)
-        }
-    }
-
-    private var sparklineEmptyState: some View {
-        ContentUnavailableView(
-            "No trend data",
-            systemImage: "chart.line.uptrend.xyaxis",
-            description: Text("Record more drives to see the trend")
-        )
-        .frame(height: 120)
-    }
-
-    // MARK: - Top summary
-
-    private var totalDrivesCount: Int {
-        if let count = data?.stats?.totalDrives {
-            return count
-        }
-        return driveManager.drives.filter { $0.carId == carId }.count
-    }
-
-    private var topSummaryRow: some View {
-        InstrumentCard {
-            HStack(spacing: 12) {
-                DrivingStyleBadge(style: data?.drivingStyle ?? .unknown)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Total Drives")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("\(totalDrivesCount)")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
-                Spacer()
-                Button {
-                    showingDrivingStyleGuide = true
-                } label: {
-                    Label("Style Guide", systemImage: "info.circle")
-                        .font(.caption.weight(.semibold))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.ftBlue)
-            }
-        }
-    }
-
-    // MARK: - Per-car achievements
-
-    @ViewBuilder
-    private var perCarAchievementsSection: some View {
-        if let pbs = data?.achievementPBs, !pbs.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    SectionHeader(title: "Achievements")
-                    Spacer()
-                    if let indicator = recentPBIndicatorText {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.ftAmber)
-                                .frame(width: 6, height: 6)
-                            Text(indicator)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundColor(.ftAmber)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.ftAmber.opacity(0.12))
-                        )
-                    }
-                }
-                ForEach(pbs) { achievement in
-                    NavigationLink {
-                        destination(for: achievement)
-                    } label: {
-                        perCarAchievementRow(achievement)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func destination(for achievement: Achievement) -> some View {
-        switch RecentAchievementsStripLogic.resolveSourceDrive(
-            for: achievement,
-            in: driveManager.drives
-        ) {
-        case .local(let drive):
-            DriveDetailView(drive: drive)
-        case .remote(let driveId):
-            RemoteDriveDetailLoader(driveId: driveId)
-        case .none:
-            AchievementsView()
-        }
-    }
-
-    private func perCarAchievementRow(_ achievement: Achievement) -> some View {
-        InstrumentCard {
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: achievement.badgeIcon)
-                    .font(.title3)
-                    .foregroundColor(achievement.badgeColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(achievement.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Text(achievement.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    // MARK: - Performance Breakdown
-
-    private var zeroToSixtyCategory: String {
-        guard let time = data?.bestZeroToSixty else { return "N/A" }
-        switch time {
-        case 0..<3.0: return "Hypercar"
-        case 3.0..<4.0: return "Supercar"
-        case 4.0..<6.0: return "Sports Car"
-        default: return "Quick"
-        }
-    }
-
-    private var corneringCategory: String {
-        switch data?.peakLateralG ?? 0 {
-        case 0.8...: return "Race Driver"
-        case 0.6..<0.8: return "Enthusiast"
-        default: return "Spirited"
-        }
-    }
-
-    private var performanceBreakdown: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text("Performance")
-                .font(.headline)
-
-            StatsGrid(spacing: 10) {
-                PerformanceBreakdownCard(
-                    title: "Best 0-60",
-                    value: data?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
-                    category: zeroToSixtyCategory,
-                    icon: "bolt.fill",
-                    color: .red
-                )
-                PerformanceBreakdownCard(
-                    title: "Cornering",
-                    value: String(format: "%.2fG", data?.peakLateralG ?? 0),
-                    category: corneringCategory,
-                    icon: "arrow.triangle.turn.up.right.circle.fill",
-                    color: .purple
-                )
-            }
-        }
-    }
-
-    // MARK: - Period Comparison
-
-    private enum TimePeriod {
-        case lastMonth
-        case previousMonth
-    }
-
-    private func drives(of carId: String, in period: TimePeriod) -> [Drive] {
-        let now = Date()
-        let start: Date
-        switch period {
-        case .lastMonth:
-            start = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
-        case .previousMonth:
-            let lastMonthStart = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
-            start = Calendar.current.date(byAdding: .month, value: -1, to: lastMonthStart) ?? lastMonthStart
-            return driveManager.drives.filter { $0.carId == carId && $0.startTime >= start && $0.startTime < lastMonthStart }
-        }
-        return driveManager.drives.filter { $0.carId == carId && $0.startTime >= start }
-    }
-
-    private var periodComparison: some View {
-        let currentAvg: Double? = {
-            guard let carId = car?.id else { return nil }
-            let drives = self.drives(of: carId, in: .lastMonth)
-            guard !drives.isEmpty else { return nil }
-            return drives.reduce(0.0) { $0 + $1.maxSpeed } / Double(drives.count)
-        }()
-        let prevAvg = data?.prevPeriodAvgMaxSpeed
-
-        let (valueText, trend): (String, TrendDirection?) = {
-            guard let cur = currentAvg, let prev = prevAvg, prev > 0 else {
-                return ("—", nil)
-            }
-            let delta = (cur - prev) * settings.speedFactor
-            let sign = delta >= 0 ? "+" : ""
-            let t: TrendDirection = delta > 0.5 ? .up : (delta < -0.5 ? .down : .neutral)
-            return (String(format: "%@%.1f %@", sign, delta, settings.speedUnit), t)
-        }()
-
-        return AnalyticsCard(
-            title: "vs Last Month",
-            value: valueText,
-            icon: "arrow.up.arrow.down",
-            iconColor: .purple,
-            trend: trend,
-            info: StatInfo.periodComparison
-        )
-    }
-
-    // MARK: - Trend Sparklines
-
-    private var trendSparklines: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Trends")
-                .font(.headline)
-
-            if #available(iOS 16.0, *) {
-                LazyVGrid(columns: [GridItem(.flexible())], spacing: 10) {
-                    sparklineCard(
-                        title: "Max Speed",
-                        values: data?.sparklinePoints ?? [],
-                        unit: settings.speedUnit,
-                        formatValue: { String(format: "%.0f", settings.speedValue($0)) }
-                    )
-                    sparklineCard(
-                        title: "Distance",
-                        values: data?.distanceTrendPoints ?? [],
-                        unit: settings.distanceUnit,
-                        formatValue: { String(format: "%.1f", settings.distanceValue($0)) }
-                    )
-                }
-            } else {
-                Text("iOS 16+ required for trend charts")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    @available(iOS 16.0, *)
-    private func sparklineCard(title: String, values: [Double], unit: String, formatValue: @escaping (Double) -> String) -> some View {
-        InstrumentCard {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    Spacer()
-                    if let last = values.last, last > 0 {
-                        Text(formatValue(last))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                if values.count > 1 {
-                    Chart {
-                        ForEach(Array(values.enumerated()), id: \.offset) { index, value in
-                            LineMark(
-                                x: .value("Drive", index),
-                                y: .value(title, value)
-                            )
-                            .foregroundStyle(Color.ftBlue)
-                            .interpolationMethod(.monotone)
-                        }
-                    }
-                    .chartYAxis(.hidden)
-                    .chartXAxis(.hidden)
-                    .frame(height: 60)
-                } else {
-                    Text("Need more drives")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-    }
-
-    // MARK: - Recent Drives
-
-    @ViewBuilder
-    private var recentDrivesSection: some View {
-        let carRecentDrives = data?.recentDrives ?? []
-
-        let topSpeedPBDriveId: Int? = {
-            guard let carId = car?.id,
-                  let drive = driveManager.drives.filter({ $0.carId == carId }).max(by: { $0.maxSpeed < $1.maxSpeed }),
-                  drive.maxSpeed == data?.bestTopSpeed else { return nil }
-            return drive.id
-        }()
-
-        let zeroSixtyPBDriveId: Int? = {
-            guard let carId = car?.id,
-                  let time = data?.bestZeroToSixty,
-                  let drive = driveManager.drives.first(where: { $0.carId == carId && $0.best060Time == time }) else { return nil }
-            return drive.id
-        }()
-
-        if !carRecentDrives.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Recent Drives")
-
-                ForEach(carRecentDrives) { drive in
-                    NavigationLink {
-                        DriveDetailView(drive: drive)
-                    } label: {
-                        GarageDriveRow(
-                            drive: drive,
-                            badge: driveBadge(
-                                for: drive,
-                                topSpeedPBDriveId: topSpeedPBDriveId,
-                                zeroSixtyPBDriveId: zeroSixtyPBDriveId
-                            )
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .swipeActions(edge: .trailing) {
-                        if drive.userID == AuthManager.shared.getUser()?.id {
-                            Button(role: .destructive) {
-                                drivePendingDelete = drive
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func driveBadge(for drive: Drive, topSpeedPBDriveId: Int?, zeroSixtyPBDriveId: Int?) -> BadgePill? {
-        if drive.id == zeroSixtyPBDriveId {
-            return BadgePill("PB 0-60", icon: "trophy.fill", style: .pb060)
-        }
-        if drive.id == topSpeedPBDriveId {
-            return BadgePill("PB Speed", icon: "flame.fill", style: .pbTopSpeed)
-        }
-        return nil
-    }
-
-    // MARK: - Display helpers
-
-    private var topSpeedDisplay: String {
-        guard let speed = data?.bestTopSpeed, speed > 0 else { return "—" }
-        return String(format: "%.0f", settings.speedValue(speed))
-    }
-
-    private var zeroSixtyDisplay: String {
-        guard let time = data?.bestZeroToSixty, time > 0 else { return "—" }
-        return String(format: "%.2f", time)
-    }
-
-    private var recentPBIndicatorText: String? {
-        let count = data?.recentPBCount ?? 0
-        guard count > 0 else { return nil }
-        return count == 1 ? "Recently unlocked" : "\(count) recently unlocked"
-    }
-
-    private var drivingStyleGuideSheet: some View {
-        NavigationStack {
-            List {
-                ForEach(DrivingStyle.guideStyles, id: \.self) { style in
-                    HStack(alignment: .top, spacing: 12) {
-                        DrivingStyleBadge(style: style)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(style.title)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Text(style.detailedExplanation)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
-            }
-            .navigationTitle("Driving Style Guide")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        showingDrivingStyleGuide = false
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func confettiOverlay() -> some View {
-        if showConfetti {
-            ConfettiView()
-                .frame(height: 600)
-                .ignoresSafeArea(edges: .top)
-        }
-    }
+    // MARK: - Photo Zoom
 
     @ViewBuilder
     private func photoZoomCover(_ target: AvatarZoomTarget) -> some View {
@@ -801,14 +218,10 @@ struct CarDetailView: View {
     // MARK: - Lifecycle
 
     private func refresh() {
-        data = currentData  // currentData is CarDetailData? — nil when car removed
+        data = currentData
         triggerConfettiIfEligible()
     }
 
-    /// One-shot confetti: schedule it if the freshly-derived data says
-    /// the user just hit a PB in the last week. We always cancel the
-    /// in-flight task on disappear so navigating away and back doesn't
-    /// stack up multiple timers.
     private func triggerConfettiIfEligible() {
         confettiTask?.cancel()
         guard data?.confettiEligible == true,
@@ -854,14 +267,6 @@ struct CarDetailView: View {
 }
 
 // MARK: - Lifecycle modifier
-//
-// SwiftUI's type checker chokes on long modifier chains when they mix
-// multiple `.onChange(of:_:)` overloads (iOS 17 / iOS 18) and an
-// `@EnvironmentObject` payload. The classic escape hatch is to move
-// the lifecycle modifiers into a dedicated `ViewModifier` whose
-// `body(content:)` is a single, narrow expression. That keeps the
-// outer `body` shallow and lets the compiler resolve each `.onChange`
-// unambiguously.
 
 private struct LifecycleModifier: ViewModifier {
     let onAppear: () -> Void
