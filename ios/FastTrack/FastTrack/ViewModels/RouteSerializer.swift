@@ -11,6 +11,11 @@ struct RouteSerializationSnapshot: Sendable {
     let attempts: [ZeroToSixtyAttempt]
 }
 
+struct RouteSerializerOutput: Sendable {
+    let v1String: String
+    let v2Array: [[String: Any]]
+}
+
 /// Builds the v2 `routeData` JSON string for a drive. Pure function;
 /// no DriveManager dependency, safe to call from any thread.
 enum RouteSerializer {
@@ -37,5 +42,14 @@ enum RouteSerializer {
         let payload: [String: Any] = ["v": 2, "points": pointDicts, "events": eventDicts]
         guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return nil }
         return String(data: data, encoding: .utf8)
+    }
+
+    static func encode(_ snapshot: RouteSerializationSnapshot) -> RouteSerializerOutput {
+        let pointDicts: [[String: Any]] = snapshot.richRoutePoints.map { p in
+            ["lat": p.lat, "lng": p.lng, "speed": p.speed, "ts": p.ts]
+        }
+        let v1Data = try! JSONSerialization.data(withJSONObject: pointDicts)
+        let v1String = String(data: v1Data, encoding: .utf8) ?? "[]"
+        return RouteSerializerOutput(v1String: v1String, v2Array: pointDicts)
     }
 }

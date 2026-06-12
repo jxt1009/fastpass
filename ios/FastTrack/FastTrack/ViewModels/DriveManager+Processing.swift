@@ -6,26 +6,21 @@ extension DriveManager {
     // MARK: - Location processing
 
     internal func processLocation(_ location: CLLocation) {
-        // Skip very old locations (more than 5 seconds old)
         let age = abs(location.timestamp.timeIntervalSinceNow)
-        if age > 5.0 {
-            #if DEBUG
-            print("⚠️ Skipping old location (age: \(age)s)")
-            #endif
-            return
-        }
+        if age > 5.0 { return }
 
-        #if DEBUG
-        print("📍 Processing location: speed=\(location.speed), accuracy=\(location.horizontalAccuracy)m, course=\(location.course)")
-        #endif
-
-        // Basic processing on main thread for UI updates
         let speed = routePointSpeed(for: location)
         let speedMph = speed * 2.23694
 
-        recordingLocations.append(location)
-        routeCoordinates.append(location.coordinate)
-        // Track rich route point with the latest fused speed where possible.
+        // Incremental distance: one O(1) delta per tick instead of O(n) re-sweep.
+        if let prev = lastDistanceTickLocation {
+            let delta = prev.distance(from: location)
+            if delta > 0.5 && delta < 500 {
+                runningDistanceMeters += delta
+            }
+        }
+        lastDistanceTickLocation = location
+
         richRoutePoints.append((
             lat: location.coordinate.latitude,
             lng: location.coordinate.longitude,
@@ -33,27 +28,16 @@ extension DriveManager {
             ts: location.timestamp.timeIntervalSince1970
         ))
 
-        #if DEBUG
-        print("📊 Recorded \(recordingLocations.count) locations, current speed: \(speedMph) mph")
-        #endif
+        if speed > currentMaxSpeed { currentMaxSpeed = speed }
 
-        // Update basic stats immediately for UI responsiveness
-        if speed > currentMaxSpeed {
-            currentMaxSpeed = speed
-            #if DEBUG
-            print("🏁 New max speed: \(currentMaxSpeed * 2.23694) mph")
-            #endif
-        }
-
-        // Offload heavy calculations to background queue to prevent UI freezing
         Task.detached { [weak self] in
             await self?.processLocationHeavy(location, speed: speed, speedMph: speedMph)
         }
 
-        // Update drive stats on main thread (lightweight)
         updateCurrentDrive()
         if publishThrottler.shouldPublish() {
-            updateLiveActivity(speedMph: speedMph, distanceMiles: currentDrive?.distance.metersToMiles ?? 0)
+            lastRouteCoordinate = location.coordinate
+            updateLiveActivity(speedMph: speedMph, distanceMiles: runningDistanceMeters / 1609.344)
         }
     }
 
@@ -203,29 +187,17 @@ extension DriveManager {
 
     func updateCurrentDrive() {
         guard var drive = currentDrive,
-              let firstLoc = recordingLocations.first,
-              let lastLoc  = recordingLocations.last else {
-            #if DEBUG
-            print("⚠️ UpdateCurrentDrive failed: currentDrive=\(currentDrive != nil), locations=\(recordingLocations.count)")
-            #endif
-            return
-        }
+              let first = richRoutePoints.first,
+              let last = richRoutePoints.last else { return }
 
-        drive.startLatitude  = firstLoc.coordinate.latitude
-        drive.startLongitude = firstLoc.coordinate.longitude
-        drive.endLatitude    = lastLoc.coordinate.latitude
-        drive.endLongitude   = lastLoc.coordinate.longitude
+        drive.startLatitude  = first.lat
+        drive.startLongitude = first.lng
+        drive.endLatitude    = last.lat
+        drive.endLongitude   = last.lng
 
-        var totalDist: Double = 0
-        for i in 1..<recordingLocations.count {
-            totalDist += recordingLocations[i-1].distance(from: recordingLocations[i])
-        }
-        drive.distance = totalDist
+        drive.distance = runningDistanceMeters
         if let start = recordingStartTime {
             drive.duration = Date().timeIntervalSince(start)
-            #if DEBUG
-            print("⏱️ Drive duration updated: \(drive.duration) seconds")
-            #endif
         }
 
         if runningSpeedStats.count > 0 {
@@ -242,9 +214,6 @@ extension DriveManager {
         drive.best060Time = best060Time
 
         currentDrive = drive
-        #if DEBUG
-        print("✅ Current drive updated: distance=\(totalDist), duration=\(drive.duration), maxSpeed=\(drive.maxSpeed)")
-        #endif
     }
 }
 

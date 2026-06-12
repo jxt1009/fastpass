@@ -9,10 +9,20 @@ import ActivityKit
 
 class DriveManager: ObservableObject {
     @Published var isRecording = false
-    @Published var currentDrive: Drive?
+    private var _currentDrive: Drive?
+    var currentDrive: Drive? {
+        get { _currentDrive }
+        set {
+            if let new = newValue, let old = _currentDrive, new == old {
+                return
+            }
+            _currentDrive = newValue
+            objectWillChange.send()
+        }
+    }
     @Published var drives: [Drive] = []
     @Published var isLoadingDrives = true  // true until first fetch completes
-    @Published var routeCoordinates: [CLLocationCoordinate2D] = []
+    @Published var lastRouteCoordinate: CLLocationCoordinate2D?
     @Published var recordingStartTime: Date?
     /// Most recent error surfaced from a failed `createDrive` upload or from
     /// a refused `startRecording` (e.g. missing location permission). Views
@@ -28,7 +38,6 @@ class DriveManager: ObservableObject {
 
     private var locationManager: LocationManager?
     private var cancellables = Set<AnyCancellable>()
-    var recordingLocations: [CLLocation] = []
     /// Bounded ring buffer of the most recent speed samples (default
     /// capacity: 1500 ≈ 1 min at 25 Hz). Used only for "recent speed"
     /// UI smoothing during the active drive. Final saved-drive stats
@@ -64,6 +73,8 @@ class DriveManager: ObservableObject {
     var topCornerSpeed: Double = 0
     var best060Time: Double?
     var currentMaxSpeed: Double = 0  // m/s for real-time UI updates
+    var runningDistanceMeters: Double = 0
+    var lastDistanceTickLocation: CLLocation?
     var launchTracker = LaunchTracker()
     /// The set of 0-60 attempts captured during the current drive, augmented
     /// with route-point indices and start/end coordinates at flush time.
@@ -154,8 +165,6 @@ class DriveManager: ObservableObject {
         
         recordingStartTime = Date()  // set before isRecording so onChange sees it immediately
         isRecording = true
-        recordingLocations = []
-        routeCoordinates = []
         richRoutePoints = []
         recordedRouteEvents = []
         speedReadings.removeAll()
@@ -178,6 +187,8 @@ class DriveManager: ObservableObject {
         best060Time = nil
         launchTracker.reset()
         currentMaxSpeed = 0  // Reset max speed for new recording
+        runningDistanceMeters = 0
+        lastDistanceTickLocation = nil
         headingWindow = nil; lastTurnOrLaneTime = nil
         lastBrakeTime = nil
         latestSpeedSample = nil
@@ -252,7 +263,7 @@ class DriveManager: ObservableObject {
         // Re-enable normal screen sleep
         UIApplication.shared.isIdleTimerDisabled = false
 
-        guard var drive = currentDrive, !recordingLocations.isEmpty else { return }
+        guard var drive = currentDrive, !richRoutePoints.isEmpty else { return }
         let endTime = Date()
         stoppedTimeTracker.finalize(at: endTime)
         drive.endTime = endTime
@@ -667,9 +678,7 @@ class DriveManager: ObservableObject {
         currentDrive = nil
         drives = []
         isLoadingDrives = false
-        routeCoordinates = []
         recordingStartTime = nil
-        recordingLocations = []
         speedReadings.removeAll()
         runningSpeedStats.reset()
         publishThrottler.reset()
@@ -690,6 +699,8 @@ class DriveManager: ObservableObject {
         best060Time = nil
         launchTracker.reset()
         currentMaxSpeed = 0
+        runningDistanceMeters = 0
+        lastDistanceTickLocation = nil
         headingWindow = nil
         lastTurnOrLaneTime = nil
         lastBrakeTime = nil

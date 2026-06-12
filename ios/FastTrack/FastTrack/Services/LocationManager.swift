@@ -25,6 +25,13 @@ class LocationManager: NSObject, ObservableObject {
     private let clManager = CLLocationManager()
     private let motionManager = CMMotionManager()
     private let fusion = SpeedFusion()
+    private let imuQueue: OperationQueue = {
+        let q = OperationQueue()
+        q.name = "com.fasttrack.location.imu"
+        q.maxConcurrentOperationCount = 1
+        q.qualityOfService = .userInitiated
+        return q
+    }()
 
     /// Latest GPS course (degrees clockwise from true north). -1 = unavailable.
     private var currentCourse: Double = -1
@@ -152,7 +159,7 @@ class LocationManager: NSObject, ObservableObject {
         // XTrueNorthZVertical: X=North, Y=East, Z=Up — lets us project onto GPS course
         motionManager.startDeviceMotionUpdates(
             using: .xTrueNorthZVertical,
-            to: .main
+            to: imuQueue
         ) { [weak self] motion, error in
             guard let self, let motion, error == nil else { return }
             self.handleMotionUpdate(motion)
@@ -169,27 +176,29 @@ class LocationManager: NSObject, ObservableObject {
     private func handleMotionUpdate(_ motion: CMDeviceMotion) {
         let dt = 1.0 / 25.0
         let timestamp = measurementDate(forMotionTimestamp: motion.timestamp)
-        fusion.updateCourse(currentCourse)
+        let course = currentCourse
+        let rawGps = rawGPSSpeed
+        fusion.updateCourse(course)
 
-        // Project IMU acceleration onto travel direction
         let longG: Double
-        if let projected = IMUProjector.longitudinalAccelG(from: motion, course: currentCourse) {
+        if let projected = IMUProjector.longitudinalAccelG(from: motion, course: course) {
             longG = projected
         } else {
-            // Course unknown (stationary / just started): use horizontal magnitude
-            let speedTrend = rawGPSSpeed - fusion.speed
+            let speedTrend = rawGps - fusion.speed
             longG = IMUProjector.fallbackAccelG(from: motion, speedTrend: speedTrend)
         }
 
         let wasLocked = fusion.isZeroLocked
         fusion.predict(longAccelG: longG, dt: dt)
 
-        // Detect zero-lock break: the moment the car starts moving from a confirmed stop.
-        // Publish the timestamp so DriveManager can anchor the 0-60 timer here.
-        if wasLocked && !fusion.isZeroLocked {
-            zeroLockBrokeAt = timestamp
+        let shouldBreakLock = wasLocked && !fusion.isZeroLocked
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if shouldBreakLock {
+                self.zeroLockBrokeAt = timestamp
+            }
+            self.publishSpeedState(at: timestamp)
         }
-        publishSpeedState(at: timestamp)
     }
 
     private func publishSpeedState(at timestamp: Date, forceSpeedUpdate: Bool = false) {
