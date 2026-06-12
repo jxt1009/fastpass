@@ -21,7 +21,8 @@ class APIService {
         URLCache.shared = URLCache(memoryCapacity: 50 * 1024 * 1024,
                                    diskCapacity: 250 * 1024 * 1024,
                                    diskPath: "fasttrack.avatar.cache")
-        self.session = URLSession.shared
+        let delegate = PinningURLSessionDelegate()
+        self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601
         self.encoder = JSONEncoder()
@@ -279,7 +280,7 @@ class APIService {
         if let token = AuthManager.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await self.session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else { throw APIError.serverError(httpResponse.statusCode) }
         return String(data: data, encoding: .utf8) ?? "{}"
