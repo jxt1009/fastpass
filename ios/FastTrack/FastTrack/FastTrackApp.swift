@@ -32,6 +32,7 @@ struct FastTrackApp: App {
             achievementManager: achievementMgr
         )
         drvMgr.setLocationManager(locMgr)
+        locMgr.driveManager = drvMgr
 
         authMgr.profileManager = profMgr
         authMgr.carStatsManager = carStatMgr

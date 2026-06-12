@@ -185,8 +185,15 @@ class AuthManager: ObservableObject {
             return
         }
         Self.log.debug("completeAuthentication: restoring data from server")
-        await restoreUserDataFromServer(serverUser: response.user)
+        await restoreUserDataFromServer(sessionToken: myToken, serverUser: response.user)
         Self.log.debug("completeAuthentication: done")
+    }
+
+    /// Returns false if signOut() rotated sessionToken since capture.
+    private func isSessionStillValid(_ captured: UUID) async -> Bool {
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == captured }
+        return valid
     }
 
     @MainActor
@@ -209,9 +216,13 @@ class AuthManager: ObservableObject {
     }
 
     /// Syncs profile, garage, car stats, and display settings from the server into local storage.
-    func restoreUserDataFromServer(serverUser: User) async {
+    /// Guards each step against sessionToken rotation (signOut during async call).
+    private func restoreUserDataFromServer(sessionToken captured: UUID, serverUser: User) async {
+        guard await isSessionStillValid(captured) else { return }
         await profileManager?.restoreFromServer(serverUser: serverUser)
+        guard await isSessionStillValid(captured) else { return }
         await carStatsManager?.restoreFromServer()
+        guard await isSessionStillValid(captured) else { return }
         await appSettings?.restoreFromServer(
             unitSystem: serverUser.unitSystem,
             colorScheme: serverUser.colorScheme

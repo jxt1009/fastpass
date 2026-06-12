@@ -35,8 +35,10 @@ struct AppStoreScreenshotRootView: View {
     @StateObject private var appSettings: AppSettings
     @StateObject private var carStatsManager: CarStatsManager
     @StateObject private var achievementManager: AchievementManager
+    @StateObject private var notificationsManager: NotificationsManager
     @StateObject private var locationManager: LocationManager
     @StateObject private var driveManager: DriveManager
+    @StateObject private var apiService: APIService
 
     init() {
         let screen = AppStoreScreenshotMode.Screen.current
@@ -47,6 +49,7 @@ struct AppStoreScreenshotRootView: View {
         let appSettings = AppSettings(apiService: apiService)
         let carStatsManager = CarStatsManager(apiService: apiService)
         let achievementManager = AchievementManager()
+        let notifMgr = NotificationsManager(apiService: apiService)
         let locationManager = LocationManager.screenshotPreview()
         let driveManager = DriveManager(
             authManager: authManager,
@@ -61,6 +64,8 @@ struct AppStoreScreenshotRootView: View {
         _appSettings = StateObject(wrappedValue: appSettings)
         _carStatsManager = StateObject(wrappedValue: carStatsManager)
         _achievementManager = StateObject(wrappedValue: achievementManager)
+        _notificationsManager = StateObject(wrappedValue: notifMgr)
+        _apiService = StateObject(wrappedValue: apiService)
         _locationManager = StateObject(wrappedValue: locationManager)
         _driveManager = StateObject(wrappedValue: driveManager)
         self.driveManager.drives = Self.screenshotDrives
@@ -81,6 +86,8 @@ struct AppStoreScreenshotRootView: View {
             .environmentObject(appSettings)
             .environmentObject(carStatsManager)
             .environmentObject(achievementManager)
+            .environmentObject(notificationsManager)
+            .environmentObject(apiService)
             .environment(\.colorScheme, .dark)
             .preferredColorScheme(.dark)
     }
