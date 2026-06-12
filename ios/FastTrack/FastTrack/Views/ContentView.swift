@@ -24,7 +24,7 @@ struct ContentView: View {
                 LiveMapView(
                     userLocation: locationManager.currentLocation?.coordinate
                         ?? CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                    lastRouteCoordinate: driveManager.lastRouteCoordinate,
+                    lastRouteCoordinate: driveManager.routeCoordinates.last,
                     useFlatElevation: driveManager.isRecording
                 )
                 .opacity(driveManager.isRecording ? 0.7 : 0.34)

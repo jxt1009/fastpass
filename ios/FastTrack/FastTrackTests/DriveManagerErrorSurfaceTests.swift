@@ -155,8 +155,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         )
         dm.isRecording = true
         dm.currentDrive = drive
-        dm.richRoutePoints = [
-            (lat: 37.0, lng: -122.0, speed: 0, ts: Date().timeIntervalSince1970)
+        dm.recordingLocations = [
+            CLLocation(latitude: 37.0, longitude: -122.0)
         ]
         return dm
     }

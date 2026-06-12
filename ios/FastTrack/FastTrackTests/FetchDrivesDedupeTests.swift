@@ -4,7 +4,7 @@ import XCTest
 final class FetchDrivesDedupeTests: XCTestCase {
 
     func test_inflightTaskClearedAfterCall() async {
-        let api = APIService.shared
+        let api = APIService()
         _ = try? await api.fetchDrives()
         await MainActor.run {
             XCTAssertNil(api.inflightFetchDrives)

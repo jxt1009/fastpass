@@ -11,6 +11,7 @@ class APIService: ObservableObject {
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
+    var inflightFetchDrives: Task<[Drive], Error>?
     weak var authManager: AuthManager?
 
     init(authManager: AuthManager? = nil) {

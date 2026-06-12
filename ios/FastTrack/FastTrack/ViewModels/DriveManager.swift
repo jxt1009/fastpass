@@ -22,8 +22,6 @@ final class DriveManager: ObservableObject {
     @Published var achievementsCatalog: [AchievementCatalogEntry] = []
     @Published var isLoadingAchievements = false
     @Published var currentGForce: Double = 0
-
-    @Published var currentGForce: Double = 0
     private let authManager: AuthManager
     private let profileManager: ProfileManager
     private let settings: AppSettings
