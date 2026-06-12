@@ -326,16 +326,20 @@ struct DriveDetailView: View {
             }
 
             // Start / End markers
-            Annotation("Start", coordinate: routeCoordinates.first!) {
-                ZStack {
-                    Circle().fill(Color.ftGreen).frame(width: 20, height: 20)
-                    Image(systemName: "flag.fill").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
+            if let first = routeCoordinates.first {
+                Annotation("Start", coordinate: first) {
+                    ZStack {
+                        Circle().fill(Color.ftGreen).frame(width: 20, height: 20)
+                        Image(systemName: "flag.fill").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
+                    }
                 }
             }
-            Annotation("End", coordinate: routeCoordinates.last!) {
-                ZStack {
-                    Circle().fill(Color.ftRed).frame(width: 20, height: 20)
-                    Image(systemName: "flag.checkered").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
+            if let last = routeCoordinates.last {
+                Annotation("End", coordinate: last) {
+                    ZStack {
+                        Circle().fill(Color.ftRed).frame(width: 20, height: 20)
+                        Image(systemName: "flag.checkered").font(.caption).minimumScaleFactor(0.8).foregroundColor(.white)
+                    }
                 }
             }
 
