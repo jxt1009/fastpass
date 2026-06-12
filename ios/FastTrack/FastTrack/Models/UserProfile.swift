@@ -295,8 +295,7 @@ class ProfileManager: ObservableObject {
         }
 
         // Restore avatar from server URL if we don't have one locally
-        if profileImage == nil, let avatarURLStr = serverUser.avatarURL,
-           !avatarURLStr.isEmpty, let url = URL(string: avatarURLStr) {
+        if profileImage == nil, let url = Self.validatedAvatarURL(from: serverUser.avatarURL) {
             if let (data, _) = try? await URLSession.shared.data(from: url),
                let image = UIImage(data: data) {
                 profileImage = image
@@ -334,6 +333,18 @@ class ProfileManager: ObservableObject {
         profileImage = nil
         UserDefaults.standard.removeObject(forKey: profileKey)
         try? FileManager.default.removeItem(at: avatarURL())
+    }
+
+    private static let allowedAvatarHosts: Set<String> = ["fast.toper.dev", "lh3.googleusercontent.com"]
+
+    private static func validatedAvatarURL(from string: String?) -> URL? {
+        guard let s = string, !s.isEmpty,
+              let url = URL(string: s),
+              let host = url.host,
+              allowedAvatarHosts.contains(host) else {
+            return nil
+        }
+        return url
     }
 
     private func avatarURL() -> URL {

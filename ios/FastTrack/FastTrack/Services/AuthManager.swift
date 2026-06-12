@@ -153,6 +153,10 @@ class AuthManager: ObservableObject {
 
     @MainActor
     func signOut() {
+        // Best-effort server logout — don't block local sign-out on network failure.
+        Task {
+            try? await APIService.shared.post(endpoint: "/auth/logout", body: EmptyResponse(), requiresAuth: true) as EmptyResponse
+        }
         sessionToken = UUID()
         NotificationsManager.shared.cancelInFlight()
         clearSessionData()
@@ -218,6 +222,8 @@ struct RefreshTokenRequest: Codable {
         }
     }
 }
+
+struct EmptyResponse: Codable {}
 
 struct AuthResponse: Codable {
     let token: String

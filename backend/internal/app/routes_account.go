@@ -9,6 +9,7 @@ func registerAccountRoutes(r *gin.Engine) {
 	{
 		api.GET("/me", getCurrentUser)
 		api.DELETE("/me", deleteCurrentUser)
+		api.POST("/auth/logout", logout)
 		api.PUT("/profile", updateProfile)
 		api.PUT("/profile/avatar", uploadAvatar)
 		api.GET("/stats", getCarStats)
