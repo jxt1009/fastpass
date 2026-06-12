@@ -9,7 +9,17 @@ import ActivityKit
 
 class DriveManager: ObservableObject {
     @Published var isRecording = false
-    @Published var currentDrive: Drive?
+    private var _currentDrive: Drive?
+    var currentDrive: Drive? {
+        get { _currentDrive }
+        set {
+            if let new = newValue, let old = _currentDrive, new == old {
+                return
+            }
+            _currentDrive = newValue
+            objectWillChange.send()
+        }
+    }
     @Published var drives: [Drive] = []
     @Published var isLoadingDrives = true  // true until first fetch completes
     @Published var lastRouteCoordinate: CLLocationCoordinate2D?
