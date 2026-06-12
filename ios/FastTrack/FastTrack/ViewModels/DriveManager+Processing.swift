@@ -21,8 +21,6 @@ extension DriveManager {
         }
         lastDistanceTickLocation = location
 
-        // Single source of truth: richRoutePoints. Drop recordingLocations
-        // and routeCoordinates appends (handled in Task 3 / D-3).
         richRoutePoints.append((
             lat: location.coordinate.latitude,
             lng: location.coordinate.longitude,
@@ -38,6 +36,7 @@ extension DriveManager {
 
         updateCurrentDrive()
         if publishThrottler.shouldPublish() {
+            lastRouteCoordinate = location.coordinate
             updateLiveActivity(speedMph: speedMph, distanceMiles: runningDistanceMeters / 1609.344)
         }
     }

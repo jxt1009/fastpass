@@ -129,7 +129,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     }
 
     /// Builds a `DriveManager` primed for `stopRecording`: `isRecording`
-    /// is true, `currentDrive` is set, `recordingLocations` is non-empty
+    /// is true, `currentDrive` is set, `richRoutePoints` is non-empty
     /// (so the `guard` past serialization doesn't return).
     @MainActor
     private func makeRecordingManager(
@@ -139,8 +139,8 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         let dm = DriveManager(apiService: api)
         dm.isRecording = true
         dm.currentDrive = drive
-        dm.recordingLocations = [
-            CLLocation(latitude: 37.0, longitude: -122.0)
+        dm.richRoutePoints = [
+            (lat: 37.0, lng: -122.0, speed: 0, ts: Date().timeIntervalSince1970)
         ]
         return dm
     }

@@ -12,7 +12,7 @@ class DriveManager: ObservableObject {
     @Published var currentDrive: Drive?
     @Published var drives: [Drive] = []
     @Published var isLoadingDrives = true  // true until first fetch completes
-    @Published var routeCoordinates: [CLLocationCoordinate2D] = []
+    @Published var lastRouteCoordinate: CLLocationCoordinate2D?
     @Published var recordingStartTime: Date?
     /// Most recent error surfaced from a failed `createDrive` upload or from
     /// a refused `startRecording` (e.g. missing location permission). Views
@@ -28,7 +28,6 @@ class DriveManager: ObservableObject {
 
     private var locationManager: LocationManager?
     private var cancellables = Set<AnyCancellable>()
-    var recordingLocations: [CLLocation] = []
     /// Bounded ring buffer of the most recent speed samples (default
     /// capacity: 1500 ≈ 1 min at 25 Hz). Used only for "recent speed"
     /// UI smoothing during the active drive. Final saved-drive stats
@@ -156,8 +155,6 @@ class DriveManager: ObservableObject {
         
         recordingStartTime = Date()  // set before isRecording so onChange sees it immediately
         isRecording = true
-        recordingLocations = []
-        routeCoordinates = []
         richRoutePoints = []
         recordedRouteEvents = []
         speedReadings.removeAll()
@@ -254,7 +251,7 @@ class DriveManager: ObservableObject {
         // Re-enable normal screen sleep
         UIApplication.shared.isIdleTimerDisabled = false
 
-        guard var drive = currentDrive, !recordingLocations.isEmpty else { return }
+        guard var drive = currentDrive, !richRoutePoints.isEmpty else { return }
         let endTime = Date()
         stoppedTimeTracker.finalize(at: endTime)
         drive.endTime = endTime
@@ -669,9 +666,7 @@ class DriveManager: ObservableObject {
         currentDrive = nil
         drives = []
         isLoadingDrives = false
-        routeCoordinates = []
         recordingStartTime = nil
-        recordingLocations = []
         speedReadings.removeAll()
         runningSpeedStats.reset()
         publishThrottler.reset()
