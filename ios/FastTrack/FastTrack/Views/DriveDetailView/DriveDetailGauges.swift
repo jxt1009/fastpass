@@ -19,7 +19,7 @@ struct DriveDetailGauges: View {
                 }
             }
 
-            if drive.leftTurns > 0 || drive.rightTurns > 0 || drive.brakeEvents > 0 {
+            if drive.leftTurns > 0 || drive.rightTurns > 0 || drive.laneChanges > 0 || drive.brakeEvents > 0 {
                 extendedStats
             }
         }
