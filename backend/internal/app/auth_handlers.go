@@ -145,6 +145,13 @@ func refreshToken(c *gin.Context) {
 	})
 }
 
+func logout(c *gin.Context) {
+	// The client sends its JWT in the Authorization header (enforced by
+	// authMiddleware). The server acknowledges the logout; token invalidation
+	// via a deny-list is reserved for a future iteration.
+	c.JSON(http.StatusOK, gin.H{"status": "logged_out"})
+}
+
 func getCurrentUser(c *gin.Context) {
 	userID, exists := getUserID(c)
 	if !exists {
