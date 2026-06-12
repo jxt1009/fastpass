@@ -199,7 +199,10 @@ struct DriveRowView: View, Equatable {
 }
 
 #Preview {
-    DriveHistoryView()
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    return DriveHistoryView()
         .environmentObject(DriveManager.preview())
-        .environmentObject(AppSettings(apiService: APIService()))
+        .environmentObject(AppSettings(apiService: apiService))
 }

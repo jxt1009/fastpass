@@ -314,7 +314,13 @@ private enum FollowDestination: Hashable {
 }
 
 #Preview {
-    NavigationStack {
+    let apiService = APIService()
+    let authManager = AuthManager(apiService: apiService)
+    apiService.authManager = authManager
+    return NavigationStack {
         PublicProfileView(username: "fastdriver99")
+            .environmentObject(ProfileManager(apiService: apiService))
+            .environmentObject(AppSettings(apiService: apiService))
+            .environmentObject(apiService)
     }
 }
