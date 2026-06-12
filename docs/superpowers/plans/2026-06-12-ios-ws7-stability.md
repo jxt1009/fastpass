@@ -323,5 +323,8 @@ Body: list the items addressed (E-1, E-3-partial, E-4, E-5, E-7, E-8, E-9, E-10,
 
 ## Decision log
 
-- 2026-06-12: For E-10, prefer a custom `Drive.==` that zips the route points array, or a wrapper `Coordinate` struct? **Decision:** custom `==` is the smaller diff. Use it unless it breaks the existing `RecordingActor` snapshot path.
+- 2026-06-12: For E-10, prefer a custom `Drive.==` that zips the route points array, or a wrapper `Coordinate` struct? **Decision:** custom `==` is the smaller diff. Use it unless it breaks the existing `RecordingActor` snapshot path. (Track C implementer: also added manual `ZeroToSixtyAttemptDisplay.==` since that struct holds `CLLocationCoordinate2D` members that depended on the removed `@retroactive` conformance.)
 - 2026-06-12: For E-3 partial, do we want `sessionToken` checked from a detached task via `await MainActor.run`? Or do we just hold an actor reference? **Decision:** use `await MainActor.run` for parity with the rest of `AuthManager` — full `@MainActor` migration is track D.
+- 2026-06-12 (track C implementer): For E-1, there is no `SignInCoordinator` in the codebase, so instead of calling a delegate callback we set `self.error` string and return a fallback `UIWindow()`. This avoids the crash while still surfacing the error to the user via the existing `@Published var error` path.
+- 2026-06-12 (track C implementer): For E-12, added `sessionToken` guard to `refresh()`, `refreshUnreadCount()`, and `loadMore()`. Wired `cancelInFlight()` into `AuthManager.signOut`. Also calls `cancelInFlight()` before `clearSessionData` in `deleteAccount`.
+- 2026-06-12 (track C implementer): For Task 11, wrote what's testable (Drive Equatable, URL string guard, hasPhoto predicate, parts.first pattern, ZeroToSixtyAttemptDisplay coordinate equality) and skipped SwiftUI view instantiation tests per the plan's fallback guidance.

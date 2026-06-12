@@ -41,10 +41,14 @@ final class NotificationsManager: ObservableObject {
         await MainActor.run { self.sessionToken = myToken }
         do {
             let count = try await APIService.shared.fetchUnreadNotificationCount()
-            guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+            var valid = false
+            await MainActor.run { valid = self.sessionToken == myToken }
+            guard valid else { return }
             await MainActor.run { self.unreadCount = count }
         } catch {
-            guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+            var valid = false
+            await MainActor.run { valid = self.sessionToken == myToken }
+            guard valid else { return }
             await MainActor.run { self.lastError = "Couldn't refresh notification count" }
         }
     }
@@ -59,14 +63,18 @@ final class NotificationsManager: ObservableObject {
         }
         do {
             let resp = try await APIService.shared.fetchNotifications(cursor: nil, limit: 50)
-            guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+            var valid = false
+            await MainActor.run { valid = self.sessionToken == myToken }
+            guard valid else { return }
             await MainActor.run {
                 self.notifications = resp.notifications
                 self.unreadCount = resp.unreadCount
                 self.nextCursor = resp.nextCursor
             }
         } catch {
-            guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+            var valid = false
+            await MainActor.run { valid = self.sessionToken == myToken }
+            guard valid else { return }
             await MainActor.run { self.lastError = "Couldn't load notifications" }
         }
     }
@@ -78,14 +86,18 @@ final class NotificationsManager: ObservableObject {
         await MainActor.run { self.sessionToken = myToken }
         do {
             let resp = try await APIService.shared.fetchNotifications(cursor: cursor, limit: 50)
-            guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+            var valid = false
+            await MainActor.run { valid = self.sessionToken == myToken }
+            guard valid else { return }
             await MainActor.run {
                 self.notifications.append(contentsOf: resp.notifications)
                 self.unreadCount = resp.unreadCount
                 self.nextCursor = resp.nextCursor
             }
         } catch {
-            guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+            var valid = false
+            await MainActor.run { valid = self.sessionToken == myToken }
+            guard valid else { return }
             await MainActor.run { self.lastError = "Couldn't load older notifications" }
         }
     }
