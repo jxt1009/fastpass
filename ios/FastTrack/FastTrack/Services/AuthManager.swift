@@ -10,6 +10,7 @@ class AuthManager: ObservableObject {
     private let tokenKey = "com.fasttrack.auth_token"
     private let refreshTokenKey = "com.fasttrack.refresh_token"
     private let userKey = "current_user"
+    private var sessionToken: UUID = UUID()
 
     private init() {
         isAuthenticated = getToken() != nil
@@ -91,6 +92,9 @@ class AuthManager: ObservableObject {
     // MARK: - Authentication
     
     func signInWithApple(identityToken: String, authCode: String?, fullName: String?, email: String?) async throws {
+        let myToken = UUID()
+        await MainActor.run { self.sessionToken = myToken }
+
         let request = AppleSignInRequest(
             identityToken: identityToken,
             authCode: authCode,
@@ -104,10 +108,16 @@ class AuthManager: ObservableObject {
             requiresAuth: false
         )
 
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == myToken }
+        guard valid else { return }
         await completeAuthentication(with: response)
     }
-    
+
     func refreshTokenIfNeeded() async throws {
+        let myToken = UUID()
+        await MainActor.run { self.sessionToken = myToken }
+
         guard let refreshToken = getRefreshToken() else {
             throw AuthError.noRefreshToken
         }
@@ -120,27 +130,38 @@ class AuthManager: ObservableObject {
             requiresAuth: false
         )
 
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == myToken }
+        guard valid else { return }
         await completeAuthentication(with: response)
     }
 
     func completeAuthentication(with response: AuthResponse) async {
+        let myToken = sessionToken
         saveToken(response.token)
         saveRefreshToken(response.refreshToken)
         saveUser(response.user)
         await MainActor.run {
+            guard self.sessionToken == myToken else { return }
             isAuthenticated = true
         }
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == myToken }
+        guard valid else { return }
         await restoreUserDataFromServer(serverUser: response.user)
     }
 
     @MainActor
     func signOut() {
+        sessionToken = UUID()
+        NotificationsManager.shared.cancelInFlight()
         clearSessionData()
     }
 
     func deleteAccount(appleAuthorizationCode: String?) async throws {
         try await APIService.shared.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
         await MainActor.run {
+            self.sessionToken = UUID()
             self.clearSessionData()
         }
     }

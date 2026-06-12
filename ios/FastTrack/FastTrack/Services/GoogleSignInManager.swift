@@ -164,7 +164,8 @@ extension GoogleSignInManager: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = scene.windows.first else {
-            fatalError("No window available")
+            DispatchQueue.main.async { self.error = "No window available for sign-in" }
+            return UIWindow()
         }
         return window
     }
