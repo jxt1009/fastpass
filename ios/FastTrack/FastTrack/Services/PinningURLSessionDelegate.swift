@@ -1,8 +1,11 @@
 import Foundation
 import CryptoKit
+import OSLog
 import os.lock
 
 final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
+    private let log = Logger(subsystem: "app.fasttrack", category: "sslPinning")
+
     weak var authManager: AuthManager?
 
     // SPKI pin for fast.toper.dev — update when the leaf cert rotates.
@@ -28,24 +31,32 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
     func urlSession(_ session: URLSession,
                     didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+        let method = challenge.protectionSpace.authenticationMethod
+        let host = challenge.protectionSpace.host
+        log.debug("authChallenge: method=\(method, privacy: .public) host=\(host, privacy: .public)")
+
+        guard method == NSURLAuthenticationMethodServerTrust,
               let serverTrust = challenge.protectionSpace.serverTrust else {
+            log.debug("authChallenge: not serverTrust, performing default handling")
             completionHandler(.performDefaultHandling, nil)
             return
         }
 
-        let host = challenge.protectionSpace.host
         guard host == "fast.toper.dev" else {
+            log.debug("authChallenge: host \(host, privacy: .public) not pinned, performing default")
             completionHandler(.performDefaultHandling, nil)
             return
         }
 
         var secError: CFError?
+        SecTrustSetNetworkFetchAllowed(serverTrust, false)
         guard SecTrustEvaluateWithError(serverTrust, &secError) else {
+            log.error("authChallenge: trust evaluation failed: \(String(describing: secError), privacy: .public)")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
         guard let cert = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
+            log.error("authChallenge: no certificate at index 0")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
@@ -57,20 +68,24 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
             pubKey = SecCertificateCopyPublicKey(cert)
         }
         guard let publicKey = pubKey else {
+            log.error("authChallenge: failed to extract public key")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
 
         let pubKeyData = SecKeyCopyExternalRepresentation(publicKey, nil) as Data?
         guard let data = pubKeyData else {
+            log.error("authChallenge: failed to copy public key data")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
 
         let hash = Data(SHA256.hash(data: data)).base64EncodedString()
         if pinnedSPKIHashes.contains(hash) {
+            log.debug("authChallenge: SPKI hash matched, allowing connection")
             completionHandler(.performDefaultHandling, nil)
         } else {
+            log.error("authChallenge: SPKI hash mismatch — got \(hash, privacy: .public)")
             completionHandler(.cancelAuthenticationChallenge, nil)
         }
     }
@@ -80,14 +95,19 @@ extension PinningURLSessionDelegate: @preconcurrency URLSessionTaskDelegate {
     func urlSession(_ session: URLSession,
                     task: URLSessionTask,
                     didCompleteWithError error: (any Error)?) {
-        guard let httpResponse = task.response as? HTTPURLResponse,
-              httpResponse.statusCode == 401,
-              !isProcessing401 else { return }
-        isProcessing401 = true
-        Task { @MainActor in
-            authManager?.signOut()
-            ToastManager.shared.show(ToastMessage(text: "Session expired"))
-            isProcessing401 = false
+        if let err = error {
+            log.debug("taskComplete: error=\(err.localizedDescription, privacy: .public)")
+        }
+        if let httpResponse = task.response as? HTTPURLResponse {
+            log.debug("taskComplete: status=\(httpResponse.statusCode)")
+            guard httpResponse.statusCode == 401, !isProcessing401 else { return }
+            isProcessing401 = true
+            log.warning("taskComplete: 401 received, signing out")
+            Task { @MainActor in
+                authManager?.signOut()
+                ToastManager.shared.show(ToastMessage(text: "Session expired"))
+                isProcessing401 = false
+            }
         }
     }
 }
