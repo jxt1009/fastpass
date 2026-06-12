@@ -78,6 +78,7 @@ struct FastTrackApp: App {
                     .environmentObject(notificationsManager)
                     .environmentObject(carStatsManager)
                     .environmentObject(achievementManager)
+                    .environmentObject(apiService)
 #endif
             }
             .toastOverlay()
