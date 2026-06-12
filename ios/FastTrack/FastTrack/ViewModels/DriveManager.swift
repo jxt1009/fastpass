@@ -170,7 +170,9 @@ class DriveManager: ObservableObject {
         attempts060 = []
 
         #if DEBUG
-        print("⏰ Recording start time: \(recordingStartTime!)")
+        if let start = recordingStartTime {
+            print("⏰ Recording start time: \(start)")
+        }
         #endif
 
         // Reset extended stats
