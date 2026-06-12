@@ -74,6 +74,7 @@ struct DriveDetailView: View {
     @State private var routeCoordinates: [CLLocationCoordinate2D] = []
     @State private var routePoints: [RoutePoint] = []
     @State private var routeEvents: [RouteEvent] = []
+    @State private var routePointTimestamps: [TimeInterval] = []
     @State private var showingCarPicker = false
 
     /// 0-60 attempts parsed from `drive.zeroToSixtyAttempts` and, as a
@@ -617,13 +618,15 @@ private func parseRouteDataFromString(_ routeData: String) -> RouteParseResult {
         Task.detached(priority: .userInitiated) {
             let result = parseRouteDataFromString(routeData)
             await MainActor.run {
-                self.routeCoordinates = result.rawCoordinates.map {
-                    CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
-                }
-                self.routePoints = result.rawPoints.map {
+                let mappedPoints = result.rawPoints.map {
                     RoutePoint(coordinate: CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng),
                                speed: $0.speed, timestamp: $0.ts)
                 }
+                self.routeCoordinates = result.rawCoordinates.map {
+                    CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
+                }
+                self.routePoints = mappedPoints
+                self.routePointTimestamps = mappedPoints.map(\.timestamp)
                 self.routeEvents = result.rawEvents.compactMap { raw -> RouteEvent? in
                     let evtType: RouteEvent.EventType
                     switch raw.type {
@@ -775,17 +778,24 @@ private func parseRouteDataFromString(_ routeData: String) -> RouteParseResult {
     }
 
     private func nearestIndex(of timestamp: TimeInterval) -> Int {
-        guard !routePoints.isEmpty else { return 0 }
-        var bestIdx = 0
-        var bestDelta = TimeInterval.greatestFiniteMagnitude
-        for (idx, pt) in routePoints.enumerated() {
-            let delta = abs(pt.timestamp - timestamp)
-            if delta < bestDelta {
-                bestDelta = delta
-                bestIdx = idx
+        guard !routePointTimestamps.isEmpty else { return 0 }
+        var lo = 0
+        var hi = routePointTimestamps.count - 1
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if routePointTimestamps[mid] < timestamp {
+                lo = mid + 1
+            } else {
+                hi = mid
             }
         }
-        return bestIdx
+        if lo > 0 && lo < routePointTimestamps.count {
+            let prev = lo - 1
+            if abs(routePointTimestamps[prev] - timestamp) < abs(routePointTimestamps[lo] - timestamp) {
+                return prev
+            }
+        }
+        return lo
     }
 
     private func midpoint(for attempt: ZeroToSixtyAttempt, fallbackTo coords: [CLLocationCoordinate2D]) -> CLLocationCoordinate2D {
