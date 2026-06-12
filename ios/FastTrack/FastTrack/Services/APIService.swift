@@ -123,9 +123,6 @@ class APIService {
                 case unlockedAchievements = "unlocked_achievements"
             }
         }
-        // The server returns `{drive, unlocked_achievements}`. For backward
-        // compatibility (e.g. tests + an older backend), also tolerate a
-        // bare `Drive` payload.
         let url = URL(string: "\(baseURL)/drives")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -133,7 +130,14 @@ class APIService {
         if let token = AuthManager.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        request.httpBody = try encoder.encode(drive)
+        let driveData = try encoder.encode(drive)
+        var bodyDict = try JSONSerialization.jsonObject(with: driveData) as? [String: Any] ?? [:]
+        bodyDict["route_data_v2"] = drive.routeData.flatMap { str -> Any? in
+            guard let data = str.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) else { return nil }
+            return json
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: bodyDict)
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
