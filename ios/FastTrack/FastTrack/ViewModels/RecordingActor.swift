@@ -52,11 +52,28 @@ actor RecordingActor {
     private var lastPublishedAt: Date = .distantPast
     private let publishInterval: TimeInterval = 0.1
 
-    private var lastIngestedLocation: CLLocation?
+    private var lastIngestedLat: Double = 0
+    private var lastIngestedLng: Double = 0
+    private var lastIngestedCourse: Double = -1
     private var lastIngestedSpeed: Double = 0
+    private var lastIngestedTimestamp: TimeInterval = 0
+    private var lastIngestedSpeedAccuracy: Double = 0
+    private var hasIngestedOnce: Bool = false
 
     func previousRoutePoint() -> PreviousRoutePoint {
-        PreviousRoutePoint(location: lastIngestedLocation, speed: lastIngestedSpeed)
+        if !hasIngestedOnce {
+            return PreviousRoutePoint(location: nil, speed: 0)
+        }
+        let loc = CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: lastIngestedLat, longitude: lastIngestedLng),
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0,
+            course: lastIngestedCourse,
+            speed: lastIngestedSpeed,
+            timestamp: Date(timeIntervalSince1970: lastIngestedTimestamp)
+        )
+        return PreviousRoutePoint(location: loc, speed: lastIngestedSpeed)
     }
 
     func ingestRoutePoint(_ coord: CLLocationCoordinate2D, speed: Double, timestamp: TimeInterval) {
@@ -75,16 +92,12 @@ actor RecordingActor {
     func ingest(_ update: RecordingActorUpdate) {
         routePointCount += 1
         lastCoordinate = update.coordinate
-        lastIngestedLocation = CLLocation(
-            coordinate: update.coordinate,
-            altitude: 0,
-            horizontalAccuracy: 0,
-            verticalAccuracy: 0,
-            course: 0,
-            speed: update.speed,
-            timestamp: Date(timeIntervalSince1970: update.timestamp)
-        )
+        lastIngestedLat = update.coordinate.latitude
+        lastIngestedLng = update.coordinate.longitude
+        lastIngestedCourse = 0
         lastIngestedSpeed = update.speed
+        lastIngestedTimestamp = update.timestamp
+        hasIngestedOnce = true
         if routePointCount == 1 {
             runningMinSpeed = update.speed
             runningMaxSpeed = update.speed
@@ -129,7 +142,12 @@ actor RecordingActor {
         runningSumSpeed = 0
         lastCoordinate = nil
         lastPublishedAt = .distantPast
-        lastIngestedLocation = nil
+        lastIngestedLat = 0
+        lastIngestedLng = 0
+        lastIngestedCourse = 0
         lastIngestedSpeed = 0
+        lastIngestedTimestamp = 0
+        lastIngestedSpeedAccuracy = 0
+        hasIngestedOnce = false
     }
 }
