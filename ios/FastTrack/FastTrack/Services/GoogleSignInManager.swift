@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import AuthenticationServices
 import CryptoKit
 import Combine
@@ -98,8 +99,9 @@ class GoogleSignInManager: NSObject, ObservableObject {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                let msg = String(data: data, encoding: .utf8) ?? "Unknown error"
-                await MainActor.run { self.error = "Auth failed: \(msg)" }
+                os.Logger(subsystem: "FastTrack", category: "auth")
+                    .error("Sign-in error: \(String(data: data, encoding: .utf8) ?? "nil", privacy: .public)")
+                await MainActor.run { self.error = "Sign in failed. Please try again." }
                 return
             }
 
