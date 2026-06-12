@@ -18,6 +18,9 @@ class APIService {
     var inflightFetchDrives: Task<[Drive], Error>?
 
     private init() {
+        URLCache.shared = URLCache(memoryCapacity: 50 * 1024 * 1024,
+                                   diskCapacity: 250 * 1024 * 1024,
+                                   diskPath: "fasttrack.avatar.cache")
         self.session = URLSession.shared
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601
