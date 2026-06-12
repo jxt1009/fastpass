@@ -64,6 +64,17 @@ struct ZeroToSixtyAttemptDisplay: Identifiable, Equatable {
     let midpointCoordinate: CLLocationCoordinate2D
     let isPersonalBest: Bool
     let isLegacy: Bool
+
+    static func == (lhs: ZeroToSixtyAttemptDisplay, rhs: ZeroToSixtyAttemptDisplay) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.elapsedSeconds == rhs.elapsedSeconds &&
+        lhs.isPersonalBest == rhs.isPersonalBest &&
+        lhs.isLegacy == rhs.isLegacy &&
+        lhs.polylineCoordinates.count == rhs.polylineCoordinates.count &&
+        zip(lhs.polylineCoordinates, rhs.polylineCoordinates).allSatisfy { $0.latitude == $1.latitude && $0.longitude == $1.longitude } &&
+        lhs.midpointCoordinate.latitude == rhs.midpointCoordinate.latitude &&
+        lhs.midpointCoordinate.longitude == rhs.midpointCoordinate.longitude
+    }
 }
 
 // MARK: - Drive Detail View
