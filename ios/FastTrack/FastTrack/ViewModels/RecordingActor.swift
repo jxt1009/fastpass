@@ -1,6 +1,15 @@
 import Foundation
 import CoreLocation
 
+// MARK: - Heading detection result
+
+struct HeadingResult: Sendable, Equatable {
+    let leftTurns: Int
+    let rightTurns: Int
+    let laneChanges: Int
+    var hasAny: Bool { leftTurns + rightTurns + laneChanges > 0 }
+}
+
 /// Coalesced view-facing snapshot of the recording path's hot state.
 /// Produced by `RecordingActor` at most every 100 ms and consumed
 /// on the main actor by `DriveManager` / `ContentView`.
@@ -59,6 +68,15 @@ actor RecordingActor {
     private var lastIngestedTimestamp: TimeInterval = 0
     private var lastIngestedSpeedAccuracy: Double = 0
     private var hasIngestedOnce: Bool = false
+
+    // MARK: - Heading detection state
+
+    private var headingWindow: (course: Double, timestamp: TimeInterval)?
+    private var headingHistory: [(course: Double, timestamp: TimeInterval)] = []
+    private var lastTurnOrLaneTime: TimeInterval?
+    private var totalLeftTurns: Int = 0
+    private var totalRightTurns: Int = 0
+    private var totalLaneChanges: Int = 0
 
     func previousRoutePoint() -> PreviousRoutePoint {
         if !hasIngestedOnce {
@@ -135,6 +153,81 @@ actor RecordingActor {
         )
     }
 
+    func ingestHeading(course: Double, speed: Double, timestamp: TimeInterval) -> HeadingResult {
+        defer {
+            headingWindow = (course, timestamp)
+        }
+
+        guard let window = headingWindow else {
+            headingHistory.append((course, timestamp))
+            return HeadingResult(leftTurns: 0, rightTurns: 0, laneChanges: 0)
+        }
+
+        let windowAge = timestamp - window.timestamp
+        guard windowAge >= 2.0 else { return HeadingResult(leftTurns: 0, rightTurns: 0, laneChanges: 0) }
+
+        var delta = course - window.course
+        if delta > 180 { delta -= 360 }
+        if delta < -180 { delta += 360 }
+
+        let gap: TimeInterval = lastTurnOrLaneTime.map { timestamp - $0 } ?? 100
+
+        headingHistory.append((course, timestamp))
+        let cutoff = timestamp - 10
+        headingHistory.removeAll { $0.timestamp < cutoff }
+        let inCurve = isSustainedCurve(upToTimestamp: timestamp)
+
+        var left = 0, right = 0, lane = 0
+        if abs(delta) > 35 && gap > 4 {
+            if delta > 0 { right = 1 } else { left = 1 }
+        } else if abs(delta) >= 10 && abs(delta) <= 35 && speed > 6.7 && gap > 3 && !inCurve {
+            lane = 1
+        }
+
+        totalLeftTurns += left
+        totalRightTurns += right
+        totalLaneChanges += lane
+        if left + right + lane > 0 {
+            lastTurnOrLaneTime = timestamp
+        }
+
+        return HeadingResult(leftTurns: left, rightTurns: right, laneChanges: lane)
+    }
+
+    func headingTotals() -> (left: Int, right: Int, lane: Int) {
+        (totalLeftTurns, totalRightTurns, totalLaneChanges)
+    }
+
+    func resetHeading() {
+        headingWindow = nil
+        headingHistory.removeAll()
+        lastTurnOrLaneTime = nil
+        totalLeftTurns = 0
+        totalRightTurns = 0
+        totalLaneChanges = 0
+    }
+
+    private func isSustainedCurve(upToTimestamp: TimeInterval) -> Bool {
+        let windowStart = upToTimestamp - 8
+        let window = headingHistory.filter { $0.timestamp >= windowStart }
+        guard window.count >= 4 else { return false }
+
+        var cumulative = 0.0
+        var signs: [Double] = []
+        for i in 1..<window.count {
+            var d = window[i].course - window[i-1].course
+            if d > 180 { d -= 360 }
+            if d < -180 { d += 360 }
+            if abs(d) > 0.5 {
+                cumulative += abs(d)
+                signs.append(d > 0 ? 1 : -1)
+            }
+        }
+        guard cumulative > 40, signs.count >= 3 else { return false }
+        let allSame = signs.allSatisfy { $0 == signs[0] }
+        return allSame
+    }
+
     func reset() {
         routePointCount = 0
         runningMinSpeed = 0
@@ -149,5 +242,6 @@ actor RecordingActor {
         lastIngestedTimestamp = 0
         lastIngestedSpeedAccuracy = 0
         hasIngestedOnce = false
+        resetHeading()
     }
 }
