@@ -270,13 +270,16 @@ private extension DriveManager {
         if screen == .track {
             manager.isRecording = true
             manager.recordingStartTime = Date().addingTimeInterval(-812)
-            manager.routeCoordinates = [
+            let coords = [
                 CLLocationCoordinate2D(latitude: 37.3320, longitude: -122.0300),
                 CLLocationCoordinate2D(latitude: 37.3332, longitude: -122.0245),
                 CLLocationCoordinate2D(latitude: 37.3346, longitude: -122.0185),
                 CLLocationCoordinate2D(latitude: 37.3362, longitude: -122.0130),
                 CLLocationCoordinate2D(latitude: 37.3384, longitude: -122.0082)
             ]
+            for c in coords {
+                manager.richRoutePoints.append((lat: c.latitude, lng: c.longitude, speed: 0, ts: Date().timeIntervalSince1970))
+            }
             manager.currentDrive = Drive(
                 id: nil,
                 userID: 1,

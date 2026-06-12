@@ -24,7 +24,7 @@ struct ContentView: View {
                 LiveMapView(
                     userLocation: locationManager.currentLocation?.coordinate
                         ?? CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                    routeCoordinates: driveManager.routeCoordinates,
+                    lastRouteCoordinate: driveManager.lastRouteCoordinate,
                     useFlatElevation: driveManager.isRecording
                 )
                 .opacity(driveManager.isRecording ? 0.7 : 0.34)
@@ -373,49 +373,27 @@ private struct TrackMetricCard: View {
 
 struct LiveMapView: View {
     let userLocation: CLLocationCoordinate2D
-    let routeCoordinates: [CLLocationCoordinate2D]
+    let lastRouteCoordinate: CLLocationCoordinate2D?
     let useFlatElevation: Bool
 
     @State private var cameraPosition: MapCameraPosition
-    @State private var cachedDecimated: [CLLocationCoordinate2D] = []
-    @State private var cachedInputCount: Int = 0
 
     init(
         userLocation: CLLocationCoordinate2D,
-        routeCoordinates: [CLLocationCoordinate2D],
+        lastRouteCoordinate: CLLocationCoordinate2D?,
         useFlatElevation: Bool = false
     ) {
         self.userLocation = userLocation
-        self.routeCoordinates = routeCoordinates
+        self.lastRouteCoordinate = lastRouteCoordinate
         self.useFlatElevation = useFlatElevation
         _cameraPosition = State(initialValue: .region(MKCoordinateRegion(
             center: userLocation,
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         )))
-        let initial = routeCoordinates.count <= 500
-            ? routeCoordinates
-            : RouteDecimator.decimate(routeCoordinates, toleranceMeters: 5, maxOutput: 500)
-        _cachedDecimated = State(initialValue: initial)
-        _cachedInputCount = State(initialValue: routeCoordinates.count)
-    }
-
-    /// Recompute the decimated polyline only when the input has
-    /// changed by a meaningful amount (≥10 new points). During
-    /// recording, `routeCoordinates` updates ~1 Hz, so this drops
-    /// the per-tick RDP pass from O(n log n) to O(1) in steady state.
-    private func recomputeDecimationIfNeeded() {
-        let count = routeCoordinates.count
-        if count == cachedInputCount { return }
-        if count > cachedInputCount && count - cachedInputCount < 10 { return }
-        cachedDecimated = count <= 500
-            ? routeCoordinates
-            : RouteDecimator.decimate(routeCoordinates, toleranceMeters: 5, maxOutput: 500)
-        cachedInputCount = count
     }
 
     var body: some View {
-        recomputeDecimationIfNeeded()
-        return Map(position: $cameraPosition) {
+        Map(position: $cameraPosition) {
             Annotation("Current location", coordinate: userLocation) {
                 ZStack {
                     Circle()
@@ -424,21 +402,6 @@ struct LiveMapView: View {
                     Circle()
                         .fill(Color.ftBlue)
                         .frame(width: 16, height: 16)
-                }
-            }
-
-            let coords = cachedDecimated
-            if coords.count > 1 {
-                MapPolyline(coordinates: coords)
-                    .stroke(Color.ftAmber, lineWidth: 4)
-            }
-
-            if let first = routeCoordinates.first {
-                Annotation("Route start", coordinate: first) {
-                    Image(systemName: "flag.checkered")
-                        .foregroundColor(.ftGreen)
-                        .font(FTFont.subtitleBold).minimumScaleFactor(0.6)
-                        .accessibilityLabel("Route start")
                 }
             }
         }
