@@ -1,0 +1,142 @@
+[
+  {
+    "id": "brakeEvents",
+    "title": "Brake Events",
+    "summary": "Counts instances of hard braking during a drive.",
+    "howCalculated": "Triggered when GPS-derived deceleration exceeds 2.5 m/s² (~0.25g). A 4-second cooldown prevents the same stop from being counted multiple times.",
+    "unit": "count"
+  },
+  {
+    "id": "laneChanges",
+    "title": "Lane Changes",
+    "summary": "Estimates lateral lane-change maneuvers.",
+    "howCalculated": "Detected when heading changes 10–35° over a 2-second GPS window while travelling above 15 mph. Sustained curves (ramps, cloverleafs) are excluded by checking that heading hasn't been rotating consistently in one direction for more than 5 seconds totalling >40° — so a 270° California cloverleaf onramp is correctly classified as a curve, not multiple lane changes. A 3-second cooldown prevents double-counting.",
+    "unit": "count"
+  },
+  {
+    "id": "leftTurns",
+    "title": "Left Turns",
+    "summary": "Counts significant left-hand turns.",
+    "howCalculated": "Detected when heading decreases by more than 35° over a 2-second GPS window. A 4-second cooldown separates distinct turns.",
+    "unit": "count"
+  },
+  {
+    "id": "rightTurns",
+    "title": "Right Turns",
+    "summary": "Counts significant right-hand turns.",
+    "howCalculated": "Detected when heading increases by more than 35° over a 2-second GPS window. A 4-second cooldown separates distinct turns.",
+    "unit": "count"
+  },
+  {
+    "id": "peakGForce",
+    "title": "Peak G-Force",
+    "summary": "The highest combined lateral and longitudinal force experienced during the drive.",
+    "howCalculated": "Calculated as √(longitudinal_G² + lateral_G²) using GPS-derived acceleration. 1 G = 9.81 m/s². Values above ~0.4g feel noticeable; above ~1g is hard cornering.",
+    "unit": "G"
+  },
+  {
+    "id": "maxAcceleration",
+    "title": "Max Acceleration",
+    "summary": "The fastest rate of forward acceleration recorded in a single GPS interval.",
+    "howCalculated": "Difference in GPS speed between consecutive readings divided by elapsed time, capped at physically plausible values. Measured in metres per second squared (m/s²).",
+    "unit": "m/s²"
+  },
+  {
+    "id": "maxDeceleration",
+    "title": "Max Deceleration",
+    "summary": "The sharpest braking force recorded in a single GPS interval.",
+    "howCalculated": "Same method as Max Acceleration but for negative acceleration (slowing down). Higher numbers mean harder braking. 9.8 m/s² = 1G.",
+    "unit": "m/s²"
+  },
+  {
+    "id": "cornerSpeed",
+    "title": "Top Corner Speed",
+    "summary": "The fastest speed recorded while cornering.",
+    "howCalculated": "The highest GPS speed at any moment where lateral G-force exceeds 0.15g, indicating the car is turning rather than going straight.",
+    "unit": "speed"
+  },
+  {
+    "id": "zeroToSixty",
+    "title": "0–60 Time",
+    "summary": "Time to accelerate from a standstill to 60 mph.",
+    "howCalculated": "Timing starts when GPS speed drops below 5 mph and stops when speed reaches 60 mph. Only recorded once per run; if speed drops below 5 mph again, the timer resets. Not recorded if you never reach 60 mph.",
+    "unit": "seconds"
+  },
+  {
+    "id": "smoothness",
+    "title": "Driving Smoothness",
+    "summary": "A 0–100 score measuring how steady and progressive your throttle, braking, and cornering inputs are.",
+    "howCalculated": "Starts from a speed-efficiency base (avg speed ÷ max speed × 100), then subtracts penalties: up to 15 points for hard acceleration (> 1g), up to 15 for hard braking (> 1g), up to 20 for high peak G-force (> 2g), and up to 20 for brake events (2 points each, capped at 10 events). The per-car score is the average across all drives for that car.",
+    "unit": "0–100"
+  },
+  {
+    "id": "performanceCategory",
+    "title": "Performance Category",
+    "summary": "A label describing the performance tier of your car based on recorded top speed.",
+    "howCalculated": "Based on the highest GPS speed ever recorded with that car: City Car (<60 mph), Economy (60–90), Performance (90–120), Sports Car (120–150), Supercar (150+).",
+    "unit": null
+  },
+  {
+    "id": "avgSpeed",
+    "title": "Avg Speed",
+    "summary": "Your average speed across the entire drive including stops.",
+    "howCalculated": "Total distance divided by total elapsed drive time (from start to end). Note: this includes stopped time, so extended stops lower the average.",
+    "unit": "speed"
+  },
+  {
+    "id": "stoppedTime",
+    "title": "Stopped Time",
+    "summary": "Total time the vehicle was stationary during the drive.",
+    "howCalculated": "Accumulated whenever GPS speed drops below 1 mph. Useful for understanding how much of your drive time was spent at lights or in traffic.",
+    "unit": "time"
+  },
+  {
+    "id": "drivingScore",
+    "title": "Driving Score",
+    "summary": "A 0–100 composite score reflecting the quality of your driving across all recorded drives.",
+    "howCalculated": "Weighted average of three components: Smoothness (40%) — consistency of throttle and braking inputs; Consistency (30%) — how repeatable your smoothness is drive-to-drive; Performance (30%) — average top speed relative to the Sports Car threshold (100 mph). Higher scores reward smooth, consistent driving with decent speed.",
+    "unit": "0–100"
+  },
+  {
+    "id": "cornering",
+    "title": "Cornering",
+    "summary": "The highest lateral G-force recorded during your drives.",
+    "howCalculated": "Peak lateral G-force is derived from GPS heading changes. The value shown is the maximum across all filtered drives. Values above 0.6g indicate spirited cornering; above 0.8g is race-driver territory.",
+    "unit": "G"
+  },
+  {
+    "id": "consistency",
+    "title": "Consistency",
+    "summary": "How repeatable your performance is drive-to-drive.",
+    "howCalculated": "Coefficient of variation of top speeds across drives. The standard deviation of max speeds is divided by the mean, then inverted to a 0–100 score. Higher means your top speeds are more predictable from drive to drive.",
+    "unit": "0–100"
+  },
+  {
+    "id": "periodComparison",
+    "title": "Period Comparison",
+    "summary": "How your average max speed this period compares to the previous equivalent period.",
+    "howCalculated": "The average max speed across all drives in the current time window minus the same metric from the prior window. A delta above +0.5 speed-units shows as 'Up'; below −0.5 as 'Down'; within ±0.5 as 'Same'.",
+    "unit": null
+  },
+  {
+    "id": "avgMaxSpeed",
+    "title": "Avg Max Speed",
+    "summary": "The average of your highest speeds across all filtered drives.",
+    "howCalculated": "Sum of each drive's max speed divided by the number of drives. Not the average speed of a single drive — this measures the typical ceiling of your driving sessions.",
+    "unit": "speed"
+  },
+  {
+    "id": "maneuversSection",
+    "title": "Maneuvers",
+    "summary": "Counts significant directional events detected from GPS heading changes.",
+    "howCalculated": "All maneuver detection uses GPS course data sampled roughly once per second. Accuracy depends on GPS quality and may miss very brief maneuvers at low speed. False positives can occur on winding roads.",
+    "unit": null
+  },
+  {
+    "id": "performanceSection",
+    "title": "Performance",
+    "summary": "Acceleration and G-force metrics derived from GPS speed changes.",
+    "howCalculated": "Calculated by comparing consecutive GPS speed readings. GPS speed accuracy varies by device and environment — values recorded at poor GPS accuracy are excluded. All metrics represent the peak value recorded during the drive.",
+    "unit": null
+  }
+]
