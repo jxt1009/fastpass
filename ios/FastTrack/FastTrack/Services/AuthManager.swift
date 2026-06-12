@@ -108,10 +108,12 @@ class AuthManager: ObservableObject {
             requiresAuth: false
         )
 
-        guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == myToken }
+        guard valid else { return }
         await completeAuthentication(with: response)
     }
-    
+
     func refreshTokenIfNeeded() async throws {
         let myToken = UUID()
         await MainActor.run { self.sessionToken = myToken }
@@ -128,7 +130,9 @@ class AuthManager: ObservableObject {
             requiresAuth: false
         )
 
-        guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == myToken }
+        guard valid else { return }
         await completeAuthentication(with: response)
     }
 
@@ -141,7 +145,9 @@ class AuthManager: ObservableObject {
             guard self.sessionToken == myToken else { return }
             isAuthenticated = true
         }
-        guard await MainActor.run({ self.sessionToken == myToken }) else { return }
+        var valid = false
+        await MainActor.run { valid = self.sessionToken == myToken }
+        guard valid else { return }
         await restoreUserDataFromServer(serverUser: response.user)
     }
 
