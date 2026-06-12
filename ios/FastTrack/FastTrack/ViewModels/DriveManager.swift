@@ -109,6 +109,7 @@ class DriveManager: ObservableObject {
 
     func setLocationManager(_ manager: LocationManager) {
         locationManager = manager
+        manager.driveManager = self
         manager.$currentLocation
             .compactMap { $0 }
             .sink { [weak self] location in
