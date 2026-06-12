@@ -82,11 +82,7 @@ class DriveManager: ObservableObject {
     var attempts060: [ZeroToSixtyAttempt] = []
 
     // Sub-state for detection algorithms
-    var headingWindow: (course: Double, time: Date)?
-    var lastTurnOrLaneTime: Date?
     var lastBrakeTime: Date?
-    /// Rolling 10-second heading history used to detect sustained curves/ramps.
-    var headingHistory: [(course: Double, time: Date)] = []
 
     // Live Activity
     var liveActivity: Activity<DriveActivityAttributes>?
@@ -187,11 +183,10 @@ class DriveManager: ObservableObject {
         currentMaxSpeed = 0  // Reset max speed for new recording
         runningDistanceMeters = 0
         lastDistanceTickLocation = nil
-        headingWindow = nil; lastTurnOrLaneTime = nil
         lastBrakeTime = nil
         latestSpeedSample = nil
-        headingHistory = []
 
+        Task { await RecordingActor.shared.resetHeading() }
         locationManager?.startUpdatingLocation()
         #if DEBUG
         print("📍 Location manager started")
@@ -699,10 +694,7 @@ class DriveManager: ObservableObject {
         currentMaxSpeed = 0
         runningDistanceMeters = 0
         lastDistanceTickLocation = nil
-        headingWindow = nil
-        lastTurnOrLaneTime = nil
         lastBrakeTime = nil
-        headingHistory = []
         userAchievements = []
         achievementsCatalog = []
     }
