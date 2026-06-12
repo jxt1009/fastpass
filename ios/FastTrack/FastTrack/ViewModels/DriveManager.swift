@@ -64,6 +64,8 @@ class DriveManager: ObservableObject {
     var topCornerSpeed: Double = 0
     var best060Time: Double?
     var currentMaxSpeed: Double = 0  // m/s for real-time UI updates
+    var runningDistanceMeters: Double = 0
+    var lastDistanceTickLocation: CLLocation?
     var launchTracker = LaunchTracker()
     /// The set of 0-60 attempts captured during the current drive, augmented
     /// with route-point indices and start/end coordinates at flush time.
@@ -176,6 +178,8 @@ class DriveManager: ObservableObject {
         best060Time = nil
         launchTracker.reset()
         currentMaxSpeed = 0  // Reset max speed for new recording
+        runningDistanceMeters = 0
+        lastDistanceTickLocation = nil
         headingWindow = nil; lastTurnOrLaneTime = nil
         lastBrakeTime = nil
         latestSpeedSample = nil
@@ -688,6 +692,8 @@ class DriveManager: ObservableObject {
         best060Time = nil
         launchTracker.reset()
         currentMaxSpeed = 0
+        runningDistanceMeters = 0
+        lastDistanceTickLocation = nil
         headingWindow = nil
         lastTurnOrLaneTime = nil
         lastBrakeTime = nil
