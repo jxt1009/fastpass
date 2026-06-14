@@ -25,6 +25,7 @@ class LocationManager: NSObject, ObservableObject {
     private let clManager = CLLocationManager()
     private let motionManager = CMMotionManager()
     private let fusion = SpeedFusion()
+    private static let imuUpdateInterval: TimeInterval = 1.0 / 100.0
     private let imuQueue: OperationQueue = {
         let q = OperationQueue()
         q.name = "com.fasttrack.location.imu"
@@ -47,6 +48,7 @@ class LocationManager: NSObject, ObservableObject {
         clManager.delegate = self
         clManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         clManager.distanceFilter = kCLDistanceFilterNone
+        clManager.activityType = .automotiveNavigation
         clManager.pausesLocationUpdatesAutomatically = true
     }
 
@@ -150,7 +152,7 @@ class LocationManager: NSObject, ObservableObject {
         currentSpeedSample = nil
     }
 
-    // MARK: - CoreMotion at 25 Hz
+    // MARK: - CoreMotion at 100 Hz
 
     private func startIMU() {
         guard motionManager.isDeviceMotionAvailable else {
@@ -159,7 +161,7 @@ class LocationManager: NSObject, ObservableObject {
             #endif
             return
         }
-        motionManager.deviceMotionUpdateInterval = 1.0 / 25.0
+        motionManager.deviceMotionUpdateInterval = Self.imuUpdateInterval
         // XTrueNorthZVertical: X=North, Y=East, Z=Up — lets us project onto GPS course
         motionManager.startDeviceMotionUpdates(
             using: .xTrueNorthZVertical,
@@ -169,7 +171,7 @@ class LocationManager: NSObject, ObservableObject {
             self.handleMotionUpdate(motion)
         }
         #if DEBUG
-        print("✅ IMU fusion started at 25 Hz")
+        print("✅ IMU fusion started at 100 Hz")
         #endif
     }
 
@@ -178,7 +180,7 @@ class LocationManager: NSObject, ObservableObject {
     }
 
     private func handleMotionUpdate(_ motion: CMDeviceMotion) {
-        let dt = 1.0 / 25.0
+        let dt = Self.imuUpdateInterval
         let timestamp = measurementDate(forMotionTimestamp: motion.timestamp)
         let course = currentCourse
         let rawGps = rawGPSSpeed
