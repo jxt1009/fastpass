@@ -110,7 +110,8 @@ struct LaunchAnalyzer {
         in stream: [(TimeInterval, Double, Bool, Double)]
     ) -> Double {
         var score: Double = 1.0
-        if startIndex < 50 { score -= 0.2 }
+        let elapsedBeforeLaunch = startIndex > 0 ? stream[startIndex].0 - stream[0].0 : 0
+        if elapsedBeforeLaunch < 0.5 { score -= 0.2 }
         if endIndex - startIndex < 50 { score -= 0.1 }
         if endIndex - startIndex > 1 {
             var deltas: [Double] = []
