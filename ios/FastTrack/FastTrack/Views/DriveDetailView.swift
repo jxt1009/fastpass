@@ -47,6 +47,12 @@ struct SpeedSegment {
     let speedBand: Int
 }
 
+struct TopSpeedSegment {
+    let coordinates: [CLLocationCoordinate2D]
+    let peakSpeed: Double
+    let midpointCoordinate: CLLocationCoordinate2D
+}
+
 // MARK: - 0-60 Attempt Display
 
 struct ZeroToSixtyAttemptDisplay: Identifiable, Equatable {
@@ -95,6 +101,7 @@ struct DriveDetailView: View {
                     routePoints: routePoints,
                     routeEvents: routeEvents,
                     speedSegments: speedSegments,
+                    topSpeedSegments: topSpeedSegments,
                     zeroToSixtyAttempts: zeroToSixtyAttempts,
                     playbackProgress: $playbackProgress,
                     isPlaying: isPlaying,
@@ -209,6 +216,51 @@ struct DriveDetailView: View {
         }
         if currentCoords.count >= 2 {
             segments.append(SpeedSegment(coordinates: currentCoords, speedBand: currentBand))
+        }
+        return segments
+    }
+
+    // MARK: - Top Speed Segments
+
+    private var topSpeedSegments: [TopSpeedSegment] {
+        guard !routePoints.isEmpty else { return [] }
+        let maxSpeed = routePoints.map(\.speed).max() ?? 0
+        guard maxSpeed > 0 else { return [] }
+        let threshold = maxSpeed * 0.95
+
+        var segments: [TopSpeedSegment] = []
+        var currentCoords: [CLLocationCoordinate2D] = []
+        var currentPeak: Double = 0
+
+        for point in routePoints {
+            if point.speed >= threshold {
+                currentCoords.append(point.coordinate)
+                if point.speed > currentPeak { currentPeak = point.speed }
+            } else {
+                if currentCoords.count >= 2 {
+                    let mid = currentCoords[currentCoords.count / 2]
+                    segments.append(TopSpeedSegment(
+                        coordinates: currentCoords,
+                        peakSpeed: currentPeak,
+                        midpointCoordinate: mid
+                    ))
+                }
+                currentCoords = []
+                currentPeak = 0
+            }
+        }
+        if currentCoords.count >= 2 {
+            let mid = currentCoords[currentCoords.count / 2]
+            segments.append(TopSpeedSegment(
+                coordinates: currentCoords,
+                peakSpeed: currentPeak,
+                midpointCoordinate: mid
+            ))
+        }
+
+        if segments.count > 3 {
+            segments.sort { $0.coordinates.count > $1.coordinates.count }
+            segments = Array(segments.prefix(3))
         }
         return segments
     }

@@ -117,7 +117,7 @@ struct CarDetailHero: View {
                     setOn: data?.topSpeedPBDate
                 ),
                 label: "Top Speed",
-                value: "\(topSpeedDisplay) \(settings.speedUnit)",
+                value: topSpeedDisplay,
                 color: SpeedColor.color(for: data?.bestTopSpeed ?? 0)
             )
             FTGauge(
@@ -130,7 +130,7 @@ struct CarDetailHero: View {
                     setOn: data?.zeroSixtyPBDate
                 ),
                 label: "Best 0-60",
-                value: "\(zeroSixtyDisplay) sec",
+                value: zeroSixtyDisplay,
                 color: .ftAmber
             )
         }

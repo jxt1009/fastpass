@@ -42,7 +42,6 @@ struct ProfileView: View {
                             profileStatsSkeleton
                         } else {
                             mainStatsGrid
-                            headlineSpeedGrid
                         }
                         privacyToggleCard
                         deleteAccountButton
@@ -250,16 +249,10 @@ struct ProfileView: View {
     }
 
 
-    // MARK: Main Stats Grid
+    // MARK: Main Stats (compact strip)
 
     private var mainStatsGrid: some View {
-        StatsGrid(spacing: 10) {
-            InstrumentStatCell(
-                icon: "location.fill", iconColor: .cyan,
-                label: "Total Distance",
-                value: String(format: "%.1f", settings.distanceValue(stats.totalDistance)),
-                unit: settings.distanceUnit
-            )
+        HStack(spacing: 10) {
             InstrumentStatCell(
                 icon: "clock.fill", iconColor: .orange,
                 label: "Total Duration",
@@ -277,26 +270,6 @@ struct ProfileView: View {
                 label: "Total Trips",
                 value: "\(stats.totalTrips)",
                 unit: ""
-            )
-        }
-    }
-
-    // MARK: Headline Speed Grid (Top Speed + Best 0-60)
-
-    private var headlineSpeedGrid: some View {
-        StatsGrid(spacing: 10) {
-            InstrumentStatCell(
-                icon: "bolt.fill", iconColor: .yellow,
-                label: "Top Speed",
-                value: String(format: "%.0f", settings.speedValue(stats.topSpeed)),
-                unit: settings.speedUnit
-            )
-            InstrumentStatCell(
-                icon: "timer", iconColor: .orange,
-                label: "Best 0-60",
-                value: stats.best060Time.map { String(format: "%.2f", $0) } ?? "—",
-                unit: stats.best060Time != nil ? "sec" : "",
-                info: StatInfo.zeroToSixty
             )
         }
     }

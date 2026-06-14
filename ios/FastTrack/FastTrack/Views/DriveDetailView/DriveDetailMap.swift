@@ -10,6 +10,7 @@ struct DriveDetailMap: View {
     let routeEvents: [RouteEvent]
     @EnvironmentObject var settings: AppSettings
     let speedSegments: [SpeedSegment]
+    let topSpeedSegments: [TopSpeedSegment]
     let zeroToSixtyAttempts: [ZeroToSixtyAttemptDisplay]
     @Binding var playbackProgress: Double
     let isPlaying: Bool
@@ -43,10 +44,7 @@ struct DriveDetailMap: View {
                             mapContent
                                 .ignoresSafeArea()
                             if !routePoints.isEmpty {
-                                playbackControlsView
-                                    .padding(.horizontal)
-                                    .padding(.bottom, 12)
-                                    .background(.ultraThinMaterial)
+                                bottomPanel
                             }
                         }
                         .navigationTitle("Route")
@@ -81,6 +79,33 @@ struct DriveDetailMap: View {
                 }
             } else {
                 MapPolyline(coordinates: routeCoordinates).stroke(Color.ftBlue, lineWidth: 3)
+            }
+
+            ForEach(Array(topSpeedSegments.prefix(3).enumerated()), id: \.offset) { idx, seg in
+                MapPolyline(coordinates: seg.coordinates)
+                    .stroke(Color.ftGold, lineWidth: 6)
+                if idx < 2 {
+                Annotation("", coordinate: seg.midpointCoordinate) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.caption2)
+                        Text(settings.speedDisplay(seg.peakSpeed))
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        SpeechBubble(cornerRadius: 10, tailWidth: 8, tailHeight: 5)
+                            .fill(Color.ftGold)
+                    )
+                    .overlay(
+                        SpeechBubble(cornerRadius: 10, tailWidth: 8, tailHeight: 5)
+                            .stroke(Color.white, lineWidth: 1)
+                    )
+                    .foregroundColor(.black)
+                    .offset(y: -24)
+                }
+                }
             }
 
             if let first = routeCoordinates.first {
@@ -124,12 +149,27 @@ struct DriveDetailMap: View {
                 }
             }
 
-            if let playCoord = playbackCoordinate {
+            if let pt = playbackPoint, let playCoord = playbackCoordinate {
                 Annotation("", coordinate: playCoord) {
-                    ZStack {
-                        Circle().fill(Color.ftBlue).frame(width: 14, height: 14)
-                        Circle().stroke(Color.white, lineWidth: 2).frame(width: 14, height: 14)
+                    VStack(spacing: 2) {
+                        Text(settings.speedDisplay(pt.speed))
+                            .font(.caption.weight(.semibold))
+                            .monospacedDigit()
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                SpeechBubble(cornerRadius: 10, tailWidth: 8, tailHeight: 5)
+                                    .fill(Color.ftBlue)
+                            )
+                            .overlay(
+                                SpeechBubble(cornerRadius: 10, tailWidth: 8, tailHeight: 5)
+                                    .stroke(Color.white, lineWidth: 1)
+                            )
+                            .foregroundColor(.white)
+                        Circle().fill(Color.ftBlue).frame(width: 10, height: 10)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
                     }
+                    .offset(y: -26)
                 }
             }
         }
@@ -137,18 +177,51 @@ struct DriveDetailMap: View {
 
     // MARK: - Playback Controls
 
-    private var playbackControlsView: some View {
+    private var bottomPanel: some View {
         VStack(spacing: 10) {
-            HStack {
-                if let pt = playbackPoint {
-                    Label(settings.speedDisplay(pt.speed), systemImage: "speedometer")
-                        .font(.subheadline).fontWeight(.semibold)
-                    Spacer()
-                    Text(playbackTimeLabel)
-                        .font(.caption).foregroundColor(.secondary)
-                }
-            }
+            gaugeStripRow
+                .padding(.horizontal, 4)
+            playbackControlsCompact
+        }
+        .padding()
+        .background(Color.ftCardBg)
+    }
 
+    private var gaugeStripRow: some View {
+        HStack(spacing: 8) {
+            VStack(spacing: 2) {
+                Text(settings.speedDisplay(drive.maxSpeed))
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(.primary)
+                Text("MAX").font(.system(size: 9, weight: .semibold)).foregroundColor(.ftAmber)
+            }
+            .frame(maxWidth: .infinity)
+            VStack(spacing: 2) {
+                Text(settings.speedDisplay(drive.avgSpeed))
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(.primary)
+                Text("AVG").font(.system(size: 9, weight: .semibold)).foregroundColor(.ftBlue)
+            }
+            .frame(maxWidth: .infinity)
+            VStack(spacing: 2) {
+                Text(playbackTimeLabel.isEmpty ? drive.durationString : playbackTimeLabel)
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(.primary)
+                Text("TIME").font(.system(size: 9, weight: .semibold)).foregroundColor(.ftGreen)
+            }
+            .frame(maxWidth: .infinity)
+            VStack(spacing: 2) {
+                Text(settings.distanceDisplay(drive.distance, decimals: 1))
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(.primary)
+                Text("DIST").font(.system(size: 9, weight: .semibold)).foregroundColor(.ftAmber)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var playbackControlsCompact: some View {
+        VStack(spacing: 8) {
             Slider(value: $playbackProgress, in: 0...1, onEditingChanged: { editing in
                 if editing && isPlaying { onStopPlayback() }
             })
@@ -172,9 +245,6 @@ struct DriveDetailMap: View {
                 }
             }
         }
-        .padding()
-        .background(Color.ftCardBg)
-        .cornerRadius(Radius.lg)
     }
 
     // MARK: - Helpers

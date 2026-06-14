@@ -7,9 +7,9 @@ import SwiftUI
 //
 // Styles:
 //
-//   .hero      — radial-arc donut with optional progress; "Set on" date
-//                caption. Used for the per-car PB hero on the own-profile
-//                car detail view.
+//   .hero      — circular progress ring with value centred inside;
+//                "Set on" date caption. Used for the per-car PB hero
+//                on the own-profile car detail view.
 //   .compact   — monospaced 28pt value + 3pt gradient underline +
 //                uppercase label. Used on the per-drive detail view.
 //   .statCell  — value + label (and optional unit) in a single row.
@@ -48,7 +48,7 @@ struct FTGauge: View {
 
     @ViewBuilder
     private func heroBody(progress: Double?, setOn: Date?) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .center, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: icon(for: label))
                     .font(.caption)
@@ -60,15 +60,28 @@ struct FTGauge: View {
                     .foregroundColor(.secondary)
             }
 
-            arc(progress: progress)
-                .frame(height: 100)
-                .padding(.top, 2)
+            ZStack {
+                Circle()
+                    .stroke(color.opacity(0.15), lineWidth: 8)
+                    .frame(width: 96, height: 96)
 
-            Text(value)
-                .font(.system(size: 32, weight: .bold, design: .monospaced))
-                .foregroundColor(color)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
+                Circle()
+                    .trim(from: 0, to: max(0.001, displayedProgress))
+                    .stroke(
+                        color,
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 96, height: 96)
+                    .animation(.easeInOut(duration: 0.6), value: displayedProgress)
+
+                Text(value)
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundColor(color)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+            }
 
             if let setOn {
                 Text("Set on \(setOn.formatted(.dateTime.month(.abbreviated).day().year()))")
@@ -80,7 +93,7 @@ struct FTGauge: View {
                     .foregroundColor(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -103,28 +116,6 @@ struct FTGauge: View {
         .onChange(of: progress) { _, newValue in
             withAnimation(.easeInOut(duration: 0.35)) {
                 displayedProgress = newValue ?? 0
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func arc(progress: Double?) -> some View {
-        if progress != nil {
-            ZStack(alignment: .leading) {
-                FTGaugeArc()
-                    .stroke(color.opacity(0.18), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                FTGaugeArc()
-                    .trim(from: 0, to: max(0.001, displayedProgress))
-                    .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .animation(.easeInOut(duration: 0.6), value: displayedProgress)
-            }
-        } else {
-            ZStack(alignment: .leading) {
-                FTGaugeArc()
-                    .stroke(color.opacity(0.18), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                FTGaugeArc()
-                    .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .opacity(0.85)
             }
         }
     }
@@ -207,23 +198,5 @@ struct FTGauge: View {
         if t.contains("0-60") || t.contains("60") { return "timer" }
         if t.contains("speed") { return "speedometer" }
         return "gauge.with.needle"
-    }
-}
-
-// MARK: - Arc shape
-
-struct FTGaugeArc: Shape {
-    var startAngle: Angle = .degrees(180)
-    var endAngle: Angle = .degrees(360)
-
-    func path(in rect: CGRect) -> Path {
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let radius = min(rect.width, rect.height) / 2
-        let start = Angle.degrees(startAngle.degrees - 90)
-        let end = Angle.degrees(endAngle.degrees - 90)
-        return Path { path in
-            path.addArc(center: center, radius: radius,
-                        startAngle: start, endAngle: end, clockwise: true)
-        }
     }
 }
