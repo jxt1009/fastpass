@@ -43,32 +43,60 @@ struct GarageView: View {
         return (totalDrives, totalDistance, topSpeed, best060)
     }
 
+    private var userStats: UserStats {
+        UserStats.from(drives: driveManager.drives)
+    }
+
     private var allCarsSummary: some View {
-        StatsGrid(spacing: 10) {
-            InstrumentStatCell(
-                icon: "flag.fill", iconColor: .ftGreen,
-                label: "Total Drives",
-                value: "\(allCarsStats.totalDrives)",
-                unit: ""
-            )
-            InstrumentStatCell(
-                icon: "map.fill", iconColor: .ftBlue,
-                label: "Total Distance",
-                value: String(format: "%.1f", settings.distanceValue(allCarsStats.totalDistance)),
-                unit: settings.distanceUnit
-            )
-            InstrumentStatCell(
-                icon: "bolt.fill", iconColor: .ftGold,
-                label: "Top Speed",
-                value: String(format: "%.0f", settings.speedValue(allCarsStats.topSpeed)),
-                unit: settings.speedUnit
-            )
-            InstrumentStatCell(
-                icon: "timer", iconColor: .ftAmber,
-                label: "Best 0-60",
-                value: allCarsStats.best060.map { String(format: "%.2f", $0) } ?? "—",
-                unit: allCarsStats.best060 != nil ? "sec" : ""
-            )
+        VStack(spacing: 10) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                InstrumentStatCell(
+                    icon: "flag.fill", iconColor: .ftGreen,
+                    label: "Total Drives",
+                    value: "\(allCarsStats.totalDrives)",
+                    unit: ""
+                )
+                InstrumentStatCell(
+                    icon: "map.fill", iconColor: .ftBlue,
+                    label: "Total Distance",
+                    value: String(format: "%.1f", settings.distanceValue(allCarsStats.totalDistance)),
+                    unit: settings.distanceUnit
+                )
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                InstrumentStatCell(
+                    icon: "bolt.fill", iconColor: .ftGold,
+                    label: "Top Speed",
+                    value: String(format: "%.0f", settings.speedValue(allCarsStats.topSpeed)),
+                    unit: settings.speedUnit
+                )
+                InstrumentStatCell(
+                    icon: "timer", iconColor: .ftAmber,
+                    label: "Best 0-60",
+                    value: allCarsStats.best060.map { String(format: "%.2f", $0) } ?? "—",
+                    unit: allCarsStats.best060 != nil ? "sec" : ""
+                )
+                InstrumentStatCell(
+                    icon: "clock.fill", iconColor: .orange,
+                    label: "Total Duration",
+                    value: formatDuration(userStats.totalDuration),
+                    unit: ""
+                )
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                InstrumentStatCell(
+                    icon: "pause.fill", iconColor: .purple,
+                    label: "Stopped Time",
+                    value: formatDuration(userStats.totalStoppedTime),
+                    unit: ""
+                )
+                InstrumentStatCell(
+                    icon: "flag.checkered", iconColor: .green,
+                    label: "Total Trips",
+                    value: "\(userStats.totalTrips)",
+                    unit: ""
+                )
+            }
         }
     }
 
@@ -205,6 +233,13 @@ struct GarageView: View {
             deleteError = error.diagnosticDescription
             drivePendingDelete = nil
         }
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let h = Int(seconds) / 3600
+        let m = (Int(seconds) % 3600) / 60
+        if h > 0 { return "\(h)h \(m)m" }
+        return "\(m)m"
     }
 }
 

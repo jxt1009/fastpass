@@ -31,7 +31,6 @@ struct CarDetailStatsGrid: View {
         VStack(alignment: .leading, spacing: 16) {
             performanceBreakdown
             periodComparison
-            trendSparklines
         }
     }
 
@@ -52,7 +51,7 @@ struct CarDetailStatsGrid: View {
                 )
                 PerformanceBreakdownCard(
                     title: "Cornering",
-                    value: String(format: "%.2fG", data?.peakLateralG ?? 0),
+                    value: String(format: "%.2fG", Double(data?.peakLateralG ?? 0)),
                     category: corneringCategory,
                     icon: "arrow.triangle.turn.up.right.circle.fill",
                     color: .purple
@@ -92,73 +91,5 @@ struct CarDetailStatsGrid: View {
             trend: trend,
             info: StatInfo.periodComparison
         )
-    }
-
-    // MARK: - Trends
-
-    private var trendSparklines: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Trends")
-                .font(.headline)
-
-            if #available(iOS 16.0, *) {
-                LazyVGrid(columns: [GridItem(.flexible())], spacing: 10) {
-                    sparklineCard(
-                        title: "Max Speed",
-                        values: data?.sparklinePoints ?? [],
-                        unit: settings.speedUnit,
-                        formatValue: { String(format: "%.0f", settings.speedValue($0)) }
-                    )
-                    sparklineCard(
-                        title: "Distance",
-                        values: data?.distanceTrendPoints ?? [],
-                        unit: settings.distanceUnit,
-                        formatValue: { String(format: "%.1f", settings.distanceValue($0)) }
-                    )
-                }
-            } else {
-                Text("iOS 16+ required for trend charts")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    @available(iOS 16.0, *)
-    private func sparklineCard(title: String, values: [Double], unit: String, formatValue: @escaping (Double) -> String) -> some View {
-        InstrumentCard {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    Spacer()
-                    if let last = values.last, last > 0 {
-                        Text(formatValue(last))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                if values.count > 1 {
-                    Chart {
-                        ForEach(Array(values.enumerated()), id: \.offset) { index, value in
-                            LineMark(
-                                x: .value("Drive", index),
-                                y: .value(title, value)
-                            )
-                            .foregroundStyle(Color.ftBlue)
-                            .interpolationMethod(.monotone)
-                        }
-                    }
-                    .chartYAxis(.hidden)
-                    .chartXAxis(.hidden)
-                    .frame(height: 60)
-                } else {
-                    Text("Need more drives")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
     }
 }
