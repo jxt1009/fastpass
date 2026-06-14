@@ -46,6 +46,47 @@ enum RouteSerializer {
         return String(data: data, encoding: .utf8)
     }
 
+    static func encodeV3(snapshot: RouteSerializationSnapshot) -> String? {
+        let pointDicts: [[String: Any]] = snapshot.richRoutePoints.map { p in
+            ["lat": p.lat, "lng": p.lng, "speed": p.speed, "ts": p.ts]
+        }
+        var eventDicts: [[String: Any]] = snapshot.recordedRouteEvents.map { e in
+            ["type": e.type, "lat": e.lat, "lng": e.lng, "ts": e.ts]
+        }
+        for attempt in snapshot.attempts {
+            eventDicts.append([
+                "type": "zero_to_sixty",
+                "lat": attempt.startLatitude,
+                "lng": attempt.startLongitude,
+                "ts": attempt.endTimestamp,
+                "start_ts": attempt.startTimestamp,
+                "end_ts": attempt.endTimestamp,
+                "start_index": attempt.startIndex,
+                "end_index": attempt.endIndex,
+                "time_seconds": attempt.elapsedSeconds,
+                "confidence": attempt.confidence
+            ])
+        }
+        let speedStreamEncoded = encodeSpeedStream(snapshot.speedStream)
+        let speedPeaksEncoded: [[String: Any]] = snapshot.speedPeaks.map { p in
+            [
+                "timestamp": p.timestamp.timeIntervalSince1970,
+                "speed": p.speed,
+                "source": p.source.rawValue,
+                "confidence": p.confidence
+            ]
+        }
+        let payload: [String: Any] = [
+            "v": 3,
+            "points": pointDicts,
+            "events": eventDicts,
+            "speed_stream": speedStreamEncoded,
+            "speed_peaks": speedPeaksEncoded
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
     static func encode(_ snapshot: RouteSerializationSnapshot) -> RouteSerializerOutput {
         let pointDicts: [[String: Any]] = snapshot.richRoutePoints.map { p in
             ["lat": p.lat, "lng": p.lng, "speed": p.speed, "ts": p.ts]
