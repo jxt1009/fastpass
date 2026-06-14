@@ -477,6 +477,47 @@ func postDrive(t *testing.T, router *gin.Engine, token string, payload map[strin
 	return resp
 }
 
+func TestCreateDrive_RoundTripsFusedAndGpsMaxSpeed(t *testing.T) {
+	jwtSecret = []byte("maxspeed-test-secret-32-bytes-long!!!")
+	setupTestDB(t)
+
+	user := User{Email: "maxspeed@test.com", Username: "maxspeed", AuthProvider: "google"}
+	db.Create(&user)
+
+	router := makeAuthRouter()
+	token := tokenForUser(t, user)
+
+	fused := 55.5
+	gps := 52.3
+	resp := postDrive(t, router, token, map[string]interface{}{
+		"start_time":      time.Now().Add(-time.Hour),
+		"end_time":        time.Now(),
+		"distance":        1000.0,
+		"duration":        120.0,
+		"max_speed":       50.0,
+		"fused_max_speed": fused,
+		"gps_max_speed":   gps,
+	})
+
+	var drive Drive
+	if err := json.Unmarshal(resp.Drive, &drive); err != nil {
+		t.Fatalf("failed to decode drive from response: %v", err)
+	}
+
+	if drive.FusedMaxSpeed == nil {
+		t.Fatal("expected fused_max_speed to be non-nil")
+	}
+	if *drive.FusedMaxSpeed != fused {
+		t.Errorf("expected fused_max_speed %f, got %f", fused, *drive.FusedMaxSpeed)
+	}
+	if drive.GpsMaxSpeed == nil {
+		t.Fatal("expected gps_max_speed to be non-nil")
+	}
+	if *drive.GpsMaxSpeed != gps {
+		t.Errorf("expected gps_max_speed %f, got %f", gps, *drive.GpsMaxSpeed)
+	}
+}
+
 func TestUserAchievements_AreUnlockedOnDriveSave(t *testing.T) {
 	jwtSecret = []byte("achievement-test-secret-32-bytes-long!!")
 	setupTestDB(t)

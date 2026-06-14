@@ -64,6 +64,8 @@ type Drive struct {
 	PeakGForce      float64 `json:"peak_g_force"`
 	TopCornerSpeed  float64 `json:"top_corner_speed"`
 	Best060Time     *float64 `gorm:"column:best_060_time" json:"best_060_time"`
+	FusedMaxSpeed  *float64 `gorm:"column:fused_max_speed" json:"fused_max_speed"`
+	GpsMaxSpeed    *float64 `gorm:"column:gps_max_speed" json:"gps_max_speed"`
 
 	// ZeroToSixtyAttempts stores every 0-60 launch detected during the drive.
 	// Persisted as a JSON blob via GORM's serializer:json.
