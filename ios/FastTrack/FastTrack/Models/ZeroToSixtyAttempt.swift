@@ -14,7 +14,7 @@ struct ZeroToSixtyAttempt: Codable, Identifiable, Equatable {
     var startLongitude: Double
     var endLatitude: Double
     var endLongitude: Double
-    var confidence: Double = 0.0
+    var confidence: Double = 1.0
     /// True for attempts synthesised from a pre-existing `best_060_time` on
     /// older drives that did not capture per-launch telemetry. Lets the UI
     /// choose whether to surface them.
@@ -30,7 +30,7 @@ struct ZeroToSixtyAttempt: Codable, Identifiable, Equatable {
         startLongitude: Double,
         endLatitude: Double,
         endLongitude: Double,
-        confidence: Double = 0.0,
+        confidence: Double = 1.0,
         legacy: Bool = false
     ) {
         self.startIndex = startIndex
@@ -78,7 +78,7 @@ struct ZeroToSixtyAttempt: Codable, Identifiable, Equatable {
         self.startLongitude = try c.decode(Double.self, forKey: .startLongitude)
         self.endLatitude    = try c.decode(Double.self, forKey: .endLatitude)
         self.endLongitude   = try c.decode(Double.self, forKey: .endLongitude)
-        self.confidence     = (try c.decodeIfPresent(Double.self, forKey: .confidence)) ?? 0.0
+        self.confidence     = (try c.decodeIfPresent(Double.self, forKey: .confidence)) ?? 1.0
         self.legacy         = (try c.decodeIfPresent(Bool.self, forKey: .legacy)) ?? false
     }
 
