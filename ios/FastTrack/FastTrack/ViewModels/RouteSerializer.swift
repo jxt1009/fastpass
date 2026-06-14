@@ -104,7 +104,7 @@ enum RouteSerializer {
         var lastTs = stream[0].0
         for i in 1..<stream.count {
             let (ts, speed, locked, conf) = stream[i]
-            let deltaMs = max(0, Int(((ts - lastTs) * 1000).rounded()))
+            let deltaMs = Int(((ts - lastTs) * 1000).rounded())
             out.append([deltaMs, speed, locked ? 1 : 0, conf])
             lastTs = ts
         }
