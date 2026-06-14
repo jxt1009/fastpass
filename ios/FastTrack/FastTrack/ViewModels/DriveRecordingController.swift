@@ -100,6 +100,8 @@ class DriveRecordingController: ObservableObject {
     var lastBrakeTime: Date?
     var headingHistory: [(course: Double, time: Date)] = []
     var best060Time: Double?
+    var speedStream: [(TimeInterval, Double, Bool, Double)] = []
+    private var lastSeenGpsAccuracy: Double = 0
 
     private weak var locationManager: LocationManager?
     private let authManager: AuthManager
@@ -163,6 +165,7 @@ class DriveRecordingController: ObservableObject {
         runningSpeedStats.reset()
         publishThrottler.reset()
         attempts060 = []
+        speedStream = []
 
         stoppedTimeTracker.reset()
         leftTurns = 0; rightTurns = 0
@@ -255,14 +258,30 @@ class DriveRecordingController: ObservableObject {
             return resolved
         }
 
+        let analyzer = LaunchAnalyzer()
+        let postHocAttempts = analyzer.analyze(stream: speedStream)
+        let resolvedAttempts = postHocAttempts.isEmpty ? attemptsResolved : postHocAttempts
+        let bestPostHoc = resolvedAttempts.min(by: { $0.elapsedSeconds < $1.elapsedSeconds })
+        drive.best060Time = bestPostHoc?.elapsedSeconds ?? best060Time
+        drive.zeroToSixtyAttempts = resolvedAttempts
+
+        let topSpeedResult = TopSpeedComputer.compute(
+            speedStream: speedStream,
+            gpsMaxSpeed: currentMaxSpeed,
+            nearestGpsAccuracyMeters: lastSeenGpsAccuracy
+        )
+        drive.fusedMaxSpeed = topSpeedResult.fusedMaxSpeed
+        drive.gpsMaxSpeed = topSpeedResult.gpsMaxSpeed
+        drive.maxSpeed = topSpeedResult.maxSpeed
+
         let routeSnapshot = RouteSerializationSnapshot(
             richRoutePoints: richRoutePoints,
             recordedRouteEvents: recordedRouteEvents,
-            attempts: attemptsResolved,
-            speedStream: [],
+            attempts: resolvedAttempts,
+            speedStream: speedStream,
             speedPeaks: []
         )
-        if let json = RouteSerializer.encodeV2(snapshot: routeSnapshot) {
+        if let json = RouteSerializer.encodeV3(snapshot: routeSnapshot) {
             drive.routeData = json
         }
 
@@ -271,8 +290,6 @@ class DriveRecordingController: ObservableObject {
         drive.brakeEvents = brakeEvents; drive.laneChanges = laneChanges
         drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
         drive.peakGForce = peakGForce; drive.topCornerSpeed = topCornerSpeed
-        drive.best060Time = best060Time
-        drive.zeroToSixtyAttempts = attemptsResolved
 
         let inFlightURL = inFlightTempFileURL(for: drive)
         if let encoded = try? Self.driveEncoder.encode(drive) {
@@ -363,6 +380,8 @@ class DriveRecordingController: ObservableObject {
         speedReadings.append(sample.speed)
         runningSpeedStats.ingest(sample.speed)
         stoppedTimeTracker.ingest(sample)
+        speedStream.append((sample.timestamp.timeIntervalSince1970, sample.speed, sample.isZeroLocked, sample.stationaryConfidence))
+        lastSeenGpsAccuracy = sample.speedAccuracy
 
         if sample.speed > currentMaxSpeed {
             currentMaxSpeed = sample.speed
@@ -545,6 +564,8 @@ class DriveRecordingController: ObservableObject {
         richRoutePoints = []
         recordedRouteEvents = []
         attempts060 = []
+        speedStream = []
+        lastSeenGpsAccuracy = 0
         stoppedTimeTracker.reset()
         leftTurns = 0
         rightTurns = 0
