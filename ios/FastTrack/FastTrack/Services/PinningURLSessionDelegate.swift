@@ -83,16 +83,16 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
         }
 
         guard let hash = Self.computeKeyHash(from: cert) else {
-            log.error("authChallenge: failed to compute SPKI hash")
+            log.error("authChallenge: failed to compute key hash")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
 
         if pinnedSPKIHashes.contains(hash) {
-            log.debug("authChallenge: SPKI hash matched, allowing connection")
+            log.debug("authChallenge: key hash matched, allowing connection")
             completionHandler(.useCredential, URLCredential(trust: serverTrust))
         } else {
-            log.error("authChallenge: SPKI hash mismatch — got \(hash, privacy: .public)")
+            log.error("authChallenge: key hash mismatch — got \(hash, privacy: .public)")
             completionHandler(.cancelAuthenticationChallenge, nil)
         }
     }
