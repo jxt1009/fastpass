@@ -295,8 +295,8 @@ class DriveRecordingController: ObservableObject {
         let routeSnapshot = RouteSerializationSnapshot(
             richRoutePoints: richRoutePoints,
             recordedRouteEvents: recordedRouteEvents,
-            attempts: attemptsResolved,
-            speedStream: [],
+            attempts: resolvedAttempts,
+            speedStream: speedStream,
             speedPeaks: []
         )
         if let json = RouteSerializer.encodeV3(snapshot: routeSnapshot) {
@@ -308,8 +308,6 @@ class DriveRecordingController: ObservableObject {
         drive.brakeEvents = brakeEvents; drive.laneChanges = laneChanges
         drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
         drive.peakGForce = peakGForce; drive.topCornerSpeed = topCornerSpeed
-
-        isRecording = false
 
         let inFlightURL = inFlightTempFileURL(for: drive)
 
@@ -390,6 +388,7 @@ class DriveRecordingController: ObservableObject {
         speedReadings.append(sample.speed)
         runningSpeedStats.ingest(sample.speed)
         stoppedTimeTracker.ingest(sample)
+        speedStream.append((sample.timestamp.timeIntervalSince1970, sample.speed, sample.isZeroLocked, sample.stationaryConfidence))
         lastSeenGpsAccuracy = sample.speedAccuracy
 
         if sample.speed > currentMaxSpeed {
