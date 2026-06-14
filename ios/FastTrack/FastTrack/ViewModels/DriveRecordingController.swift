@@ -258,7 +258,9 @@ class DriveRecordingController: ObservableObject {
         let routeSnapshot = RouteSerializationSnapshot(
             richRoutePoints: richRoutePoints,
             recordedRouteEvents: recordedRouteEvents,
-            attempts: attemptsResolved
+            attempts: attemptsResolved,
+            speedStream: [],
+            speedPeaks: []
         )
         if let json = RouteSerializer.encodeV2(snapshot: routeSnapshot) {
             drive.routeData = json

@@ -18,6 +18,15 @@ final class LaunchAnalyzerTests: XCTestCase {
         return out
     }
 
+    func test_sub2secondLaunch_isAccurate() {
+        let stream = makeStream(elapsed: 1.8)
+        let analyzer = LaunchAnalyzer()
+        let attempts = analyzer.analyze(stream: stream)
+        XCTAssertFalse(attempts.isEmpty)
+        guard let best = attempts.min(by: { $0.elapsedSeconds < $1.elapsedSeconds }) else { return }
+        XCTAssertEqual(best.elapsedSeconds, 1.8, accuracy: 0.05)
+    }
+
     func test_findsLaunch_withinTolerance() {
         let stream = makeStream(elapsed: 2.5)
         let analyzer = LaunchAnalyzer()

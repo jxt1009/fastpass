@@ -11,7 +11,9 @@ final class RouteDataV2EncoderTests: XCTestCase {
         let snapshot = RouteSerializationSnapshot(
             richRoutePoints: points,
             recordedRouteEvents: [],
-            attempts: []
+            attempts: [],
+            speedStream: [],
+            speedPeaks: []
         )
         let output = RouteSerializer.encode(snapshot)
         XCTAssertEqual(output.v2Array.count, 2)
@@ -27,7 +29,9 @@ final class RouteDataV2EncoderTests: XCTestCase {
         let snapshot = RouteSerializationSnapshot(
             richRoutePoints: points,
             recordedRouteEvents: [],
-            attempts: []
+            attempts: [],
+            speedStream: [],
+            speedPeaks: []
         )
         let output = RouteSerializer.encode(snapshot)
         let data = output.v1String.data(using: .utf8)!

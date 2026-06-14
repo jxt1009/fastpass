@@ -9,6 +9,8 @@ struct RouteSerializationSnapshot: Sendable {
     let richRoutePoints: [(lat: Double, lng: Double, speed: Double, ts: Double)]
     let recordedRouteEvents: [(type: String, lat: Double, lng: Double, ts: Double)]
     let attempts: [ZeroToSixtyAttempt]
+    let speedStream: [(TimeInterval, Double, Bool, Double)]
+    let speedPeaks: [SpeedPeak]
 }
 
 struct RouteSerializerOutput: Sendable {

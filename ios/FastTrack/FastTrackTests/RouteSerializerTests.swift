@@ -6,7 +6,9 @@ final class RouteSerializerTests: XCTestCase {
         let snap = RouteSerializationSnapshot(
             richRoutePoints: [],
             recordedRouteEvents: [],
-            attempts: []
+            attempts: [],
+            speedStream: [],
+            speedPeaks: []
         )
         let json = RouteSerializer.encodeV2(snapshot: snap)
         XCTAssertNotNil(json)
@@ -22,7 +24,9 @@ final class RouteSerializerTests: XCTestCase {
         let snap = RouteSerializationSnapshot(
             richRoutePoints: [(lat: 1.0, lng: 2.0, speed: 10.0, ts: 100.0)],
             recordedRouteEvents: [(type: "brake", lat: 1.0, lng: 2.0, ts: 100.5)],
-            attempts: []
+            attempts: [],
+            speedStream: [],
+            speedPeaks: []
         )
         let json = RouteSerializer.encodeV2(snapshot: snap)!
         let data = json.data(using: .utf8)!
