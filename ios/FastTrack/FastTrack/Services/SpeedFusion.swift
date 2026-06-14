@@ -31,6 +31,10 @@ class SpeedFusion {
     private let stationaryAccelThresholdG: Double = 0.03
     private let stationaryHoldTime: Double = 0.35
     private let lowSpeedDampingThreshold: Double = 0.8
+    static let lowSpeedDampingCoefficient_25Hz: Double = 0.72
+    static let lowSpeedDampingCoefficient_100Hz: Double = 0.921
+    static let lowSpeedDampingCoefficientActive_25Hz: Double = 0.86
+    static let lowSpeedDampingCoefficientActive_100Hz: Double = 0.963
 
     // Course tracking for longitudinal projection
     private var lastCourse: Double = -1   // degrees, -1 = invalid
@@ -56,7 +60,9 @@ class SpeedFusion {
 
         // Drain IMU drift in the near-zero zone — prevents stuck-at-1-mph after deceleration
         if speed < lowSpeedDampingThreshold {
-            speed *= abs(longAccelG) < stationaryAccelThresholdG ? 0.72 : 0.86
+            speed *= abs(longAccelG) < stationaryAccelThresholdG
+                ? SpeedFusion.lowSpeedDampingCoefficient_100Hz
+                : SpeedFusion.lowSpeedDampingCoefficientActive_100Hz
         }
 
         updateStationaryEstimate(absLongAccelG: abs(longAccelG), dt: dt)
