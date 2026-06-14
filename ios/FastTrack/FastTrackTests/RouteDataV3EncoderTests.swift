@@ -57,4 +57,19 @@ final class RouteDataV3EncoderTests: XCTestCase {
             XCTAssertEqual(a.3, b.3, accuracy: 0.0001)
         }
     }
+
+    func test_encodeV3_producesV3Marker() {
+        let snapshot = RouteSerializationSnapshot(
+            richRoutePoints: [(1.0, 2.0, 5.0, 100.0)],
+            recordedRouteEvents: [],
+            attempts: [],
+            speedStream: [(100.0, 5.0, false, 0.0)],
+            speedPeaks: []
+        )
+        let encoded = RouteSerializer.encodeV3(snapshot: snapshot)
+        XCTAssertNotNil(encoded)
+        let dict = try! XCTUnwrap(try JSONSerialization.jsonObject(with: encoded!.data(using: .utf8)!) as? [String: Any])
+        XCTAssertEqual(dict["v"] as? Int, 3)
+        XCTAssertNotNil(dict["speed_stream"] as? [[Any]])
+    }
 }
