@@ -60,7 +60,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
 
             if let error = error {
                 if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin { return }
-                DispatchQueue.main.async { self.error = error.localizedDescription }
+                DispatchQueue.main.async { self.error = error.diagnosticDescription }
                 return
             }
 
@@ -140,7 +140,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
             Self.log.debug("exchangeCode: signInWithGoogle returned")
         } catch {
             Self.log.error("exchangeCode: caught error: \(error.localizedDescription)")
-            await MainActor.run { self.error = error.localizedDescription }
+            await MainActor.run { self.error = error.diagnosticDescription }
         }
     }
 

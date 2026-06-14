@@ -173,7 +173,7 @@ struct DriveDetailView: View {
             })
             dismiss()
         } catch {
-            deleteError = error.localizedDescription
+            deleteError = error.diagnosticDescription
         }
     }
 
@@ -527,11 +527,8 @@ struct DriveCarSelectorView: View {
                     dismiss()
                 }
             } catch {
-                print("Failed to update drive car: \(error)")
-                if case APIError.serverError(let code) = error {
-                    print("Server returned status code: \(code)")
-                }
                 await MainActor.run {
+                    ToastManager.shared.show(ToastMessage(text: "Car reassignment failed: \(error.diagnosticDescription)"))
                     dismiss()
                 }
             }

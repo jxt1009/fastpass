@@ -33,7 +33,7 @@ class AppleSignInManager: NSObject, ObservableObject {
                     )
                     await MainActor.run { self.error = nil }
                 } catch {
-                    await MainActor.run { self.error = error.localizedDescription }
+                    await MainActor.run { self.error = error.diagnosticDescription }
                 }
             }
         case .failure(let err):
@@ -143,7 +143,7 @@ extension AppleSignInManager: ASAuthorizationControllerDelegate {
                 }
             } catch {
                 await MainActor.run {
-                    self.error = error.localizedDescription
+                    self.error = error.diagnosticDescription
                     self.isSignedIn = false
                 }
             }

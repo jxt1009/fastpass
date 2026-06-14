@@ -9,15 +9,17 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
     weak var authManager: AuthManager?
 
     // SPKI pin for fast.toper.dev — update when the leaf cert rotates.
-    // Generated from:
+    // The iOS code hashes the raw public key bytes (via SecKeyCopyExternalRepresentation),
+    // NOT the full DER-encoded SubjectPublicKeyInfo. To regenerate:
     //   openssl s_client -connect fast.toper.dev:443 -servername fast.toper.dev </dev/null 2>/dev/null \
     //     | openssl x509 -pubkey -noout 2>/dev/null \
-    //     | openssl pkey -pubin -outform DER 2>/dev/null \
+    //     | openssl ec -pubin -conv_form uncompressed -outform DER 2>/dev/null \
+    //     | openssl asn1parse -inform DER -strparse 24 -noout -out /dev/stdout 2>/dev/null \
     //     | openssl dgst -sha256 -binary 2>/dev/null \
     //     | base64
-    // Current hash (2026-06-13): 8Pq14p0SF7i6pX268DDe8owa5TD+PGKhCfAasxKzM/E=
+    // Current hash (2026-06-14): FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA=
     private let pinnedSPKIHashes: Set<String> = [
-        "8Pq14p0SF7i6pX268DDe8owa5TD+PGKhCfAasxKzM/E="
+        "FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA="
     ]
 
     private var _lock = os_unfair_lock()
@@ -28,9 +30,10 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
         set { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; _isProcessing401 = newValue }
     }
 
-    /// Computes the SHA-256 hash of a certificate's Subject Public Key Info (SPKI).
+    /// Computes the SHA-256 hash of a certificate's raw public key bytes
+    /// (as returned by SecKeyCopyExternalRepresentation, NOT the DER-encoded SPKI).
     /// Returns the base64-encoded hash, or `nil` if the public key cannot be extracted.
-    static func computeSPKIHash(from certificate: SecCertificate) -> String? {
+    static func computeKeyHash(from certificate: SecCertificate) -> String? {
         var pubKey: SecKey?
         if #available(iOS 14.0, *) {
             pubKey = SecCertificateCopyKey(certificate)
@@ -62,13 +65,24 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
             return
         }
 
+        // Evaluate trust to populate the certificate chain so that
+        // SecTrustGetCertificateAtIndex works (required by Security framework
+        // docs, enforced on iOS 27+). We tolerate evaluation failure so that
+        // OCSP/network issues don't block the connection — SPKI pinning is our
+        // trust anchor.
+        SecTrustSetNetworkFetchAllowed(serverTrust, false)
+        var evalError: CFError?
+        if !SecTrustEvaluateWithError(serverTrust, &evalError) {
+            log.warning("authChallenge: trust evaluation failed (\(String(describing: evalError))), proceeding with SPKI check")
+        }
+
         guard let cert = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
             log.error("authChallenge: no certificate at index 0")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
 
-        guard let hash = Self.computeSPKIHash(from: cert) else {
+        guard let hash = Self.computeKeyHash(from: cert) else {
             log.error("authChallenge: failed to compute SPKI hash")
             completionHandler(.cancelAuthenticationChallenge, nil)
             return

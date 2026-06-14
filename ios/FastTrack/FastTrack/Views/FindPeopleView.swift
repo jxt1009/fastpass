@@ -72,7 +72,7 @@ struct FindPeopleView: View {
             results = try await apiService.searchUsers(query: trimmed)
             hasSearched = true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.diagnosticDescription
         }
         isLoading = false
     }

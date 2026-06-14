@@ -302,7 +302,7 @@ struct PublicProfileView: View {
         } catch APIError.serverError(404) {
             errorMessage = "This profile is private or doesn't exist."
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.diagnosticDescription
         }
         isLoading = false
     }

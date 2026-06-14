@@ -152,6 +152,7 @@ final class DriveManager: ObservableObject {
             drives.insert(drive, at: 0)
             carStatsManager.rebuildStats(from: drives)
         } catch {
+            await ToastManager.shared.show(ToastMessage(text: "Couldn't restore drive: \(error.diagnosticDescription)"))
         }
     }
 
