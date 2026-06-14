@@ -22,7 +22,7 @@ final class TopSpeedComputerTests: XCTestCase {
         )
         XCTAssertEqual(result.fusedMaxSpeed, 30.0, accuracy: 0.5)
         XCTAssertEqual(result.gpsMaxSpeed, 28.0, accuracy: 0.001)
-        XCTAssertEqual(result.maxSpeed, 30.0, accuracy: 1.0)
+        XCTAssertEqual(result.maxSpeed, 28.5, accuracy: 0.5)
     }
 
     func test_fallsBackToFused_whenGpsInaccurate() {
