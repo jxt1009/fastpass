@@ -231,7 +231,7 @@ struct SocialView: View {
                 entries = fetched
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.diagnosticDescription
         }
         withAnimation { isLoading = false }
     }

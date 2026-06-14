@@ -84,7 +84,7 @@ private struct FollowListView: View {
         do {
             users = try await fetcher(username)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.diagnosticDescription
         }
         isLoading = false
     }

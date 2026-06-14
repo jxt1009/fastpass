@@ -126,7 +126,7 @@ struct CarPhotoEditorSection: View {
             let resized = img.resizedForAvatar(maxDimension: 2048)
             croppingImage = CropImageSource(image: resized, context: .car)
         } catch {
-            // Error surfaced to parent via errorMessage binding if needed.
+            ToastManager.shared.show(ToastMessage(text: "Couldn't load photo: \(error.diagnosticDescription)"))
         }
     }
 }

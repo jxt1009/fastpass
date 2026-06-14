@@ -416,7 +416,7 @@ struct ProfileView: View {
             try await authManager.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
             driveManager.clearLocalData()
         } catch {
-            deleteAccountError = error.localizedDescription
+            deleteAccountError = error.diagnosticDescription
         }
     }
 }
@@ -462,7 +462,7 @@ struct RemoteDriveDetailLoader: View {
             }
         } catch {
             await MainActor.run {
-                self.error = error.localizedDescription
+                self.error = error.diagnosticDescription
                 self.isLoading = false
             }
         }

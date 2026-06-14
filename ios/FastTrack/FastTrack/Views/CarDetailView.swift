@@ -261,7 +261,7 @@ struct CarDetailView: View {
                 Task { await driveManager.restoreDrive(drive) }
             })
         } catch {
-            deleteError = error.localizedDescription
+            deleteError = error.diagnosticDescription
             drivePendingDelete = nil
         }
     }
