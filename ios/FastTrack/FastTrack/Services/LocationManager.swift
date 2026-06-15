@@ -43,10 +43,16 @@ class LocationManager: NSObject, ObservableObject {
     private var courseAtLastGPS: Double = -1
     private var yawAtLastGPSRad: Double = 0
     private var gpsUpdatePending: Bool = false
+    private var lastSpeedPublishAt: Date = .distantPast
 
     /// Weak reference to DriveManager so heading processing can be triggered
     /// from the GPS callback path. Set externally during wiring.
-    weak var driveManager: DriveManager?
+    weak     var driveManager: DriveManager?
+
+    // Called on the IMU background queue at 100 Hz with every raw speed sample.
+    // DriveRecordingController sets this to capture the full-rate speed stream
+    // without putting 100 Hz traffic on the main thread.
+    var onRawSpeedSample: ((SpeedSample) -> Void)?
 
     // MARK: - Init
 
@@ -220,8 +226,22 @@ class LocationManager: NSObject, ObservableObject {
 
         let wasLocked = fusion.isZeroLocked
         fusion.predict(longAccelG: longG, dt: dt)
-
         let shouldBreakLock = wasLocked && !fusion.isZeroLocked
+
+        // Fire 100 Hz speed sample for stream capture (lightweight main-dispatch).
+        if let onRaw = onRawSpeedSample {
+            let sample = SpeedSample(
+                speed: fusion.speed,
+                rawGPSSpeed: self.rawGPSSpeed,
+                speedAccuracy: self.speedAccuracy,
+                timestamp: timestamp,
+                isZeroLocked: fusion.isZeroLocked,
+                stationaryConfidence: fusion.stationaryConfidence
+            )
+            onRaw(sample)
+        }
+
+        // Throttled main-thread publish for UI and Combine subscribers.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             if shouldBreakLock {
@@ -232,6 +252,10 @@ class LocationManager: NSObject, ObservableObject {
     }
 
     private func publishSpeedState(at timestamp: Date, forceSpeedUpdate: Bool = false) {
+        guard forceSpeedUpdate || timestamp.timeIntervalSince(lastSpeedPublishAt) >= 0.1 else {
+            return
+        }
+        lastSpeedPublishAt = timestamp
         let sample = SpeedSample(
             speed: fusion.speed,
             rawGPSSpeed: rawGPSSpeed,

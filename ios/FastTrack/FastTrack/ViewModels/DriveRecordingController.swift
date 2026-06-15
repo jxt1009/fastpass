@@ -142,6 +142,21 @@ class DriveRecordingController: ObservableObject {
                 self.processSpeedSample(sample)
             }
             .store(in: &cancellables)
+
+        // Capture full 100 Hz speed stream from the IMU background queue for
+        // post-hoc analysis (LaunchAnalyzer, TopSpeedComputer). The stream
+        // must include every sample regardless of the 10 Hz UI-throttle.
+        manager.onRawSpeedSample = { [weak self] sample in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                self.speedStream.append((
+                    sample.timestamp.timeIntervalSince1970,
+                    sample.speed,
+                    sample.isZeroLocked,
+                    sample.stationaryConfidence
+                ))
+            }
+        }
     }
 
     func startRecording() {
@@ -380,7 +395,6 @@ class DriveRecordingController: ObservableObject {
         speedReadings.append(sample.speed)
         runningSpeedStats.ingest(sample.speed)
         stoppedTimeTracker.ingest(sample)
-        speedStream.append((sample.timestamp.timeIntervalSince1970, sample.speed, sample.isZeroLocked, sample.stationaryConfidence))
         lastSeenGpsAccuracy = sample.speedAccuracy
 
         if sample.speed > currentMaxSpeed {
@@ -396,12 +410,10 @@ class DriveRecordingController: ObservableObject {
             attempts060.append(contentsOf: newOnes)
         }
 
-        guard var drive = currentDrive else { return }
+        guard publishThrottler.shouldPublish(), var drive = currentDrive else { return }
         drive.stoppedTime = stoppedTimeTracker.totalStoppedTime(at: sample.timestamp)
         drive.best060Time = best060Time
-        if publishThrottler.shouldPublish() {
-            currentDrive = drive
-        }
+        currentDrive = drive
     }
 
     func routePointSpeed(for location: CLLocation) -> Double {
