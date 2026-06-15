@@ -99,7 +99,7 @@ struct RootView: View {
     @EnvironmentObject var apiService: APIService
     @Environment(\.scenePhase) private var scenePhase
     @State private var isInitializing = true
-    @State private var selectedTab = 0
+    @State private var selectedTab: AppTab = .track
     @State private var showingProfileSetup = false
     @State private var tabResetIDs = (0..<4).map { _ in UUID() }
 
@@ -139,7 +139,7 @@ struct RootView: View {
                     }
                     driveManager.clearLocalData()
                     notificationsManager.stopPolling()
-                    selectedTab = 0
+                    selectedTab = .track
                 }
             }
         }
@@ -162,15 +162,23 @@ struct RootView: View {
         if authManager.isAuthenticated {
             TabView(selection: $selectedTab) {
                 ContentView()
-                    .tabItem { Label("Track", systemImage: "location.fill") }.tag(0)
+                    .tabItem { Label("Track", systemImage: "location.fill") }.tag(AppTab.track)
                 GarageView()
                     .id(tabResetIDs[1])
-                    .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(1)
+                    .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(AppTab.garage)
                 SocialView()
-                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(2)
-                ProfileView(onSwitchToGarage: { selectedTab = 1 })
+                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(AppTab.social)
+                ProfileView(onSwitchToGarage: { selectedTab = .garage })
                     .id(tabResetIDs[3])
-                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(3)
+                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppTab.profile)
+            }
+            .toolbar(.hidden, for: .tabBar)
+            .overlay(alignment: .bottom) {
+                FloatingTabBar(
+                    selectedTab: $selectedTab,
+                    isHidden: driveManager.isRecording
+                )
+                .padding(.bottom, 16)
             }
             .sheet(isPresented: $showingProfileSetup) {
                 ProfileSetupView()
@@ -188,14 +196,14 @@ struct RootView: View {
                 }
             }
             .onChange(of: selectedTab) { oldTab, _ in
-                if oldTab != 0 && oldTab != 2 {
-                    tabResetIDs[oldTab] = UUID()
+                if oldTab == .garage || oldTab == .profile {
+                    tabResetIDs[oldTab.rawValue] = UUID()
                 }
             }
             .onOpenURL { url in
                 if url.scheme == "fasttrack", url.host == "stop-recording" {
                     Task { await driveManager.stopRecording() }
-                    selectedTab = 0
+                    selectedTab = .track
                 }
             }
             .onAppear {
