@@ -12,6 +12,7 @@ struct FastTrackApp: App {
     @StateObject private var carStatsManager: CarStatsManager
     @StateObject private var achievementManager: AchievementManager
     @StateObject private var apiService: APIService
+    @StateObject private var screenWake: ScreenWakeControllerObservable
 
     init() {
         let apiService = APIService()
@@ -49,6 +50,7 @@ struct FastTrackApp: App {
         _carStatsManager = StateObject(wrappedValue: carStatMgr)
         _achievementManager = StateObject(wrappedValue: achievementMgr)
         _apiService = StateObject(wrappedValue: apiService)
+        _screenWake = StateObject(wrappedValue: ScreenWakeControllerObservable())
     }
 
     var body: some Scene {
@@ -68,6 +70,7 @@ struct FastTrackApp: App {
                         .environmentObject(carStatsManager)
                         .environmentObject(achievementManager)
                         .environmentObject(apiService)
+                        .environmentObject(screenWake)
                 }
 #else
                 RootView()
@@ -80,6 +83,7 @@ struct FastTrackApp: App {
                     .environmentObject(carStatsManager)
                     .environmentObject(achievementManager)
                     .environmentObject(apiService)
+                    .environmentObject(screenWake)
 #endif
             }
             .toastOverlay()
@@ -97,6 +101,7 @@ struct RootView: View {
     @EnvironmentObject var carStatsManager: CarStatsManager
     @EnvironmentObject var achievementManager: AchievementManager
     @EnvironmentObject var apiService: APIService
+    @EnvironmentObject var screenWake: ScreenWakeControllerObservable
     @Environment(\.scenePhase) private var scenePhase
     @State private var isInitializing = true
     @State private var selectedTab = 0
@@ -144,6 +149,11 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
+            screenWake.inner.update(
+                isRecording: driveManager.isRecording,
+                keepScreenOn: settings.keepScreenOn,
+                scenePhase: newPhase
+            )
             switch newPhase {
             case .active:
                 if authManager.isAuthenticated {
@@ -154,6 +164,27 @@ struct RootView: View {
             default:
                 break
             }
+        }
+        .onChange(of: driveManager.isRecording) { _, recording in
+            screenWake.inner.update(
+                isRecording: recording,
+                keepScreenOn: settings.keepScreenOn,
+                scenePhase: scenePhase
+            )
+        }
+        .onChange(of: settings.keepScreenOn) { _, keep in
+            screenWake.inner.update(
+                isRecording: driveManager.isRecording,
+                keepScreenOn: keep,
+                scenePhase: scenePhase
+            )
+        }
+        .onAppear {
+            screenWake.inner.update(
+                isRecording: driveManager.isRecording,
+                keepScreenOn: settings.keepScreenOn,
+                scenePhase: scenePhase
+            )
         }
     }
 
