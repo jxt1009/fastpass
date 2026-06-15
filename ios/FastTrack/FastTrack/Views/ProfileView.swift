@@ -144,11 +144,18 @@ struct ProfileView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    if !bioLine.isEmpty {
-                        Text(bioLine)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
+                    if let profile = profileManager.profile {
+                        if !profile.country.isEmpty {
+                            Text(profile.country)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        if !profile.carDisplayString.isEmpty {
+                            StatusDot(level: .typical, label: profile.carDisplayString)
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
                     }
                 }
 

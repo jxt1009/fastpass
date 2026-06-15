@@ -180,7 +180,10 @@ struct DriveRowView: View, Equatable {
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: pbAnimationKey)
             HStack {
-                Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
+                StatusDot(
+                    level: isPersonalBestTopSpeed ? .best : .typical,
+                    label: settings.speedDisplay(drive.maxSpeed)
+                )
                 Spacer()
                 Label(settings.distanceDisplay(drive.distance, decimals: 1), systemImage: "map")
                 Spacer()

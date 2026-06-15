@@ -367,11 +367,11 @@ private struct LeaderboardRow: View {
             Spacer(minLength: 4)
 
             // Stat value
-            Text(category.formattedValue(entry.value, settings: settings))
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.primary)
-                .monospacedDigit()
+            StatusDot(
+                level: entry.rank == 1 ? .best : entry.rank <= 3 ? .improving : .typical,
+                label: category.formattedValue(entry.value, settings: settings)
+            )
+            .font(.subheadline)
         }
         .padding(.vertical, 2)
     }
