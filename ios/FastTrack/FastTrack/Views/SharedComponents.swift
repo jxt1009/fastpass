@@ -495,3 +495,22 @@ struct SpeechBubble: Shape {
     }
 }
 
+/// A small filled circle with a label — used to add qualitative context to a metric or state.
+struct StatusDot: View {
+    let level: StatusLevel
+    let label: String
+    var font: Font = .caption
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(level.color)
+                .frame(width: 6, height: 6)
+            Text(label)
+                .font(font)
+                .fontWeight(.semibold)
+                .foregroundStyle(level.color)
+        }
+    }
+}
+
