@@ -4,7 +4,6 @@ import Combine
 
 struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var settings: AppSettings
@@ -238,7 +237,7 @@ struct ContentView: View {
                         .scaleEffect(driveManager.isRecording ? 1.05 : 1)
                         .opacity(driveManager.isRecording ? 0.6 : 0)
                         .animation(
-                            driveManager.isRecording && !reduceMotion && scenePhase == .active
+                            driveManager.isRecording && !reduceMotion
                                 ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
                                 : .default,
                             value: driveManager.isRecording
