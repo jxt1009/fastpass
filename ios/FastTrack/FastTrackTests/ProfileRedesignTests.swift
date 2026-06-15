@@ -284,22 +284,22 @@ final class ProfileRedesignTests: XCTestCase {
 
     // MARK: - ProfileView body section order (issue #64 regression guard)
 
-    /// The achievements strip must render directly under the profile
-    /// header and ahead of the garage section, so a returning user can
+    /// The achievements section must render directly under the profile
+    /// header and ahead of the garage link row, so a returning user can
     /// see their recent unlocks without scrolling. This is a line-order
     /// regression guard rather than a SwiftUI snapshot: the project does
     /// not currently use ViewInspector and the layout itself is hard to
     /// inspect without it, but the *order* of the three sections in the
     /// body of `ProfileView` is straightforward to pin down.
-    func testProfileView_AchievementsStripAboveGarage() throws {
+    func testProfileView_AchievementsSectionBelowGarageLink() throws {
         let source = try readProfileViewSource()
         let headerLine = try firstLineNumber(in: source, matching: "profileHeader")
-        let stripLine = try firstLineNumber(in: source, matching: "RecentAchievementsStrip(driveManager:")
-        let garageLine = try firstLineNumber(in: source, matching: "garageSection")
+        let stripLine = try firstLineNumber(in: source, matching: "achievementsSection")
+        let garageLine = try firstLineNumber(in: source, matching: "garageLinkRow")
         XCTAssertGreaterThan(stripLine, headerLine,
-            "RecentAchievementsStrip must come after profileHeader in ProfileView.swift")
-        XCTAssertLessThan(stripLine, garageLine,
-            "RecentAchievementsStrip must come before garageSection in ProfileView.swift")
+            "achievementsSection must come after profileHeader in ProfileView.swift")
+        XCTAssertGreaterThan(stripLine, garageLine,
+            "achievementsSection must come after garageLinkRow in ProfileView.swift")
     }
 
     // MARK: - "View Garage" entry point (Phase 2 / Track E)

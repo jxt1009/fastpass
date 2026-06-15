@@ -21,84 +21,28 @@ struct CarDetailDrivesList: View {
 
     @ViewBuilder
     private var perCarAchievementsSection: some View {
-        if let pbs = data?.achievementPBs, !pbs.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+        if let carAchievements = data?.achievementPBs, !carAchievements.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack {
-                    SectionHeader(title: "Achievements")
+                    Text("Achievements")
+                        .font(.headline)
                     Spacer()
-                    if let indicator = recentPBIndicatorText {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.ftAmber)
-                                .frame(width: 6, height: 6)
-                            Text(indicator)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundColor(.ftAmber)
+                    NavigationLink("See all") {
+                        AchievementsView()
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(Color.ftBlue)
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.sm) {
+                        ForEach(carAchievements) { achievement in
+                            AchievementChip(achievement: achievement)
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.ftAmber.opacity(0.12))
-                        )
                     }
-                }
-                ForEach(pbs) { achievement in
-                    NavigationLink {
-                        destination(for: achievement)
-                    } label: {
-                        achievementRow(achievement)
-                    }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 1)
                 }
             }
         }
-    }
-
-    @ViewBuilder
-    private func destination(for achievement: Achievement) -> some View {
-        switch RecentAchievementsStripLogic.resolveSourceDrive(
-            for: achievement,
-            in: driveManager.drives
-        ) {
-        case .local(let drive):
-            DriveDetailView(drive: drive)
-        case .remote(let driveId):
-            RemoteDriveDetailLoader(driveId: driveId)
-        case .none:
-            AchievementsView()
-        }
-    }
-
-    private func achievementRow(_ achievement: Achievement) -> some View {
-        InstrumentCard {
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: achievement.badgeIcon)
-                    .font(.title3)
-                    .foregroundColor(achievement.badgeColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(achievement.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Text(achievement.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    private var recentPBIndicatorText: String? {
-        let count = data?.recentPBCount ?? 0
-        guard count > 0 else { return nil }
-        return count == 1 ? "Recently unlocked" : "\(count) recently unlocked"
     }
 
     // MARK: - Recent Drives
