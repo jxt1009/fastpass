@@ -39,7 +39,7 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
                         garageLinkRow
-                        RecentAchievementsStrip(achievementManager: achievementManager, driveManager: driveManager)
+                        achievementsSection
                         if driveManager.isLoadingDrives {
                             profileStatsSkeleton
                         } else {
@@ -232,6 +232,59 @@ struct ProfileView: View {
         }
         .buttonStyle(.plain)
         .padding(.vertical, 4)
+    }
+
+    // MARK: - Achievements Section
+
+    private var achievementsSection: some View {
+        let achievements = achievementManager.achievements
+        let unlockedCount = achievements.filter(\.isUnlocked).count
+        let totalCount = achievements.count
+        let recentlyUnlocked = Array(
+            RecentAchievementsStripLogic.recentUnlocks(from: achievements, maxCount: 5)
+        )
+
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text("Achievements")
+                    .font(.headline)
+                Spacer()
+                NavigationLink("See all") {
+                    AchievementsView()
+                }
+                .font(.subheadline)
+                .foregroundStyle(Color.ftBlue)
+            }
+
+            if totalCount > 0 {
+                HStack {
+                    Text("\(unlockedCount) / \(totalCount) unlocked")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                GradientProgressBar(
+                    value: Double(unlockedCount),
+                    range: 0...Double(max(totalCount, 1)),
+                    size: .compact
+                )
+            }
+
+            if recentlyUnlocked.isEmpty {
+                Text("Start driving to earn achievements")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.sm) {
+                        ForEach(recentlyUnlocked) { achievement in
+                            AchievementChip(achievement: achievement)
+                        }
+                    }
+                    .padding(.horizontal, 1)
+                }
+            }
+        }
     }
 
     // MARK: - Loading skeleton (dark theme)

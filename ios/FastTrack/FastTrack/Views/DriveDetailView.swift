@@ -87,6 +87,7 @@ struct DriveDetailView: View {
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var carStatsManager: CarStatsManager
+    @EnvironmentObject var achievementManager: AchievementManager
 
     private var isOwner: Bool {
         drive.userID == authManager.getUser()?.id
@@ -138,6 +139,8 @@ struct DriveDetailView: View {
                     drive: drive,
                     onTapCarPicker: { showingCarPicker = true }
                 )
+
+                earnedThisDriveSection
             }
             .padding()
         }
@@ -176,6 +179,46 @@ struct DriveDetailView: View {
         .onDisappear { stopPlayback() }
         .sheet(isPresented: $showingCarPicker) {
             DriveCarSelectorView(drive: drive)
+        }
+    }
+
+    // MARK: - Earned This Drive
+
+    @ViewBuilder
+    private var earnedThisDriveSection: some View {
+        let earnedAchievements = achievementManager.achievements.filter {
+            $0.isUnlocked && $0.sourceDriveId == drive.id
+        }
+        if !earnedAchievements.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("Earned This Drive")
+                    .font(.headline)
+                ForEach(earnedAchievements) { achievement in
+                    InstrumentCard {
+                        HStack(spacing: Spacing.md) {
+                            RoundedRectangle(cornerRadius: Radius.md)
+                                .fill(achievement.category.color.opacity(0.15))
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Image(systemName: achievement.icon)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(achievement.category.color)
+                                )
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(achievement.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.primary)
+                                Text("Unlocked on this drive")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .background(achievement.category.color.opacity(0.08))
+                    }
+                }
+            }
         }
     }
 
