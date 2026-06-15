@@ -112,6 +112,22 @@ struct DriveDetailView: View {
                     onSeekForward: seekForward
                 )
 
+                if drive.id == driveManager.pbTopSpeedDriveId {
+                    StatusDot(level: .best, label: "Top Speed PB")
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.ftGold.opacity(0.08))
+                        .overlay(Capsule().stroke(Color.ftGold.opacity(0.20), lineWidth: 1))
+                        .clipShape(Capsule())
+                } else if drive.id == driveManager.pb060DriveId {
+                    StatusDot(level: .nearBest, label: "0-60 PB")
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.ftAmber.opacity(0.08))
+                        .overlay(Capsule().stroke(Color.ftAmber.opacity(0.20), lineWidth: 1))
+                        .clipShape(Capsule())
+                }
+
                 if !routePoints.isEmpty {
                     DriveDetailAttemptsList(zeroToSixtyAttempts: zeroToSixtyAttempts)
                 }

@@ -112,19 +112,14 @@ struct ContentView: View {
             }
 
             HStack(spacing: 8) {
-                Circle()
-                    .fill(gpsStatusColor)
-                    .frame(width: 7, height: 7)
-                    .accessibilityLabel("GPS: \(gpsStatusText)")
-                Text(driveManager.isRecording ? "Recording" : "Idle")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(driveManager.isRecording ? recordingAccent : .secondary)
+                StatusDot(
+                    level: driveManager.isRecording ? .nearBest : .typical,
+                    label: driveManager.isRecording ? "Recording" : "Idle"
+                )
                 Text("•")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(gpsStatusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                StatusDot(level: gpsStatusLevel, label: gpsStatusText)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -265,6 +260,16 @@ struct ContentView: View {
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
     }
 
+    private var gpsStatusLevel: StatusLevel {
+        guard let location = locationManager.currentLocation else { return .inactive }
+        let accuracy = location.horizontalAccuracy
+        if accuracy < 0 { return .inactive }
+        if accuracy < 5 { return .improving }
+        if accuracy < 10 { return .nearBest }
+        if accuracy < 20 { return .typical }
+        return .inactive
+    }
+
     private var gpsStatusColor: Color {
         guard let location = locationManager.currentLocation else { return .red }
         let accuracy = location.horizontalAccuracy
@@ -284,6 +289,7 @@ struct ContentView: View {
         if accuracy < 0 { return "GPS Error" }
         if accuracy < 5 { return "GPS Excellent" }
         if accuracy < 10 { return "GPS Good" }
+        if accuracy < 20 { return "GPS Fair" }
         return "GPS Poor"
     }
 
