@@ -179,29 +179,43 @@ struct DetailRow: View {
     }
 }
 
-struct GaugeProgressBar: View {
-    let progress: Double
-    var color: Color = .ftBlue
-    var height: CGFloat = 6
+enum GradientProgressBarSize {
+    case compact, hero
+}
 
-    private var clampedProgress: Double {
-        min(max(progress, 0), 1)
+struct GradientProgressBar: View {
+    let value: Double
+    let range: ClosedRange<Double>
+    let size: GradientProgressBarSize
+
+    var fraction: Double {
+        guard range.upperBound > range.lowerBound else { return 0 }
+        return max(0, min(1, (value - range.lowerBound) / (range.upperBound - range.lowerBound)))
     }
 
-    var body: some View {
-        GeometryReader { proxy in
-            let width = max(proxy.size.width * clampedProgress, height)
+    var trackHeight: CGFloat { size == .compact ? 5 : 8 }
+    var dotDiameter: CGFloat { size == .compact ? 9 : 14 }
 
-            Capsule()
-                .fill(Color.ftSectionBg)
-                .overlay(alignment: .leading) {
-                    Capsule()
-                        .fill(color)
-                        .frame(width: clampedProgress == 0 ? 0 : width)
-                        .animation(Motion.standard, value: clampedProgress)
-                }
+    private let gradient = LinearGradient(
+        colors: [.ftGreen, .ftGold, .ftAmber, .ftRed],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(gradient)
+                    .frame(height: trackHeight)
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(Color.ftBg, lineWidth: 1.5))
+                    .frame(width: dotDiameter, height: dotDiameter)
+                    .offset(x: geo.size.width * fraction - dotDiameter / 2)
+            }
         }
-        .frame(height: height)
+        .frame(height: dotDiameter)
     }
 }
 
