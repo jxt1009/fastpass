@@ -81,8 +81,7 @@ struct ContentView: View {
             ZStack {
                 SpeedHeroRing(
                     progress: speedRingProgress,
-                    tint: driveManager.isRecording ? recordingAccent : idleAccent,
-                    isRecording: driveManager.isRecording
+                    diameter: 256
                 )
                 .frame(width: 256, height: 256)
                 .accessibilityLabel("Current speed \(Int(settings.calibratedSpeedValue(locationManager.currentSpeed))) \(settings.speedUnit)")
@@ -293,32 +292,44 @@ struct ContentView: View {
 }
 
 private struct SpeedHeroRing: View {
-    let progress: Double
-    let tint: Color
-    let isRecording: Bool
+    let progress: Double   // 0–1 normalized speed fraction
+    let diameter: CGFloat
+
+    private let trackGradient = AngularGradient(
+        colors: [.ftGreen, .ftGold, .ftAmber, .ftRed],
+        center: .center,
+        startAngle: .degrees(150),
+        endAngle: .degrees(390)
+    )
 
     var body: some View {
         ZStack {
+            // Track — 240° open arc, gap at bottom
             Circle()
-                .stroke(Color.ftHairline, lineWidth: 16)
+                .trim(from: 0, to: 240.0/360.0)
+                .stroke(Color.white.opacity(0.06), style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .rotationEffect(.degrees(150))
+                .frame(width: diameter, height: diameter)
 
+            // Value arc
             Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    LinearGradient(
-                        colors: [tint.opacity(0.35), tint],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    style: StrokeStyle(lineWidth: 16, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.2), value: progress)
+                .trim(from: 0, to: (240.0/360.0) * progress)
+                .stroke(trackGradient, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .rotationEffect(.degrees(150))
+                .frame(width: diameter, height: diameter)
+                .animation(.linear(duration: 0.1), value: progress)
 
-            Circle()
-                .fill(Color.ftCardBg.opacity(isRecording ? 0.5 : 0.7))
-                .padding(24)
+            // 5 tick marks evenly spaced along the 240° arc
+            ForEach(0..<5) { i in
+                let angle = 150.0 + (240.0 / 4.0) * Double(i)
+                Rectangle()
+                    .fill(Color.white.opacity(0.15))
+                    .frame(width: 1.5, height: 6)
+                    .offset(y: -(diameter / 2) + 5)
+                    .rotationEffect(.degrees(angle))
+            }
         }
+        .frame(width: diameter, height: diameter)
     }
 }
 
