@@ -43,7 +43,6 @@ class LocationManager: NSObject, ObservableObject {
     private var courseAtLastGPS: Double = -1
     private var yawAtLastGPSRad: Double = 0
     private var gpsUpdatePending: Bool = false
-    private var lastSpeedPublishAt: Date = .distantPast
 
     /// Weak reference to DriveManager so heading processing can be triggered
     /// from the GPS callback path. Set externally during wiring.
