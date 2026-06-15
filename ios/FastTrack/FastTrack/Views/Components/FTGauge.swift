@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 // MARK: - FTGauge
 //
@@ -30,6 +31,9 @@ struct FTGauge: View {
     let label: String
     let value: String
     let color: Color
+    var sparklineData: [Double] = []
+    var numericValue: Double = 0
+    var maxValue: Double = 0
 
     @State private var displayedProgress: Double = 0
 
@@ -62,18 +66,26 @@ struct FTGauge: View {
 
             ZStack {
                 Circle()
-                    .stroke(color.opacity(0.15), lineWidth: 8)
+                    .trim(from: 0, to: 240.0 / 360.0)
+                    .stroke(Color.white.opacity(0.06),
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(150))
                     .frame(width: 96, height: 96)
 
                 Circle()
-                    .trim(from: 0, to: max(0.001, displayedProgress))
+                    .trim(from: 0, to: max(0.0001, (240.0 / 360.0) * displayedProgress))
                     .stroke(
-                        color,
+                        AngularGradient(
+                            colors: [.ftGreen, .ftGold, .ftAmber, .ftRed],
+                            center: .center,
+                            startAngle: .degrees(150),
+                            endAngle: .degrees(390)
+                        ),
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )
-                    .rotationEffect(.degrees(-90))
+                    .rotationEffect(.degrees(150))
                     .frame(width: 96, height: 96)
-                    .animation(.easeInOut(duration: 0.6), value: displayedProgress)
+                    .animation(.linear(duration: 0.15), value: displayedProgress)
 
                 Text(value)
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
@@ -81,6 +93,10 @@ struct FTGauge: View {
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
                     .padding(.horizontal, 6)
+            }
+
+            if maxValue > 0 {
+                GradientProgressBar(value: numericValue, range: 0...maxValue, size: .hero)
             }
 
             if let setOn {
@@ -129,14 +145,24 @@ struct FTGauge: View {
                 .foregroundColor(color)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [.ftBlue, .ftAmber],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ))
-                .frame(width: 32, height: 3)
-                .cornerRadius(1.5)
+            if sparklineData.count >= 3 {
+                Chart {
+                    ForEach(Array(sparklineData.enumerated()), id: \.offset) { index, val in
+                        LineMark(
+                            x: .value("Index", index),
+                            y: .value("Value", val)
+                        )
+                    }
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .foregroundStyle(color.opacity(0.70))
+                .frame(height: 14)
+            }
+            if maxValue > 0 {
+                GradientProgressBar(value: numericValue, range: 0...maxValue, size: .compact)
+                    .padding(.top, 4)
+            }
             Text(label.uppercased())
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundColor(.secondary)
