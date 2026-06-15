@@ -21,6 +21,7 @@ struct GarageView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var showingAddCar = false
     @State private var drivePendingDelete: Drive?
+    @State private var showingDeleteConfirmation = false
     @State private var deleteError: String?
 
     private var cars: [UserCar] {
@@ -102,9 +103,17 @@ struct GarageView: View {
 
     private var recentDrivesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            let recent = driveManager.drives
+            let allDrives = driveManager.drives
+            let recent = allDrives
                 .sorted { $0.startTime > $1.startTime }
                 .prefix(5)
+            #if DEBUG
+            let _ = {
+                let firstId = allDrives.first?.id ?? -1
+                let firstUser = allDrives.first?.userID ?? -1
+                print("🏎️ GarageView: drives.count=\(allDrives.count) first.id=\(firstId) first.userID=\(firstUser)")
+            }()
+            #endif
 
             if !recent.isEmpty {
                 SectionHeader(title: "Recent Drives")
@@ -118,7 +127,11 @@ struct GarageView: View {
                     .swipeActions(edge: .trailing) {
                         if drive.userID == authManager.getUser()?.id {
                             Button(role: .destructive) {
+                                #if DEBUG
+                                print("🔴 swipe delete: drive.id=\(drive.id ?? -1) userID=\(drive.userID) ts=\(drive.startTime)")
+                                #endif
                                 drivePendingDelete = drive
+                                showingDeleteConfirmation = true
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -164,6 +177,7 @@ struct GarageView: View {
                 .padding()
             }
             .background(Color.ftSurfaceBg.ignoresSafeArea())
+            .onAppear { driveManager.fetchDrives() }
             .navigationTitle("Your Garage")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -181,10 +195,7 @@ struct GarageView: View {
             .sheet(isPresented: $showingAddCar) {
                 AddCarView()
             }
-            .alert("Delete Drive?", isPresented: Binding(
-                get: { drivePendingDelete != nil },
-                set: { if !$0 { drivePendingDelete = nil } }
-            )) {
+            .alert("Delete Drive?", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { drivePendingDelete = nil }
                 Button("Delete", role: .destructive) {
                     Task { await performDelete() }
@@ -219,9 +230,21 @@ struct GarageView: View {
 
     @MainActor
     private func performDelete() async {
-        guard let drive = drivePendingDelete, let id = drive.id else { return }
+        guard let drive = drivePendingDelete, let id = drive.id else {
+            #if DEBUG
+            print("⚠️ GarageView.delete: no drive or id (id=\(drivePendingDelete?.id ?? -1))")
+            #endif
+            drivePendingDelete = nil
+            return
+        }
+        #if DEBUG
+        print("🗑️ GarageView.delete: drive=\(id), count before=\(driveManager.drives.count)")
+        #endif
         do {
             try await driveManager.deleteDrive(id: id)
+            #if DEBUG
+            print("✅ GarageView.delete: success, count after=\(driveManager.drives.count)")
+            #endif
             drivePendingDelete = nil
             ToastManager.shared.show(ToastMessage(
                 text: "Drive deleted",
@@ -230,6 +253,9 @@ struct GarageView: View {
                 Task { await driveManager.restoreDrive(drive) }
             })
         } catch {
+            #if DEBUG
+            print("❌ GarageView.delete: error=\(error)")
+            #endif
             deleteError = error.diagnosticDescription
             drivePendingDelete = nil
         }

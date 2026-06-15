@@ -27,7 +27,7 @@ struct AchievementsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Stats Header
                 statsHeader
@@ -157,12 +157,8 @@ struct CategoryFilterChip: View {
 struct AchievementCard: View {
     let achievement: Achievement
     @EnvironmentObject var settings: AppSettings
-    @State private var showingDetail = false
-    
     var body: some View {
-        Button {
-            showingDetail = true
-        } label: {
+        NavigationLink(destination: AchievementDetailView(achievement: achievement)) {
             VStack(alignment: .leading, spacing: 12) {
                 // Header with icon and status
                 HStack {
@@ -225,9 +221,6 @@ struct AchievementCard: View {
             .cornerRadius(Radius.lg)
         }
         .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $showingDetail) {
-            AchievementDetailView(achievement: achievement)
-        }
     }
 }
 

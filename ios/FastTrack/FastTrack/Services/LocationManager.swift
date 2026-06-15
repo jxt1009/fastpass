@@ -25,6 +25,7 @@ class LocationManager: NSObject, ObservableObject {
     private let clManager = CLLocationManager()
     private let motionManager = CMMotionManager()
     private let fusion = SpeedFusion()
+    private static let imuUpdateInterval: TimeInterval = 1.0 / 100.0
     private let imuQueue: OperationQueue = {
         let q = OperationQueue()
         q.name = "com.fasttrack.location.imu"
@@ -36,9 +37,22 @@ class LocationManager: NSObject, ObservableObject {
     /// Latest GPS course (degrees clockwise from true north). -1 = unavailable.
     private var currentCourse: Double = -1
 
+    // IMU-attitude course estimation: tracks yaw changes at 100 Hz and applies
+    // them to the last-known GPS course, so the IMU projection stays accurate
+    // during turns between GPS course updates.
+    private var courseAtLastGPS: Double = -1
+    private var yawAtLastGPSRad: Double = 0
+    private var gpsUpdatePending: Bool = false
+    private var lastSpeedPublishAt: Date = .distantPast
+
     /// Weak reference to DriveManager so heading processing can be triggered
     /// from the GPS callback path. Set externally during wiring.
-    weak var driveManager: DriveManager?
+    weak     var driveManager: DriveManager?
+
+    // Called on the IMU background queue at 100 Hz with every raw speed sample.
+    // DriveRecordingController sets this to capture the full-rate speed stream
+    // without putting 100 Hz traffic on the main thread.
+    var onRawSpeedSample: ((SpeedSample) -> Void)?
 
     // MARK: - Init
 
@@ -47,6 +61,7 @@ class LocationManager: NSObject, ObservableObject {
         clManager.delegate = self
         clManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         clManager.distanceFilter = kCLDistanceFilterNone
+        clManager.activityType = .automotiveNavigation
         clManager.pausesLocationUpdatesAutomatically = true
     }
 
@@ -150,7 +165,7 @@ class LocationManager: NSObject, ObservableObject {
         currentSpeedSample = nil
     }
 
-    // MARK: - CoreMotion at 25 Hz
+    // MARK: - CoreMotion at 100 Hz
 
     private func startIMU() {
         guard motionManager.isDeviceMotionAvailable else {
@@ -159,7 +174,7 @@ class LocationManager: NSObject, ObservableObject {
             #endif
             return
         }
-        motionManager.deviceMotionUpdateInterval = 1.0 / 25.0
+        motionManager.deviceMotionUpdateInterval = Self.imuUpdateInterval
         // XTrueNorthZVertical: X=North, Y=East, Z=Up — lets us project onto GPS course
         motionManager.startDeviceMotionUpdates(
             using: .xTrueNorthZVertical,
@@ -169,7 +184,7 @@ class LocationManager: NSObject, ObservableObject {
             self.handleMotionUpdate(motion)
         }
         #if DEBUG
-        print("✅ IMU fusion started at 25 Hz")
+        print("✅ IMU fusion started at 100 Hz")
         #endif
     }
 
@@ -178,9 +193,26 @@ class LocationManager: NSObject, ObservableObject {
     }
 
     private func handleMotionUpdate(_ motion: CMDeviceMotion) {
-        let dt = 1.0 / 25.0
+        let dt = Self.imuUpdateInterval
         let timestamp = measurementDate(forMotionTimestamp: motion.timestamp)
-        let course = currentCourse
+        let currentYaw = motion.attitude.yaw
+
+        // If GPS just updated, capture the IMU yaw at that moment on the IMU
+        // queue to build a drift-free course estimate between GPS fixes.
+        if gpsUpdatePending, courseAtLastGPS >= 0 {
+            yawAtLastGPSRad = currentYaw
+            gpsUpdatePending = false
+        }
+
+        // Blend GPS course with IMU yaw-delta for high-rate heading during turns.
+        let course: Double
+        if courseAtLastGPS >= 0 {
+            let yawDelta = currentYaw - yawAtLastGPSRad
+            course = courseAtLastGPS + yawDelta * 180.0 / .pi
+        } else {
+            course = currentCourse
+        }
+
         let rawGps = rawGPSSpeed
         fusion.updateCourse(course)
 
@@ -194,8 +226,22 @@ class LocationManager: NSObject, ObservableObject {
 
         let wasLocked = fusion.isZeroLocked
         fusion.predict(longAccelG: longG, dt: dt)
-
         let shouldBreakLock = wasLocked && !fusion.isZeroLocked
+
+        // Fire 100 Hz speed sample for stream capture (lightweight main-dispatch).
+        if let onRaw = onRawSpeedSample {
+            let sample = SpeedSample(
+                speed: fusion.speed,
+                rawGPSSpeed: self.rawGPSSpeed,
+                speedAccuracy: self.speedAccuracy,
+                timestamp: timestamp,
+                isZeroLocked: fusion.isZeroLocked,
+                stationaryConfidence: fusion.stationaryConfidence
+            )
+            onRaw(sample)
+        }
+
+        // Throttled main-thread publish for UI and Combine subscribers.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             if shouldBreakLock {
@@ -206,6 +252,10 @@ class LocationManager: NSObject, ObservableObject {
     }
 
     private func publishSpeedState(at timestamp: Date, forceSpeedUpdate: Bool = false) {
+        guard forceSpeedUpdate || timestamp.timeIntervalSince(lastSpeedPublishAt) >= 0.1 else {
+            return
+        }
+        lastSpeedPublishAt = timestamp
         let sample = SpeedSample(
             speed: fusion.speed,
             rawGPSSpeed: rawGPSSpeed,
@@ -240,6 +290,10 @@ extension LocationManager: CLLocationManagerDelegate {
         
         currentLocation = location
         currentCourse = location.course  // -1 if invalid
+        if location.course >= 0 {
+            courseAtLastGPS = location.course
+            gpsUpdatePending = true
+        }
 
         guard location.speed >= 0 else {
             #if DEBUG

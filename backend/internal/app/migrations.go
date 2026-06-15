@@ -172,6 +172,19 @@ var schemaMigrations = []schemaMigration{
 			`).Error
 		},
 	},
+	{
+		version:     "2026061401",
+		description: "add fused_max_speed and gps_max_speed columns to drives",
+		up: func(tx *gorm.DB) error {
+			driveColumns := []string{"FusedMaxSpeed", "GpsMaxSpeed"}
+			for _, col := range driveColumns {
+				if err := addColumnIfMissing(tx, &Drive{}, col); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	},
 }
 
 func runMigrations(db *gorm.DB) error {

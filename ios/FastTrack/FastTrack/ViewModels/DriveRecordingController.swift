@@ -100,6 +100,8 @@ class DriveRecordingController: ObservableObject {
     var lastBrakeTime: Date?
     var headingHistory: [(course: Double, time: Date)] = []
     var best060Time: Double?
+    var speedStream: [(TimeInterval, Double, Bool, Double)] = []
+    private var lastSeenGpsAccuracy: Double = 0
 
     private weak var locationManager: LocationManager?
     private let authManager: AuthManager
@@ -140,6 +142,22 @@ class DriveRecordingController: ObservableObject {
                 self.processSpeedSample(sample)
             }
             .store(in: &cancellables)
+
+        // Capture full 100 Hz speed stream from the IMU background queue for
+        // post-hoc analysis (LaunchAnalyzer, TopSpeedComputer). The stream
+        // must include every sample regardless of the 10 Hz UI-throttle.
+        manager.onRawSpeedSample = { [weak self] sample in
+            guard let self else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.isRecording else { return }
+                self.speedStream.append((
+                    sample.timestamp.timeIntervalSince1970,
+                    sample.speed,
+                    sample.isZeroLocked,
+                    sample.stationaryConfidence
+                ))
+            }
+        }
     }
 
     func startRecording() {
@@ -163,6 +181,7 @@ class DriveRecordingController: ObservableObject {
         runningSpeedStats.reset()
         publishThrottler.reset()
         attempts060 = []
+        speedStream = []
 
         stoppedTimeTracker.reset()
         leftTurns = 0; rightTurns = 0
@@ -223,11 +242,13 @@ class DriveRecordingController: ObservableObject {
 
     func stopRecording() async {
         guard isRecording else { return }
-        isRecording = false
         locationManager?.stopUpdatingLocation()
         UIApplication.shared.isIdleTimerDisabled = false
 
-        guard var drive = currentDrive, !recordingLocations.isEmpty else { return }
+        guard var drive = currentDrive, !recordingLocations.isEmpty else {
+            isRecording = false
+            return
+        }
         let endTime = Date()
         stoppedTimeTracker.finalize(at: endTime)
         drive.endTime = endTime
@@ -255,12 +276,30 @@ class DriveRecordingController: ObservableObject {
             return resolved
         }
 
+        let analyzer = LaunchAnalyzer()
+        let postHocAttempts = analyzer.analyze(stream: speedStream)
+        let resolvedAttempts = postHocAttempts.isEmpty ? attemptsResolved : postHocAttempts
+        let bestPostHoc = resolvedAttempts.min(by: { $0.elapsedSeconds < $1.elapsedSeconds })
+        drive.best060Time = bestPostHoc?.elapsedSeconds ?? best060Time
+        drive.zeroToSixtyAttempts = resolvedAttempts
+
+        let topSpeedResult = TopSpeedComputer.compute(
+            speedStream: speedStream,
+            gpsMaxSpeed: currentMaxSpeed,
+            nearestGpsAccuracyMeters: lastSeenGpsAccuracy
+        )
+        drive.fusedMaxSpeed = topSpeedResult.fusedMaxSpeed
+        drive.gpsMaxSpeed = topSpeedResult.gpsMaxSpeed
+        drive.maxSpeed = topSpeedResult.maxSpeed
+
         let routeSnapshot = RouteSerializationSnapshot(
             richRoutePoints: richRoutePoints,
             recordedRouteEvents: recordedRouteEvents,
-            attempts: attemptsResolved
+            attempts: resolvedAttempts,
+            speedStream: speedStream,
+            speedPeaks: []
         )
-        if let json = RouteSerializer.encodeV2(snapshot: routeSnapshot) {
+        if let json = RouteSerializer.encodeV3(snapshot: routeSnapshot) {
             drive.routeData = json
         }
 
@@ -269,21 +308,10 @@ class DriveRecordingController: ObservableObject {
         drive.brakeEvents = brakeEvents; drive.laneChanges = laneChanges
         drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
         drive.peakGForce = peakGForce; drive.topCornerSpeed = topCornerSpeed
-        drive.best060Time = best060Time
-        drive.zeroToSixtyAttempts = attemptsResolved
+
+        isRecording = false
 
         let inFlightURL = inFlightTempFileURL(for: drive)
-        if let encoded = try? Self.driveEncoder.encode(drive) {
-            do {
-                try encoded.write(to: inFlightURL, options: .atomic)
-            } catch {
-                lastError = .invalidResponse
-            }
-        } else {
-            lastError = .invalidResponse
-        }
-
-        await RecordingActor.shared.reset()
 
         var bgTaskID = UIBackgroundTaskIdentifier.invalid
         bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "DriveUpload") {
@@ -297,14 +325,16 @@ class DriveRecordingController: ObservableObject {
 
         do {
             let saved = try await apiService.createDrive(drive)
-            currentDrive = drive
+            await RecordingActor.shared.reset()
             currentDrive = nil
             recordingStartTime = nil
             attempts060 = []
-            try? FileManager.default.removeItem(at: inFlightURL)
         } catch {
             let surfaced = (error as? APIError) ?? APIError.invalidResponse
             lastError = surfaced
+            if let encoded = try? Self.driveEncoder.encode(drive) {
+                try? encoded.write(to: inFlightURL, options: .atomic)
+            }
         }
     }
 
@@ -322,9 +352,8 @@ class DriveRecordingController: ObservableObject {
         for drive: Drive,
         in directory: URL = FileManager.default.temporaryDirectory
     ) -> URL {
-        let stamp = Int(drive.startTime.timeIntervalSince1970)
-        return directory
-            .appendingPathComponent("in_flight_drive_\(drive.userID)_\(stamp).json")
+        directory
+            .appendingPathComponent("in_flight_drive_\(drive.userID)_\(UUID().uuidString).json")
     }
 
     // MARK: - Location processing
@@ -361,6 +390,7 @@ class DriveRecordingController: ObservableObject {
         speedReadings.append(sample.speed)
         runningSpeedStats.ingest(sample.speed)
         stoppedTimeTracker.ingest(sample)
+        lastSeenGpsAccuracy = sample.speedAccuracy
 
         if sample.speed > currentMaxSpeed {
             currentMaxSpeed = sample.speed
@@ -375,12 +405,10 @@ class DriveRecordingController: ObservableObject {
             attempts060.append(contentsOf: newOnes)
         }
 
-        guard var drive = currentDrive else { return }
+        guard publishThrottler.shouldPublish(), var drive = currentDrive else { return }
         drive.stoppedTime = stoppedTimeTracker.totalStoppedTime(at: sample.timestamp)
         drive.best060Time = best060Time
-        if publishThrottler.shouldPublish() {
-            currentDrive = drive
-        }
+        currentDrive = drive
     }
 
     func routePointSpeed(for location: CLLocation) -> Double {
@@ -421,6 +449,7 @@ class DriveRecordingController: ObservableObject {
     }
 
     func processHeading(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {
+        guard isRecording else { return nil }
         let result = await RecordingActor.shared.ingestHeading(
             course: course,
             speed: speed,
@@ -543,6 +572,8 @@ class DriveRecordingController: ObservableObject {
         richRoutePoints = []
         recordedRouteEvents = []
         attempts060 = []
+        speedStream = []
+        lastSeenGpsAccuracy = 0
         stoppedTimeTracker.reset()
         leftTurns = 0
         rightTurns = 0

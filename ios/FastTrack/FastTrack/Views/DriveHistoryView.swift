@@ -4,6 +4,7 @@ struct DriveHistoryView: View {
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var authManager: AuthManager
     @State private var drivePendingDelete: Drive?
+    @State private var showingDeleteConfirmation = false
     @State private var deleteError: String?
 
     /// Yellow wins over red: a 0-60 PB is rarer, so when both PBs are
@@ -50,8 +51,9 @@ struct DriveHistoryView: View {
                             .listRowBackground(rowTint(isPB060: isPB060, isPBTopSpeed: isPBTopSpeed))
                             .swipeActions(edge: .trailing) {
                                 if drive.userID == authManager.getUser()?.id {
-                                    Button(role: .destructive) {
-                                        drivePendingDelete = drive
+                            Button(role: .destructive) {
+                                drivePendingDelete = drive
+                                showingDeleteConfirmation = true
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
@@ -60,15 +62,13 @@ struct DriveHistoryView: View {
                         }
                     }
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+                    .refreshable { driveManager.fetchDrives() }
                 }
             }
             .navigationTitle("Drive History")
             .navigationBarTitleDisplayMode(.large)
             .onAppear { driveManager.fetchDrives() }
-            .alert("Delete Drive?", isPresented: Binding(
-                get: { drivePendingDelete != nil },
-                set: { if !$0 { drivePendingDelete = nil } }
-            )) {
+            .alert("Delete Drive?", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { drivePendingDelete = nil }
                 Button("Delete", role: .destructive) {
                     Task { await performDelete() }
@@ -173,7 +173,7 @@ struct DriveRowView: View, Equatable {
             HStack {
                 Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
                 Spacer()
-                Label(settings.distanceDisplay(drive.distance, decimals: 2), systemImage: "map")
+                Label(settings.distanceDisplay(drive.distance, decimals: 1), systemImage: "map")
                 Spacer()
                 Label(drive.durationString, systemImage: "clock")
             }

@@ -36,6 +36,8 @@ struct Drive: Identifiable, Codable, Equatable {
     var peakGForce: Double       // G
     var topCornerSpeed: Double   // m/s
     var best060Time: Double?     // seconds; nil if never hit 60 mph
+    var fusedMaxSpeed: Double?
+    var gpsMaxSpeed: Double?
     var zeroToSixtyAttempts: [ZeroToSixtyAttempt] = []  // every 0-60 launch detected
 
     var carDisplayString: String {
@@ -91,6 +93,8 @@ struct Drive: Identifiable, Codable, Equatable {
         case peakGForce = "peak_g_force"
         case topCornerSpeed = "top_corner_speed"
         case best060Time = "best_060_time"
+        case fusedMaxSpeed = "fused_max_speed"
+        case gpsMaxSpeed = "gps_max_speed"
         case zeroToSixtyAttempts = "zero_to_sixty_attempts"
     }
 
@@ -129,6 +133,8 @@ struct Drive: Identifiable, Codable, Equatable {
         self.peakGForce          = try c.decode(Double.self,                       forKey: .peakGForce)
         self.topCornerSpeed      = try c.decode(Double.self,                       forKey: .topCornerSpeed)
         self.best060Time         = try c.decodeIfPresent(Double.self,              forKey: .best060Time)
+        self.fusedMaxSpeed       = try c.decodeIfPresent(Double.self,              forKey: .fusedMaxSpeed)
+        self.gpsMaxSpeed         = try c.decodeIfPresent(Double.self,              forKey: .gpsMaxSpeed)
         self.zeroToSixtyAttempts = try c.decodeIfPresent([ZeroToSixtyAttempt].self, forKey: .zeroToSixtyAttempts) ?? []
     }
 
@@ -166,6 +172,8 @@ struct Drive: Identifiable, Codable, Equatable {
         peakGForce: Double,
         topCornerSpeed: Double,
         best060Time: Double? = nil,
+        fusedMaxSpeed: Double? = nil,
+        gpsMaxSpeed: Double? = nil,
         zeroToSixtyAttempts: [ZeroToSixtyAttempt] = []
     ) {
         self.id                  = id
@@ -198,6 +206,8 @@ struct Drive: Identifiable, Codable, Equatable {
         self.peakGForce          = peakGForce
         self.topCornerSpeed      = topCornerSpeed
         self.best060Time         = best060Time
+        self.fusedMaxSpeed       = fusedMaxSpeed
+        self.gpsMaxSpeed         = gpsMaxSpeed
         self.zeroToSixtyAttempts = zeroToSixtyAttempts
     }
 
@@ -232,7 +242,9 @@ struct Drive: Identifiable, Codable, Equatable {
             maxDeceleration: 4.1,
             peakGForce: 0.42,
             topCornerSpeed: 20.0,
-            best060Time: 8.4
+            best060Time: 8.4,
+            fusedMaxSpeed: 35.0,
+            gpsMaxSpeed: 34.5
         )
     }
 }
