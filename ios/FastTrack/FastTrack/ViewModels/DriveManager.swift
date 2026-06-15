@@ -127,9 +127,9 @@ final class DriveManager: ObservableObject {
 
     // MARK: - Recording control
 
-    func startRecording() async {
+    func startRecording() {
         recordingController.startRecording()
-        await liveActivity.start(recordingStartTime: recordingController.recordingStartTime)
+        Task { await liveActivity.start(recordingStartTime: recordingController.recordingStartTime) }
     }
 
     @MainActor
