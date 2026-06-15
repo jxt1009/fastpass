@@ -56,7 +56,20 @@ class DrivePoller: ObservableObject {
     private var recentlyDeletedDriveKeys: Set<String> = []
 
     func noteDriveDeleted(userID: Int, startTime: Date) {
-        recentlyDeletedDriveKeys.insert("\(userID):\(startTime.timeIntervalSince1970)")
+        let key = "\(userID):\(startTime.timeIntervalSince1970)"
+        recentlyDeletedDriveKeys.insert(key)
+
+        // Also delete the physical file immediately so it can't persist
+        // across app restarts when the in-memory set is lost.
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: .temporaryDirectory, includingPropertiesForKeys: nil) else { return }
+        for url in entries where url.lastPathComponent.hasPrefix("in_flight_drive_") && url.pathExtension == "json" {
+            guard let data = try? Data(contentsOf: url),
+                  let drive = try? Self.driveDecoder.decode(Drive.self, from: data),
+                  drive.userID == userID,
+                  abs(drive.startTime.timeIntervalSince1970 - startTime.timeIntervalSince1970) < 1 else { continue }
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 
     func stopPolling() {
