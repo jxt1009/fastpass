@@ -80,26 +80,6 @@ final class DriveManager: ObservableObject {
             .assign(to: &$drives)
         drivePoller.$isLoadingDrives
             .assign(to: &$isLoadingDrives)
-
-        // Forward drive stats to the Live Activity while recording.
-        // Throttled at 1 Hz to avoid overwhelming the widget extension;
-        // the coordinator also has its own 1 Hz guard for defense-in-depth.
-        recordingController.$currentDrive
-            .compactMap { $0 }
-            .throttle(for: .seconds(1), scheduler: DispatchQueue.main, latest: true)
-            .sink { [weak self] drive in
-                guard let self, self.recordingController.isRecording else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.liveActivity.update(
-                        speedMph: self.recordingController.latestSpeedSample.map { $0.speed * 2.23694 } ?? 0,
-                        distanceMiles: drive.distance * 0.000621371,
-                        currentGForce: self.recordingController.currentGForce,
-                        currentMaxSpeed: self.recordingController.currentMaxSpeed
-                    )
-                }
-            }
-            .store(in: &cancellables)
     }
 
     static let inFlightFilePrefix = "in_flight_drive_"
@@ -128,11 +108,8 @@ final class DriveManager: ObservableObject {
     // MARK: - Recording control
 
     func startRecording() {
-        print("🔵🚗 DriveManager.startRecording() begin, isRecording=\(recordingController.isRecording)")
         recordingController.startRecording()
-        print("🔵🚗 recordingController.startRecording() done, isRecording=\(recordingController.isRecording)")
         liveActivity.start(recordingStartTime: recordingController.recordingStartTime)
-        print("🔵🚗 liveActivity.start() done")
     }
 
     @MainActor

@@ -1,6 +1,5 @@
 import SwiftUI
 import os
-import UIKit
 
 @main
 struct FastTrackApp: App {
@@ -103,21 +102,13 @@ struct RootView: View {
     @EnvironmentObject var achievementManager: AchievementManager
     @EnvironmentObject var apiService: APIService
     @EnvironmentObject var screenWake: ScreenWakeControllerObservable
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isInitializing = true
     @State private var selectedTab = 0
     @State private var showingProfileSetup = false
     @State private var tabResetIDs = (0..<4).map { _ in UUID() }
 
     private static let signOutLog = Logger(subsystem: "app.fasttrack", category: "signOut")
-
-    private var scenePhase: ScenePhase {
-        switch UIApplication.shared.applicationState {
-        case .active: return .active
-        case .inactive: return .inactive
-        case .background: return .background
-        @unknown default: return .active
-        }
-    }
 
     var body: some View {
         ZStack {
@@ -160,28 +151,24 @@ struct RootView: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
-            print("🔵🌙 willResignActive, isRecording=\(driveManager.isRecording)")
+        .onChange(of: scenePhase) { _, newPhase in
             screenWake.inner.update(
                 isRecording: driveManager.isRecording,
                 keepScreenOn: settings.keepScreenOn,
-                scenePhase: .inactive
+                scenePhase: newPhase
             )
-            notificationsManager.stopPolling()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            print("🔵🌙 didBecomeActive")
-            screenWake.inner.update(
-                isRecording: driveManager.isRecording,
-                keepScreenOn: settings.keepScreenOn,
-                scenePhase: .active
-            )
-            if authManager.isAuthenticated {
-                notificationsManager.startPolling()
+            switch newPhase {
+            case .active:
+                if authManager.isAuthenticated {
+                    notificationsManager.startPolling()
+                }
+            case .background:
+                notificationsManager.stopPolling()
+            default:
+                break
             }
         }
         .onChange(of: driveManager.isRecording) { _, recording in
-            print("🔵🎬 isRecording onChange: \(recording), appState=\(UIApplication.shared.applicationState.rawValue)")
             screenWake.inner.update(
                 isRecording: recording,
                 keepScreenOn: settings.keepScreenOn,
@@ -189,7 +176,6 @@ struct RootView: View {
             )
         }
         .onChange(of: settings.keepScreenOn) { _, keep in
-            print("🔵💡 keepScreenOn onChange: \(keep)")
             screenWake.inner.update(
                 isRecording: driveManager.isRecording,
                 keepScreenOn: keep,
