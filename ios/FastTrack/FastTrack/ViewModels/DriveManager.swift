@@ -165,6 +165,15 @@ final class DriveManager: ObservableObject {
         }
 
         await refreshAchievementsFromServer()
+
+        // Remove any stale in-flight file so recoverPendingDrives doesn't
+        // re-upload it on the next poll (re-creating the deleted drive).
+        let fm = FileManager.default
+        if let entries = try? fm.contentsOfDirectory(at: .temporaryDirectory, includingPropertiesForKeys: nil) {
+            for url in entries where url.lastPathComponent.hasPrefix("in_flight_drive_") && url.pathExtension == "json" {
+                try? fm.removeItem(at: url)
+            }
+        }
     }
 
     @MainActor
