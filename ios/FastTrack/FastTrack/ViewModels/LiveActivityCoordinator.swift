@@ -9,8 +9,14 @@ final class LiveActivityCoordinator: LiveActivityController {
     private var lastUpdate: Date?
 
     func start(recordingStartTime: Date?) async {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled,
-              let startDate = recordingStartTime else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            Self.log.error("Live Activities not authorized")
+            return
+        }
+        guard let startDate = recordingStartTime else {
+            Self.log.error("start() called with nil recordingStartTime")
+            return
+        }
         lastUpdate = nil
         let attrs = DriveActivityAttributes(startDate: startDate)
         let state = DriveActivityAttributes.DriveActivityState(
@@ -23,6 +29,7 @@ final class LiveActivityCoordinator: LiveActivityController {
             liveActivity = try Activity<DriveActivityAttributes>.request(
                 attributes: attrs, content: content, pushType: nil
             )
+            Self.log.info("Live Activity started for drive at \(startDate, privacy: .public)")
         } catch {
             Self.log.error("Failed to start Live Activity: \(error.localizedDescription, privacy: .public)")
         }
@@ -45,7 +52,11 @@ final class LiveActivityCoordinator: LiveActivityController {
     }
 
     func end(finalState: DriveActivityAttributes.DriveActivityState?, lingerSeconds: TimeInterval) async {
-        guard let activity = liveActivity else { return }
+        guard let activity = liveActivity else {
+            Self.log.error("end() called with no stored live activity — sweeping orphans")
+            await dismissAllOrphans()
+            return
+        }
         lastUpdate = nil
         let final = finalState ?? DriveActivityAttributes.DriveActivityState(
             phase: .ended, speedMph: 0, gForce: 0, distanceMiles: 0, maxSpeedMph: 0, elapsedSeconds: 0
@@ -58,10 +69,21 @@ final class LiveActivityCoordinator: LiveActivityController {
             dismissalPolicy: policy
         )
         liveActivity = nil
+        // Failsafe: end any activity still tracked by the system. If the
+        // stored Activity reference was stale/invalidated the call above is a
+        // no-op and the Live Activity would keep running; this catches it.
+        for remaining in Activity<DriveActivityAttributes>.activities {
+            Self.log.error("Found orphan after explicit end — cleaning up")
+            await remaining.end(nil, dismissalPolicy: .immediate)
+        }
     }
 
     func dismissAllOrphans() async {
-        for activity in Activity<DriveActivityAttributes>.activities {
+        let orphans = Activity<DriveActivityAttributes>.activities
+        if !orphans.isEmpty {
+            Self.log.info("Sweeping \(orphans.count) orphaned Live Activity(s)")
+        }
+        for activity in orphans {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
         liveActivity = nil

@@ -65,7 +65,7 @@ struct ContentView: View {
             .alert("Safety First", isPresented: $showingSafetyDisclaimer) {
                 Button("I Understand — Start Drive") {
                     UserDefaults.standard.set(true, forKey: hasAcceptedSafetyKey)
-                    driveManager.startRecording()
+                    Task { await driveManager.startRecording() }
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
@@ -219,7 +219,7 @@ struct ContentView: View {
                         print("▶️ Start recording button pressed")
                         let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
                         if hasAccepted {
-                            driveManager.startRecording()
+                            Task { await driveManager.startRecording() }
                         } else {
                             showingSafetyDisclaimer = true
                         }

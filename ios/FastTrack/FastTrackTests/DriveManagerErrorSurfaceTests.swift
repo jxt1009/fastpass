@@ -217,7 +217,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     }
 
     @MainActor
-    func testStartRecording_clearsLastError() {
+    func testStartRecording_clearsLastError() async {
         // The next startRecording should clear any stale failure from a
         // previous drive, so the UI doesn't show a banner that no longer
         // applies.
@@ -229,7 +229,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         dm.setLocationManager(locMgr)
         dm.lastError = .serverError(503)  // stale from a prior failure
 
-        dm.startRecording()
+        await dm.startRecording()
 
         XCTAssertNil(dm.lastError, "startRecording must clear any prior lastError")
     }
@@ -249,7 +249,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     // MARK: - A-3: startRecording refuses without Always permission
 
     @MainActor
-    func testStartRecording_refusesWhenHasRecordingPermissionIsFalse() {
+    func testStartRecording_refusesWhenHasRecordingPermissionIsFalse() async {
         let mock = MockDriveAPI()
         let (realAPI, authMgr) = makeManagers(api: mock)
         let dm = DriveManager(authManager: authMgr, profileManager: ProfileManager(apiService: realAPI), settings: AppSettings(apiService: realAPI), apiService: mock, carStatsManager: CarStatsManager(apiService: realAPI), achievementManager: AchievementManager())
@@ -258,7 +258,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         locMgr.authorizationStatus = .notDetermined
         dm.setLocationManager(locMgr)
 
-        dm.startRecording()
+        await dm.startRecording()
 
         guard case .locationPermissionDenied? = dm.lastError else {
             XCTFail("lastError must be .locationPermissionDenied; got \(String(describing: dm.lastError))")
@@ -271,7 +271,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
     }
 
     @MainActor
-    func testStartRecording_refusesWhenAuthorizedWhenInUseOnly() {
+    func testStartRecording_refusesWhenAuthorizedWhenInUseOnly() async {
         // The user previously granted only WhenInUse (the HIG-friendly
         // path); we still require .authorizedAlways to actually record.
         let mock = MockDriveAPI()
@@ -281,7 +281,7 @@ final class DriveManagerErrorSurfaceTests: XCTestCase {
         locMgr.authorizationStatus = .authorizedWhenInUse
         dm.setLocationManager(locMgr)
 
-        dm.startRecording()
+        await dm.startRecording()
 
         guard case .locationPermissionDenied? = dm.lastError else {
             XCTFail("lastError must be .locationPermissionDenied; got \(String(describing: dm.lastError))")

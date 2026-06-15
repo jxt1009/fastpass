@@ -81,12 +81,12 @@ final class DriveManager: ObservableObject {
         drivePoller.$isLoadingDrives
             .assign(to: &$isLoadingDrives)
 
-        // Forward drive stats to the Live Activity while a recording is
-        // active. The coordinator throttles its own updates to 1 Hz, so the
-        // 10 Hz currentDrive publisher from the recording controller is
-        // safe to consume here.
+        // Forward drive stats to the Live Activity while recording.
+        // Throttled at 1 Hz to avoid overwhelming the widget extension;
+        // the coordinator also has its own 1 Hz guard for defense-in-depth.
         recordingController.$currentDrive
             .compactMap { $0 }
+            .throttle(for: .seconds(1), scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] drive in
                 guard let self, self.recordingController.isRecording else { return }
                 Task { [weak self] in
@@ -127,9 +127,9 @@ final class DriveManager: ObservableObject {
 
     // MARK: - Recording control
 
-    func startRecording() {
+    func startRecording() async {
         recordingController.startRecording()
-        Task { await liveActivity.start(recordingStartTime: recordingController.recordingStartTime) }
+        await liveActivity.start(recordingStartTime: recordingController.recordingStartTime)
     }
 
     @MainActor
