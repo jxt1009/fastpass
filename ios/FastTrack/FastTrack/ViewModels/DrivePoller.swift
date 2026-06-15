@@ -32,8 +32,7 @@ class DrivePoller: ObservableObject {
 
     func startPolling() {
         guard pollTimer == nil else { return }
-        fetchDrives()
-        Task { [weak self] in await self?.recoverPendingDrives() }
+        Task { [weak self] in await self?.pollCycle() }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             Task { [weak self] in await self?.pollCycle() }
         }
@@ -80,8 +79,14 @@ class DrivePoller: ObservableObject {
         }
         guard !candidates.isEmpty else { return }
 
-        // Use the current drives list (freshly fetched by pollCycle) for dedup.
-        let existingDrives = self.drives
+        // Fetch current server list for dedup. Don't rely on self.drives which
+        // may be stale between poll cycles (e.g., user deleted a drive server-side).
+        let existingDrives: [Drive]
+        do {
+            existingDrives = try await apiService.fetchDrives()
+        } catch {
+            existingDrives = self.drives
+        }
 
         for url in candidates {
             let data: Data
