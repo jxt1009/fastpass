@@ -102,9 +102,17 @@ struct GarageView: View {
 
     private var recentDrivesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            let recent = driveManager.drives
+            let allDrives = driveManager.drives
+            let recent = allDrives
                 .sorted { $0.startTime > $1.startTime }
                 .prefix(5)
+            #if DEBUG
+            let _ = {
+                let firstId = allDrives.first?.id ?? -1
+                let firstUser = allDrives.first?.userID ?? -1
+                print("🏎️ GarageView: drives.count=\(allDrives.count) first.id=\(firstId) first.userID=\(firstUser)")
+            }()
+            #endif
 
             if !recent.isEmpty {
                 SectionHeader(title: "Recent Drives")
@@ -118,6 +126,9 @@ struct GarageView: View {
                     .swipeActions(edge: .trailing) {
                         if drive.userID == authManager.getUser()?.id {
                             Button(role: .destructive) {
+                                #if DEBUG
+                                print("🔴 swipe delete: drive.id=\(drive.id ?? -1) userID=\(drive.userID) ts=\(drive.startTime)")
+                                #endif
                                 drivePendingDelete = drive
                             } label: {
                                 Label("Delete", systemImage: "trash")
