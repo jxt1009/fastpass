@@ -41,17 +41,23 @@ struct DriveActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.center) {
                     VStack(spacing: 2) {
                         HStack(spacing: 4) {
-                            Image(systemName: "record.circle")
-                                .foregroundColor(.red)
+                            Image(systemName: context.state.phase == .ended ? "checkmark.circle.fill" : "record.circle")
+                                .foregroundColor(context.state.phase == .ended ? .green : .red)
                                 .symbolEffect(.pulse)
-                            Text("FastTrack")
+                            Text(context.state.phase == .ended ? "Drive complete" : "FastTrack")
                                 .font(.caption).fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
                         }
-                        Text(timerInterval: context.attributes.startDate...Date.distantFuture,
-                             countsDown: false)
-                            .font(.headline).fontWeight(.semibold)
-                            .monospacedDigit()
+                        if context.state.phase == .ended {
+                            Text(formatElapsed(context.state.elapsedSeconds))
+                                .font(.headline).fontWeight(.semibold)
+                                .monospacedDigit()
+                        } else {
+                            Text(timerInterval: context.attributes.startDate...Date.distantFuture,
+                                 countsDown: false)
+                                .font(.headline).fontWeight(.semibold)
+                                .monospacedDigit()
+                        }
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -75,23 +81,26 @@ struct DriveActivityWidget: Widget {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
-                        // Stop button — deep-links into the app to stop recording
-                        Link(destination: URL(string: "fasttrack://stop-recording")!) {
-                            Label("Stop", systemImage: "stop.circle.fill")
-                                .font(.caption).fontWeight(.semibold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.red.opacity(0.8), in: Capsule())
+                        // Stop button — deep-links into the app to stop recording.
+                        // Hidden in the ended phase — drive is already over.
+                        if context.state.phase == .recording {
+                            Link(destination: URL(string: "fasttrack://stop-recording")!) {
+                                Label("Stop", systemImage: "stop.circle.fill")
+                                    .font(.caption).fontWeight(.semibold)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.red.opacity(0.8), in: Capsule())
+                            }
                         }
                     }
                     .padding(.top, 4)
                 }
             } compactLeading: {
                 HStack(spacing: 2) {
-                    Image(systemName: "speedometer")
+                    Image(systemName: context.state.phase == .ended ? "checkmark.circle.fill" : "speedometer")
                         .font(.caption2)
-                        .foregroundColor(.yellow)
+                        .foregroundColor(context.state.phase == .ended ? .green : .yellow)
                     Text(String(format: "%.0f", context.state.speedMph))
                         .font(.caption).fontWeight(.semibold)
                         .monospacedDigit()
@@ -102,8 +111,8 @@ struct DriveActivityWidget: Widget {
                     .foregroundColor(.orange)
                     .monospacedDigit()
             } minimal: {
-                Image(systemName: "record.circle")
-                    .foregroundColor(.red)
+                Image(systemName: context.state.phase == .ended ? "checkmark.circle.fill" : "record.circle")
+                    .foregroundColor(context.state.phase == .ended ? .green : .red)
                     .symbolEffect(.pulse)
             }
         }
@@ -140,13 +149,22 @@ private struct LockScreenLiveActivityView: View {
                 .frame(height: 30)
                 .overlay(.white.opacity(0.3))
             VStack(alignment: .leading, spacing: 2) {
-                Text(timerInterval: context.attributes.startDate...Date.distantFuture,
-                     countsDown: false)
-                    .font(.headline).fontWeight(.semibold)
-                    .monospacedDigit()
-                Text("elapsed")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                if context.state.phase == .ended {
+                    Text(formatElapsed(context.state.elapsedSeconds))
+                        .font(.headline).fontWeight(.semibold)
+                        .monospacedDigit()
+                    Text("elapsed")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(timerInterval: context.attributes.startDate...Date.distantFuture,
+                         countsDown: false)
+                        .font(.headline).fontWeight(.semibold)
+                        .monospacedDigit()
+                    Text("elapsed")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -156,30 +174,39 @@ private struct LockScreenLiveActivityView: View {
     // Full lock screen / notification view
     private var lockScreenView: some View {
         VStack(spacing: 10) {
-            // Top row: app name + timer + stop button
             HStack {
                 HStack(spacing: 5) {
-                    Image(systemName: "record.circle")
-                        .foregroundColor(.red)
+                    Image(systemName: context.state.phase == .ended ? "checkmark.circle.fill" : "record.circle")
+                        .foregroundColor(context.state.phase == .ended ? .green : .red)
                         .symbolEffect(.pulse)
-                    Text("FastTrack")
+                    Text(context.state.phase == .ended ? "Drive complete" : "FastTrack")
                         .font(.caption).fontWeight(.semibold)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(timerInterval: context.attributes.startDate...Date.distantFuture,
-                     countsDown: false)
-                    .font(.headline).fontWeight(.bold)
-                    .monospacedDigit()
+                if context.state.phase == .ended {
+                    Text(formatElapsed(context.state.elapsedSeconds))
+                        .font(.headline).fontWeight(.bold)
+                        .monospacedDigit()
+                } else {
+                    Text(timerInterval: context.attributes.startDate...Date.distantFuture,
+                         countsDown: false)
+                        .font(.headline).fontWeight(.bold)
+                        .monospacedDigit()
+                }
                 Spacer()
-                // Deep-link stop button
-                Link(destination: URL(string: "fasttrack://stop-recording")!) {
-                    Label("Stop", systemImage: "stop.circle.fill")
-                        .font(.caption).fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.red.opacity(0.75), in: Capsule())
+                // Deep-link stop button — hidden once the drive has ended.
+                if context.state.phase == .recording {
+                    Link(destination: URL(string: "fasttrack://stop-recording")!) {
+                        Label("Stop", systemImage: "stop.circle.fill")
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.red.opacity(0.75), in: Capsule())
+                    }
+                } else {
+                    Color.clear.frame(width: 1, height: 1)
                 }
             }
 
@@ -211,4 +238,13 @@ private struct LockScreenLiveActivityView: View {
         }
         .frame(maxWidth: .infinity)
     }
+}
+
+// MARK: - Helpers
+
+private func formatElapsed(_ t: TimeInterval) -> String {
+    let h = Int(t) / 3600
+    let m = (Int(t) % 3600) / 60
+    let s = Int(t) % 60
+    return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
 }
