@@ -62,6 +62,17 @@ class DrivePoller: ObservableObject {
             url.lastPathComponent.hasPrefix("in_flight_drive_") &&
             url.pathExtension == "json"
         }
+        guard !candidates.isEmpty else { return }
+
+        // Fetch the current server-side list so we can skip stale files.
+        let serverDrives: [Drive]
+        do {
+            serverDrives = try await apiService.fetchDrives()
+            self.drives = serverDrives
+        } catch {
+            serverDrives = self.drives  // fall back to local cache
+        }
+
         for url in candidates {
             let data: Data
             do {
@@ -77,6 +88,14 @@ class DrivePoller: ObservableObject {
                 try? FileManager.default.removeItem(at: url)
                 continue
             }
+
+            // Dedup: if a drive with this start time and user ID already
+            // exists on the server, the in-flight file is stale.
+            if serverDrives.contains(where: { $0.startTime == drive.startTime && $0.userID == drive.userID }) {
+                try? FileManager.default.removeItem(at: url)
+                continue
+            }
+
             do {
                 let saved = try await apiService.createDrive(drive)
                 self.drives.insert(saved, at: 0)
