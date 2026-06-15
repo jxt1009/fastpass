@@ -243,7 +243,6 @@ struct ContentView: View {
                                 : .default,
                             value: driveManager.isRecording
                         )
-                        .id("pulse-\(scenePhase)")
                 )
                 .sensoryFeedback(.impact(weight: .medium), trigger: driveManager.isRecording) { oldValue, newValue in
                     newValue
