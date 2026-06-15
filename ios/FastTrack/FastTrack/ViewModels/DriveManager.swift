@@ -134,7 +134,6 @@ final class DriveManager: ObservableObject {
 
     @MainActor
     func deleteDrive(id: Int) async throws {
-        // Capture the drive before deleting for stale-file tracking.
         let deletedDrive = drives.first(where: { $0.id == id })
 
         do {
@@ -149,6 +148,12 @@ final class DriveManager: ObservableObject {
 
         if let drive = deletedDrive {
             drivePoller.noteDriveDeleted(userID: drive.userID, startTime: drive.startTime)
+        }
+
+        // Force a fresh server fetch immediately so the display list reflects
+        // the post-delete state regardless of any in-flight stale fetches.
+        if let fresh = try? await apiService.fetchDrives() {
+            drivePoller.drives = fresh
         }
 
         await refreshAchievementsFromServer()
