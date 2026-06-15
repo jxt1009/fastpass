@@ -51,8 +51,17 @@ final class LiveActivityCoordinationTests: XCTestCase {
         dm.recordingLocations = [CLLocation(latitude: 37.0, longitude: -122.0)]
         dm.recordingController.currentDrive = Drive.example
         await dm.stopRecording()
-        // Phase assertion is added in Task 4 once `phase` is on ContentState.
-        XCTAssertNotNil(mock.lastEndedWithFinalState)
+        XCTAssertEqual(mock.lastEndedWithFinalState?.phase, .ended)
+    }
+
+    func test_recordingUpdates_pushedToLiveActivity() async {
+        let mock = MockLiveActivity()
+        let dm = DriveManager.forTesting(apiService: APIService(), liveActivity: mock)
+        dm.recordingController.isRecording = true
+        dm.recordingController.currentDrive = Drive.example
+        // Allow the unstructured Task inside the sink to run.
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertTrue(mock.calls.contains(.init(kind: .update)))
     }
 
     // Backward-compat: an in-flight Live Activity payload from an older app
