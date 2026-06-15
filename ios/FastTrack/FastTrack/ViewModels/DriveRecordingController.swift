@@ -148,8 +148,7 @@ class DriveRecordingController: ObservableObject {
         // must include every sample regardless of the 10 Hz UI-throttle.
         manager.onRawSpeedSample = { [weak self] sample in
             guard let self else { return }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.isRecording else { return }
+            DispatchQueue.main.async {
                 self.speedStream.append((
                     sample.timestamp.timeIntervalSince1970,
                     sample.speed,
@@ -388,7 +387,6 @@ class DriveRecordingController: ObservableObject {
         speedReadings.append(sample.speed)
         runningSpeedStats.ingest(sample.speed)
         stoppedTimeTracker.ingest(sample)
-        speedStream.append((sample.timestamp.timeIntervalSince1970, sample.speed, sample.isZeroLocked, sample.stationaryConfidence))
         lastSeenGpsAccuracy = sample.speedAccuracy
 
         if sample.speed > currentMaxSpeed {
