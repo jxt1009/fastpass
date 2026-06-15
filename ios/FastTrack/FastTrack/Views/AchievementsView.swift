@@ -51,9 +51,9 @@ struct AchievementsView: View {
                         }
                         .padding()
                     }
-                    .background(Color.ftSurfaceBg.ignoresSafeArea())
                 }
             }
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle("Achievements")
             .navigationBarTitleDisplayMode(.inline)
             .accentColor(.ftBlue)

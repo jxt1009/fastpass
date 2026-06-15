@@ -48,7 +48,7 @@ struct FindPeopleView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(Color.ftSurfaceBg.ignoresSafeArea())
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .navigationTitle("Find People")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search by username or name")

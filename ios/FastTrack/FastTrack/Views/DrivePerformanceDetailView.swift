@@ -104,6 +104,7 @@ struct DrivePerformanceDetailView: View {
                 }
                 .padding()
             }
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle("Performance Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

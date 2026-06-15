@@ -66,7 +66,7 @@ struct PublicCarDetailView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(Color.ftSurfaceBg.ignoresSafeArea())
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .navigationTitle(titleText)
         .navigationBarTitleDisplayMode(.inline)
     }

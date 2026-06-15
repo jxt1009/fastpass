@@ -100,7 +100,7 @@ struct CarDetailView: View {
                 )
             }
         }
-        .background(Color.ftSurfaceBg.ignoresSafeArea())
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .navigationTitle(car.map { $0.nickname.isEmpty ? $0.shortDisplay : $0.nickname } ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -32,7 +32,9 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.ftSurfaceBg.ignoresSafeArea()
+                Rectangle()
+                    .fill(Color.ftBgGradient)
+                    .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader

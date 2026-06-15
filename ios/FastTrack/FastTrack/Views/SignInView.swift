@@ -87,7 +87,7 @@ struct SignInView: View {
             .font(.caption2)
             .padding(.bottom, 24)
         }
-        .background(Color.ftSurfaceBg.ignoresSafeArea())
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .onAppear {
             googleSignInManager.authManager = authManager
             appleSignInManager.authManager  = authManager

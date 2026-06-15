@@ -25,6 +25,7 @@ struct DriveHistoryView: View {
                                 .listRowBackground(Color.ftSurfaceBg)
                         }
                     }
+                    .scrollContentBackground(.hidden)
                 } else if driveManager.drives.isEmpty {
                     ContentUnavailableView(
                         "No Drives Yet",
@@ -61,10 +62,12 @@ struct DriveHistoryView: View {
                             }
                         }
                     }
+                    .scrollContentBackground(.hidden)
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
                     .refreshable { driveManager.fetchDrives() }
                 }
             }
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle("Drive History")
             .navigationBarTitleDisplayMode(.large)
             .onAppear { driveManager.fetchDrives() }

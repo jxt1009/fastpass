@@ -176,7 +176,7 @@ struct GarageView: View {
                 }
                 .padding()
             }
-            .background(Color.ftSurfaceBg.ignoresSafeArea())
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .onAppear { driveManager.fetchDrives() }
             .navigationTitle("Your Garage")
             .navigationBarTitleDisplayMode(.inline)
