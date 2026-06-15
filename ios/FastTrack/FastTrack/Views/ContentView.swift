@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import Combine
+import Charts
 
 struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -133,13 +134,15 @@ struct ContentView: View {
     // MARK: - Gauge Strip
 
     private func gaugeStrip(drive: Drive) -> some View {
-        HStack(spacing: Spacing.sm) {
+        let recentDrives = Array(driveManager.drives.prefix(10))
+        return HStack(spacing: Spacing.sm) {
             TrackMetricCard(
                 title: "MAX",
                 value: String(format: "%.0f", settings.speedValue(drive.maxSpeed)),
                 unit: settings.speedUnit,
                 color: recordingAccent,
-                progress: normalizedSpeedProgress(drive.maxSpeed)
+                progress: normalizedSpeedProgress(drive.maxSpeed),
+                sparklineData: recentDrives.compactMap { $0.maxSpeed > 0 ? settings.speedValue($0.maxSpeed) : nil }
             )
 
             TrackMetricCard(
@@ -147,7 +150,8 @@ struct ContentView: View {
                 value: String(format: "%.0f", settings.speedValue(drive.avgSpeed)),
                 unit: settings.speedUnit,
                 color: .ftBlue,
-                progress: normalizedSpeedProgress(drive.avgSpeed)
+                progress: normalizedSpeedProgress(drive.avgSpeed),
+                sparklineData: recentDrives.compactMap { $0.avgSpeed > 0 ? settings.speedValue($0.avgSpeed) : nil }
             )
 
             TimelineView(.periodic(from: driveManager.recordingStartTime ?? .now, by: 1)) { ctx in
@@ -350,6 +354,7 @@ private struct TrackMetricCard: View {
     let unit: String
     let color: Color
     let progress: Double
+    var sparklineData: [Double] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -369,17 +374,19 @@ private struct TrackMetricCard: View {
                 .font(FTFont.pill).minimumScaleFactor(0.7)
                 .foregroundColor(.secondary)
 
-            GeometryReader { proxy in
-                RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
-                    .fill(color.opacity(0.22))
-                    .overlay(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
-                            .fill(color)
-                            .frame(width: proxy.size.width * min(1, max(0, progress)))
-                            .animation(.easeInOut(duration: 0.2), value: progress)
+            if sparklineData.count >= 3 {
+                Chart {
+                    ForEach(Array(sparklineData.enumerated()), id: \.offset) { i, v in
+                        LineMark(x: .value("i", i), y: .value("v", v))
                     }
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .foregroundStyle(color.opacity(0.70))
+                .frame(height: 14)
             }
-            .frame(height: 4)
+
+            GradientProgressBar(value: progress, range: 0...max(1, 0.001), size: .compact)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 9)
