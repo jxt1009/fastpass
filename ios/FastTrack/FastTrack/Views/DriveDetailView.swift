@@ -338,7 +338,30 @@ private func parseRouteDataFromString(_ routeData: String) -> RouteParseResult {
         }
         let rawCoords = rawPoints.map { (lat: $0.lat, lng: $0.lng) }
         return RouteParseResult(rawCoordinates: rawCoords, rawPoints: rawPoints, rawEvents: rawEvents)
-    } else if let v1 = json as? [[String: Double]] {
+    }
+
+    if let dict = json as? [String: Any], (dict["v"] as? Int) == 3 {
+        var rawPoints: [(lat: Double, lng: Double, speed: Double, ts: Double)] = []
+        if let pts = dict["points"] as? [[String: Double]] {
+            rawPoints = pts.compactMap { d in
+                guard let lat = d["lat"], let lng = d["lng"] else { return nil }
+                return (lat: lat, lng: lng, speed: d["speed"] ?? 0, ts: d["ts"] ?? 0)
+            }
+        }
+        var rawEvents: [(type: String, lat: Double, lng: Double, ts: Double)] = []
+        if let evts = dict["events"] as? [[String: Any]] {
+            rawEvents = evts.compactMap { d in
+                guard let typeStr = d["type"] as? String,
+                      let lat = d["lat"] as? Double,
+                      let lng = d["lng"] as? Double else { return nil }
+                return (type: typeStr, lat: lat, lng: lng, ts: d["ts"] as? Double ?? 0)
+            }
+        }
+        let rawCoords = rawPoints.map { (lat: $0.lat, lng: $0.lng) }
+        return RouteParseResult(rawCoordinates: rawCoords, rawPoints: rawPoints, rawEvents: rawEvents)
+    }
+
+    if let v1 = json as? [[String: Double]] {
         let rawCoords = v1.compactMap { d -> (lat: Double, lng: Double)? in
             guard let lat = d["lat"], let lng = d["lng"] else { return nil }
             return (lat: lat, lng: lng)
