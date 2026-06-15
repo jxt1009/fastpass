@@ -62,6 +62,14 @@ class DrivePoller: ObservableObject {
 
     private var isRecovering = false
 
+    /// Keys of recently-deleted drives, so recoverPendingDrives can distinguish
+    /// "never uploaded" (retry) from "user deleted" (stale file to discard).
+    private var recentlyDeletedDriveKeys: Set<String> = []
+
+    func noteDriveDeleted(userID: Int, startTime: Date) {
+        recentlyDeletedDriveKeys.insert("\(userID):\(startTime.timeIntervalSince1970)")
+    }
+
     func stopPolling() {
         pollTimer?.invalidate()
         pollTimer = nil
@@ -115,9 +123,18 @@ class DrivePoller: ObservableObject {
                 continue
             }
 
+            let driveKey = "\(drive.userID):\(drive.startTime.timeIntervalSince1970)"
+
             // Dedup: if a drive with this start time and user ID already
-            // exists, the in-flight file is stale.
+            // exists on the server, the in-flight file is stale.
             if existingDrives.contains(where: { $0.startTime == drive.startTime && $0.userID == drive.userID }) {
+                try? FileManager.default.removeItem(at: url)
+                continue
+            }
+
+            // Skip files for drives the user explicitly deleted since the
+            // last recovery pass. They don't want these back.
+            if recentlyDeletedDriveKeys.contains(driveKey) {
                 try? FileManager.default.removeItem(at: url)
                 continue
             }

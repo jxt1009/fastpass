@@ -134,10 +134,8 @@ final class DriveManager: ObservableObject {
 
     @MainActor
     func deleteDrive(id: Int) async throws {
+        // Capture the drive before deleting for stale-file tracking.
         let deletedDrive = drives.first(where: { $0.id == id })
-        #if DEBUG
-        print("🗑️ DriveManager.delete(\(id)): before=\(drives.count) ids=\(drives.map { $0.id ?? -1 })")
-        #endif
 
         do {
             try await apiService.deleteDrive(id: id)
@@ -148,32 +146,12 @@ final class DriveManager: ObservableObject {
 
         drives.removeAll { $0.id == id }
         carStatsManager.rebuildStats(from: drives)
-        #if DEBUG
-        print("   after remove=\(drives.count) ids=\(drives.map { $0.id ?? -1 })")
-        #endif
 
         if let drive = deletedDrive {
             drivePoller.noteDriveDeleted(userID: drive.userID, startTime: drive.startTime)
         }
 
-        if let fresh = try? await apiService.fetchDrives() {
-            drivePoller.drives = fresh
-            drives = fresh  // also set directly in case .assign hasn't propagated
-            #if DEBUG
-            print("   after fresh fetch=\(fresh.count) ids=\(fresh.map { $0.id ?? -1 })")
-            #endif
-        }
-
         await refreshAchievementsFromServer()
-
-        // Remove any stale in-flight file so recoverPendingDrives doesn't
-        // re-upload it on the next poll (re-creating the deleted drive).
-        let fm = FileManager.default
-        if let entries = try? fm.contentsOfDirectory(at: .temporaryDirectory, includingPropertiesForKeys: nil) {
-            for url in entries where url.lastPathComponent.hasPrefix("in_flight_drive_") && url.pathExtension == "json" {
-                try? fm.removeItem(at: url)
-            }
-        }
     }
 
     @MainActor
