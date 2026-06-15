@@ -217,7 +217,7 @@ struct AchievementCard: View {
             .padding()
             .frame(height: 140)
             .opacity(achievement.isUnlocked ? 1.0 : 0.65)
-            .background(Color.ftCardBg)
+            .background(Color.ftGlassCardFill)
             .cornerRadius(Radius.lg)
         }
         .buttonStyle(PlainButtonStyle())

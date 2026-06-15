@@ -9,10 +9,16 @@ struct DriveHistoryView: View {
 
     /// Yellow wins over red: a 0-60 PB is rarer, so when both PBs are
     /// held by the same drive, the yellow tint takes precedence.
-    private func rowTint(isPB060: Bool, isPBTopSpeed: Bool) -> Color {
-        if isPB060        { return Color.ftPB060Tint.opacity(0.15) }
-        if isPBTopSpeed   { return Color.ftPBTopSpeedTint.opacity(0.10) }
-        return Color.ftSurfaceBg
+    @ViewBuilder
+    private func rowBackground(isPB060: Bool, isPBTopSpeed: Bool) -> some View {
+        ZStack {
+            Color.ftGlassCardFill
+            if isPB060 {
+                Color.ftPB060Tint.opacity(0.06)
+            } else if isPBTopSpeed {
+                Color.ftPBTopSpeedTint.opacity(0.06)
+            }
+        }
     }
 
     var body: some View {
@@ -49,7 +55,7 @@ struct DriveHistoryView: View {
                                     isPersonalBestTopSpeed: isPBTopSpeed
                                 )
                             }
-                            .listRowBackground(rowTint(isPB060: isPB060, isPBTopSpeed: isPBTopSpeed))
+                            .listRowBackground(rowBackground(isPB060: isPB060, isPBTopSpeed: isPBTopSpeed))
                             .swipeActions(edge: .trailing) {
                                 if drive.userID == authManager.getUser()?.id {
                             Button(role: .destructive) {

@@ -105,7 +105,7 @@ struct ContentView: View {
                         .padding(.vertical, 3)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.ftCardBg.opacity(0.92))
+                                .fill(Color.ftGlassCardFill)
                         )
                 }
             }
@@ -129,7 +129,7 @@ struct ContentView: View {
             .padding(.vertical, 6)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color.ftCardBg.opacity(0.9))
+                    .fill(Color.ftGlassCardFill)
             )
         }
     }
@@ -198,7 +198,7 @@ struct ContentView: View {
                 .disabled(driveManager.isRecording)
                 .opacity(driveManager.isRecording ? 0.5 : 1)
                 .frame(maxWidth: .infinity)
-                .background(Color.ftCardBg)
+                .background(Color.ftGlassCardFill)
                 .cornerRadius(Radius.lg)
             }
 

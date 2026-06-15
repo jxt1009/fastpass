@@ -19,16 +19,6 @@ extension Color {
             : UIColor.systemGroupedBackground
     })
 
-    @available(*, deprecated, message: "Use ftGlassCardFill + ftGlassCardStroke for glass-style cards. Do not do a mechanical rename — these are not equivalent.")
-    static let ftCardBg = Color(red: 0.071, green: 0.071, blue: 0.086)
-
-    @available(*, deprecated, message: "Migrate to ftGlassCardFill + ftGlassCardStroke")
-    static let ftSectionBg = Color(UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1)
-            : UIColor.systemBackground
-    })
-
     static let ftGlassSurface = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? UIColor(white: 1, alpha: 0.06)
@@ -47,7 +37,7 @@ extension Color {
             : UIColor(white: 1, alpha: 0.42)
     })
 
-    static let ftShimmer = Color(white: 1, opacity: 0.35)
+    static let ftShimmer = Color.white.opacity(0.12)
     static let ftScrim = Color.black.opacity(0.45)
     static let ftRankGold = Color.ftGold
     static let ftRankSilver = Color(red: 192/255, green: 192/255, blue: 192/255)

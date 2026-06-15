@@ -378,7 +378,7 @@ struct GarageCarCard: View, Equatable {
         }
         .background(
             RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .fill(Color.ftCardBg)
+                .fill(Color.ftGlassCardFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)

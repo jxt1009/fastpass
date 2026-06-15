@@ -59,7 +59,7 @@ struct PublicProfileView: View {
                 narrowHeader(profile)
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-            .listRowBackground(Color.ftCardBg)
+            .listRowBackground(Color.ftGlassCardFill)
 
             // Stats (Top Speed, Best 0-60, Total Distance)
             Section("Stats") {
@@ -72,7 +72,7 @@ struct PublicProfileView: View {
                     )
                 }
             }
-            .listRowBackground(Color.ftCardBg)
+            .listRowBackground(Color.ftGlassCardFill)
 
             // Garage (per the redesign, read-only with photos + short stats).
             // Each card is wrapped in a NavigationLink with .buttonStyle(.plain)
@@ -102,7 +102,7 @@ struct PublicProfileView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .listRowBackground(Color.ftCardBg)
+                .listRowBackground(Color.ftGlassCardFill)
             }
         }
         .listStyle(.insetGrouped)

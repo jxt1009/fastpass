@@ -40,22 +40,34 @@ struct BadgePill: View {
         .padding(.horizontal, paddingH)
         .padding(.vertical, paddingV)
         .background(Capsule().fill(background))
+        .overlay(strokeOverlay)
     }
 
     private var foreground: Color {
         switch style {
-        case .you, .selected, .pbTopSpeed, .carChip, .count: return .white
+        case .you, .selected, .carChip: return .ftBlue
+        case .pbTopSpeed, .count: return .white
         case .pb060: return .black
         }
     }
 
     private var background: Color {
         switch style {
-        case .you, .selected: return .ftBlue
+        case .you, .selected: return .ftBlue.opacity(0.15)
         case .pb060: return .yellow
         case .pbTopSpeed: return .red
-        case .carChip: return .ftBlue.opacity(0.8)
+        case .carChip: return .ftBlue.opacity(0.15)
         case .count: return .red
+        }
+    }
+
+    @ViewBuilder
+    private var strokeOverlay: some View {
+        switch style {
+        case .you, .selected, .carChip:
+            Capsule().stroke(Color.ftBlue.opacity(0.30), lineWidth: 1)
+        default:
+            EmptyView()
         }
     }
 
