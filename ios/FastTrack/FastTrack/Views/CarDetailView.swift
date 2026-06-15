@@ -42,6 +42,7 @@ struct CarDetailView: View {
     @State private var showingDrivingStyleGuide = false
     @State private var lastPresentedConfettiToken: String?
     @State private var drivePendingDelete: Drive?
+    @State private var showingDeleteConfirmation = false
     @State private var deleteError: String?
 
     /// Snapshot of the data the view is rendering. Rebuilt whenever
@@ -149,17 +150,17 @@ struct CarDetailView: View {
                     driveManager: driveManager,
                     settings: settings,
                     car: car,
-                    onDeleteDrive: { drive in drivePendingDelete = drive }
+                    onDeleteDrive: { drive in
+                        drivePendingDelete = drive
+                        showingDeleteConfirmation = true
+                    }
                 )
                 Spacer(minLength: 16)
             }
             .padding(.horizontal)
             .padding(.bottom, 32)
         }
-        .alert("Delete Drive?", isPresented: Binding(
-            get: { drivePendingDelete != nil },
-            set: { if !$0 { drivePendingDelete = nil } }
-        )) {
+        .alert("Delete Drive?", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { drivePendingDelete = nil }
             Button("Delete", role: .destructive) {
                 Task { await performDelete() }

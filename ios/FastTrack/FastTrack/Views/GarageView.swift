@@ -21,6 +21,7 @@ struct GarageView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var showingAddCar = false
     @State private var drivePendingDelete: Drive?
+    @State private var showingDeleteConfirmation = false
     @State private var deleteError: String?
 
     private var cars: [UserCar] {
@@ -130,6 +131,7 @@ struct GarageView: View {
                                 print("🔴 swipe delete: drive.id=\(drive.id ?? -1) userID=\(drive.userID) ts=\(drive.startTime)")
                                 #endif
                                 drivePendingDelete = drive
+                                showingDeleteConfirmation = true
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -193,10 +195,7 @@ struct GarageView: View {
             .sheet(isPresented: $showingAddCar) {
                 AddCarView()
             }
-            .alert("Delete Drive?", isPresented: Binding(
-                get: { drivePendingDelete != nil },
-                set: { if !$0 { drivePendingDelete = nil } }
-            )) {
+            .alert("Delete Drive?", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { drivePendingDelete = nil }
                 Button("Delete", role: .destructive) {
                     Task { await performDelete() }
