@@ -19,12 +19,10 @@ extension Color {
             : UIColor.systemGroupedBackground
     })
 
-    static let ftCardBg = Color(UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 18/255, green: 18/255, blue: 22/255, alpha: 1)
-            : UIColor.secondarySystemGroupedBackground
-    })
+    @available(*, deprecated, message: "Use ftGlassCardFill + ftGlassCardStroke for glass-style cards. Do not do a mechanical rename — these are not equivalent.")
+    static let ftCardBg = Color(red: 0.071, green: 0.071, blue: 0.086)
 
+    @available(*, deprecated, message: "Migrate to ftGlassCardFill + ftGlassCardStroke")
     static let ftSectionBg = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1)
@@ -60,6 +58,55 @@ extension Color {
     static let ftPB060Tint = Color.yellow
     static let ftPBTopSpeedTint = Color.red
     static let ftErrorBackground = Color.red.opacity(0.6)
+
+    // ── Background gradients ─────────────────────────────────
+
+    /// Default screen background — deep navy → near-black radial gradient.
+    static var ftBgGradient: some ShapeStyle {
+        RadialGradient(
+            colors: [Color(red: 0.10, green: 0.10, blue: 0.23), Color(red: 0.027, green: 0.027, blue: 0.043)],
+            center: .topLeading,
+            startRadius: 0,
+            endRadius: 500
+        )
+    }
+
+    /// Recording-active screen background — warm dark radial gradient.
+    static var ftBgGradientWarm: some ShapeStyle {
+        RadialGradient(
+            colors: [Color(red: 0.12, green: 0.04, blue: 0.0), Color(red: 0.027, green: 0.027, blue: 0.043)],
+            center: .top,
+            startRadius: 0,
+            endRadius: 500
+        )
+    }
+
+    // ── Glass card tokens ────────────────────────────────────
+
+    /// Glass card fill — white at ~7% opacity. Use with `ftGlassCardStroke` border.
+    static let ftGlassCardFill = Color.white.opacity(0.07)
+    /// Glass card border stroke — white at ~12% opacity.
+    static let ftGlassCardStroke = Color.white.opacity(0.12)
+}
+
+// ─── Status Level ───────────────────────────────────────────
+
+enum StatusLevel {
+    case best       // ftGold  — PB, #1 rank
+    case improving  // ftGreen — improving, above average, GPS excellent
+    case nearBest   // ftAmber — near best, active, GPS good
+    case typical    // ftBlue  — normal, info, GPS fair
+    case inactive   //          — idle, locked, GPS poor
+
+    var color: Color {
+        switch self {
+        case .best:      return .ftGold
+        case .improving: return .ftGreen
+        case .nearBest:  return .ftAmber
+        case .typical:   return .ftBlue
+        case .inactive:  return Color(white: 0.33)
+        }
+    }
 }
 
 // ─── Spacing ───────────────────────────────────────────────
