@@ -112,13 +112,13 @@ class DrivePoller: ObservableObject {
         }
         guard !candidates.isEmpty else { return }
 
-        // Fetch current server list for dedup. Don't rely on self.drives which
-        // may be stale between poll cycles (e.g., user deleted a drive server-side).
-        let existingDrives: [Drive]
+        // Fetch the current server-side list so we can skip stale files.
+        let serverDrives: [Drive]
         do {
-            existingDrives = try await apiService.fetchDrives()
+            serverDrives = try await apiService.fetchDrives()
+            self.drives = serverDrives
         } catch {
-            existingDrives = self.drives
+            serverDrives = self.drives  // fall back to local cache
         }
 
         for url in candidates {
@@ -137,18 +137,9 @@ class DrivePoller: ObservableObject {
                 continue
             }
 
-            let driveKey = "\(drive.userID):\(drive.startTime.timeIntervalSince1970)"
-
             // Dedup: if a drive with this start time and user ID already
             // exists on the server, the in-flight file is stale.
-            if existingDrives.contains(where: { $0.startTime == drive.startTime && $0.userID == drive.userID }) {
-                try? FileManager.default.removeItem(at: url)
-                continue
-            }
-
-            // Skip files for drives the user explicitly deleted since the
-            // last recovery pass. They don't want these back.
-            if recentlyDeletedDriveKeys.contains(driveKey) {
+            if serverDrives.contains(where: { $0.startTime == drive.startTime && $0.userID == drive.userID }) {
                 try? FileManager.default.removeItem(at: url)
                 continue
             }
