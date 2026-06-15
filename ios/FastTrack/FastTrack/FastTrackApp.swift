@@ -1,5 +1,6 @@
 import SwiftUI
 import os
+import UIKit
 
 @main
 struct FastTrackApp: App {
@@ -123,6 +124,13 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.4), value: isInitializing)
         .preferredColorScheme(settings.preferredColorScheme.colorScheme)
         .task {
+            // Crash breadcrumb: if the app was killed during a background
+            // transition, the marker will still be set on next launch.
+            if let state = UserDefaults.standard.string(forKey: "crash_bg_state") {
+                print("🔴 CRASH DIAG: last bg handler reached: '\(state)'")
+                UserDefaults.standard.removeObject(forKey: "crash_bg_state")
+            }
+            UserDefaults.standard.removeObject(forKey: "crash_bg_state")
             if authManager.isAuthenticated {
                 do {
                     try await authManager.refreshTokenIfNeeded()
@@ -152,11 +160,15 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
+            UserDefaults.standard.set("enter_\(newPhase)", forKey: "crash_bg_state")
+            UserDefaults.standard.synchronize()
             screenWake.inner.update(
                 isRecording: driveManager.isRecording,
                 keepScreenOn: settings.keepScreenOn,
                 scenePhase: newPhase
             )
+            UserDefaults.standard.set("screenWake_\(newPhase)", forKey: "crash_bg_state")
+            UserDefaults.standard.synchronize()
             switch newPhase {
             case .active:
                 if authManager.isAuthenticated {
@@ -167,6 +179,8 @@ struct RootView: View {
             default:
                 break
             }
+            UserDefaults.standard.set("done_\(newPhase)", forKey: "crash_bg_state")
+            UserDefaults.standard.synchronize()
         }
         .onChange(of: driveManager.isRecording) { _, recording in
             screenWake.inner.update(
