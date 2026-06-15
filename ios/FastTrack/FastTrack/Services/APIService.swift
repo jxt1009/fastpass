@@ -94,13 +94,18 @@ class APIService: ObservableObject {
 
     func delete(endpoint: String) async throws {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else { throw APIError.invalidURL }
+        print("[delete] URL: \(url.absoluteString)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (_, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        print("[delete] Status: \(http.statusCode)")
+        if let body = String(data: data, encoding: .utf8) {
+            print("[delete] Body: \(body)")
+        }
         guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
     }
 
@@ -168,7 +173,16 @@ class APIService: ObservableObject {
     }
 
     private func performFetchDrives() async throws -> [Drive] {
-        return try await get(endpoint: "/drives")
+        // Cache-bust: add a time-based query param to avoid stale URLCache responses
+        let drives: [Drive] = try await get(endpoint: "/drives?t=\(Int(Date().timeIntervalSince1970))")
+        #if DEBUG
+        if let first = drives.first {
+            print("📡 fetchDrives: first drive id=\(first.id ?? -1), userID=\(first.userID), maxSpeed=\(first.maxSpeed)")
+        } else {
+            print("📡 fetchDrives: empty list")
+        }
+        #endif
+        return drives
     }
 
     func fetchDrive(id: Int) async throws -> Drive {
