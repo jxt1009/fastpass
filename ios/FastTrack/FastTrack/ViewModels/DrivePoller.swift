@@ -69,6 +69,7 @@ class DrivePoller: ObservableObject {
     func noteDriveDeleted(userID: Int, startTime: Date) {
         let key = "\(userID):\(startTime.timeIntervalSince1970)"
         recentlyDeletedDriveKeys.insert(key)
+        invalidateStaleFetches()
 
         // Also delete the physical file immediately so it can't persist
         // across app restarts when the in-memory set is lost.
