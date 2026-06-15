@@ -37,6 +37,13 @@ class LocationManager: NSObject, ObservableObject {
     /// Latest GPS course (degrees clockwise from true north). -1 = unavailable.
     private var currentCourse: Double = -1
 
+    // IMU-attitude course estimation: tracks yaw changes at 100 Hz and applies
+    // them to the last-known GPS course, so the IMU projection stays accurate
+    // during turns between GPS course updates.
+    private var courseAtLastGPS: Double = -1
+    private var yawAtLastGPSRad: Double = 0
+    private var gpsUpdatePending: Bool = false
+
     /// Weak reference to DriveManager so heading processing can be triggered
     /// from the GPS callback path. Set externally during wiring.
     weak var driveManager: DriveManager?
@@ -182,7 +189,24 @@ class LocationManager: NSObject, ObservableObject {
     private func handleMotionUpdate(_ motion: CMDeviceMotion) {
         let dt = Self.imuUpdateInterval
         let timestamp = measurementDate(forMotionTimestamp: motion.timestamp)
-        let course = currentCourse
+        let currentYaw = motion.attitude.yaw
+
+        // If GPS just updated, capture the IMU yaw at that moment on the IMU
+        // queue to build a drift-free course estimate between GPS fixes.
+        if gpsUpdatePending, courseAtLastGPS >= 0 {
+            yawAtLastGPSRad = currentYaw
+            gpsUpdatePending = false
+        }
+
+        // Blend GPS course with IMU yaw-delta for high-rate heading during turns.
+        let course: Double
+        if courseAtLastGPS >= 0 {
+            let yawDelta = currentYaw - yawAtLastGPSRad
+            course = courseAtLastGPS + yawDelta * 180.0 / .pi
+        } else {
+            course = currentCourse
+        }
+
         let rawGps = rawGPSSpeed
         fusion.updateCourse(course)
 
@@ -242,6 +266,10 @@ extension LocationManager: CLLocationManagerDelegate {
         
         currentLocation = location
         currentCourse = location.course  // -1 if invalid
+        if location.course >= 0 {
+            courseAtLastGPS = location.course
+            gpsUpdatePending = true
+        }
 
         guard location.speed >= 0 else {
             #if DEBUG
