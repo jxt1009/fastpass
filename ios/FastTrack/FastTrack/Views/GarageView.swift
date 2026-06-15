@@ -220,9 +220,21 @@ struct GarageView: View {
 
     @MainActor
     private func performDelete() async {
-        guard let drive = drivePendingDelete, let id = drive.id else { return }
+        guard let drive = drivePendingDelete, let id = drive.id else {
+            #if DEBUG
+            print("⚠️ GarageView.delete: no drive or id (id=\(drivePendingDelete?.id ?? -1))")
+            #endif
+            drivePendingDelete = nil
+            return
+        }
+        #if DEBUG
+        print("🗑️ GarageView.delete: drive=\(id), count before=\(driveManager.drives.count)")
+        #endif
         do {
             try await driveManager.deleteDrive(id: id)
+            #if DEBUG
+            print("✅ GarageView.delete: success, count after=\(driveManager.drives.count)")
+            #endif
             drivePendingDelete = nil
             ToastManager.shared.show(ToastMessage(
                 text: "Drive deleted",
@@ -231,6 +243,9 @@ struct GarageView: View {
                 Task { await driveManager.restoreDrive(drive) }
             })
         } catch {
+            #if DEBUG
+            print("❌ GarageView.delete: error=\(error)")
+            #endif
             deleteError = error.diagnosticDescription
             drivePendingDelete = nil
         }
