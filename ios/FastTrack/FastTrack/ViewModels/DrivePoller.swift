@@ -9,6 +9,8 @@ class DrivePoller: ObservableObject {
     private var pollTimer: Timer?
     private let apiService: DriveAPI
     private let carStatsManager: CarStatsManager
+    private var fetchVersion = 0  // incremented on mutate (delete); in-flight fetches
+                                    // check this before applying their result
 
     init(
         apiService: DriveAPI,
@@ -19,15 +21,24 @@ class DrivePoller: ObservableObject {
     }
 
     func fetchDrives() {
+        let versionAtStart = fetchVersion
         Task {
             do {
                 let fetched = try await apiService.fetchDrives()
+                guard self.fetchVersion == versionAtStart else { return }
                 self.drives = fetched
                 self.isLoadingDrives = false
             } catch {
                 self.isLoadingDrives = false
             }
         }
+    }
+
+    /// Called after a local mutation (delete) that would make an in-flight
+    /// fetch result stale. The fetch version gate prevents stale data from
+    /// overwriting the post-mutation state.
+    func invalidateStaleFetches() {
+        fetchVersion &+= 1
     }
 
     func startPolling() {
@@ -58,6 +69,7 @@ class DrivePoller: ObservableObject {
     func noteDriveDeleted(userID: Int, startTime: Date) {
         let key = "\(userID):\(startTime.timeIntervalSince1970)"
         recentlyDeletedDriveKeys.insert(key)
+        invalidateStaleFetches()
 
         // Also delete the physical file immediately so it can't persist
         // across app restarts when the in-memory set is lost.
