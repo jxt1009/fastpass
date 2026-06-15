@@ -276,6 +276,12 @@ final class DriveManager: ObservableObject {
         userAchievements = []
         achievementsCatalog = []
     }
+
+    /// Sweep any Live Activities left over from a previous app session.
+    /// Called once at launch; safe to no-op when nothing is currently recording.
+    func discardOrphanLiveActivities() async {
+        await liveActivity.dismissAllOrphans()
+    }
 }
 
 extension DriveManager {
