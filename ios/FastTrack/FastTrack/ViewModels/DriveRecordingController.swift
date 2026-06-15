@@ -304,6 +304,7 @@ class DriveRecordingController: ObservableObject {
         drive.peakGForce = peakGForce; drive.topCornerSpeed = topCornerSpeed
 
         let inFlightURL = inFlightTempFileURL(for: drive)
+        await RecordingActor.shared.reset()
 
         var bgTaskID = UIBackgroundTaskIdentifier.invalid
         bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "DriveUpload") {
@@ -317,13 +318,15 @@ class DriveRecordingController: ObservableObject {
 
         do {
             let saved = try await apiService.createDrive(drive)
-            await RecordingActor.shared.reset()
             currentDrive = nil
             recordingStartTime = nil
             attempts060 = []
         } catch {
             let surfaced = (error as? APIError) ?? APIError.invalidResponse
             lastError = surfaced
+            // Write in-flight file for retry — only on failure to avoid
+            // a race with recoverPendingDrives picking up the file before
+            // this upload completes.
             if let encoded = try? Self.driveEncoder.encode(drive) {
                 try? encoded.write(to: inFlightURL, options: .atomic)
             }
