@@ -148,7 +148,8 @@ class DriveRecordingController: ObservableObject {
         // must include every sample regardless of the 10 Hz UI-throttle.
         manager.onRawSpeedSample = { [weak self] sample in
             guard let self else { return }
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.isRecording else { return }
                 self.speedStream.append((
                     sample.timestamp.timeIntervalSince1970,
                     sample.speed,
@@ -308,8 +309,9 @@ class DriveRecordingController: ObservableObject {
         drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
         drive.peakGForce = peakGForce; drive.topCornerSpeed = topCornerSpeed
 
+        isRecording = false
+
         let inFlightURL = inFlightTempFileURL(for: drive)
-        await RecordingActor.shared.reset()
 
         var bgTaskID = UIBackgroundTaskIdentifier.invalid
         bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "DriveUpload") {
@@ -323,15 +325,13 @@ class DriveRecordingController: ObservableObject {
 
         do {
             let saved = try await apiService.createDrive(drive)
+            await RecordingActor.shared.reset()
             currentDrive = nil
             recordingStartTime = nil
             attempts060 = []
         } catch {
             let surfaced = (error as? APIError) ?? APIError.invalidResponse
             lastError = surfaced
-            // Write in-flight file for retry — only on failure to avoid
-            // a race with recoverPendingDrives picking up the file before
-            // this upload completes.
             if let encoded = try? Self.driveEncoder.encode(drive) {
                 try? encoded.write(to: inFlightURL, options: .atomic)
             }
