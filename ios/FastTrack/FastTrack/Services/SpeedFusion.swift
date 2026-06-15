@@ -28,7 +28,7 @@ class SpeedFusion {
     private let zeroUnlockThreshold: Double = 0.55 // m/s (~1.2 mph)
     private let stationarySpeedThreshold: Double = 0.35
     private let stationaryLockThreshold: Double = 0.18
-    private let stationaryAccelThresholdG: Double = 0.03
+    private let stationaryAccelThresholdG: Double = 0.07  // tuned for 100 Hz; 0.03 at 25 Hz
     private let stationaryHoldTime: Double = 0.35
     private let lowSpeedDampingThreshold: Double = 0.8
     static let lowSpeedDampingCoefficient_25Hz: Double = 0.72
