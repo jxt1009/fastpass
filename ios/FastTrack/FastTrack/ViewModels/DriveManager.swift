@@ -136,7 +136,7 @@ final class DriveManager: ObservableObject {
     func deleteDrive(id: Int) async throws {
         let deletedDrive = drives.first(where: { $0.id == id })
         #if DEBUG
-        print("🗑️ DriveManager.delete(\(id)): before=\(drives.count) ids=\(drives.map(\.id ?? -1))")
+        print("🗑️ DriveManager.delete(\(id)): before=\(drives.count) ids=\(drives.map { $0.id ?? -1 })")
         #endif
 
         do {
@@ -149,7 +149,7 @@ final class DriveManager: ObservableObject {
         drives.removeAll { $0.id == id }
         carStatsManager.rebuildStats(from: drives)
         #if DEBUG
-        print("   after remove=\(drives.count) ids=\(drives.map(\.id ?? -1))")
+        print("   after remove=\(drives.count) ids=\(drives.map { $0.id ?? -1 })")
         #endif
 
         if let drive = deletedDrive {
@@ -158,8 +158,9 @@ final class DriveManager: ObservableObject {
 
         if let fresh = try? await apiService.fetchDrives() {
             drivePoller.drives = fresh
+            drives = fresh  // also set directly in case .assign hasn't propagated
             #if DEBUG
-            print("   after fresh fetch=\(fresh.count) ids=\(fresh.map(\.id ?? -1))")
+            print("   after fresh fetch=\(fresh.count) ids=\(fresh.map { $0.id ?? -1 })")
             #endif
         }
 
