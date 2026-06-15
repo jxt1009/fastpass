@@ -134,6 +134,9 @@ final class DriveManager: ObservableObject {
 
     @MainActor
     func deleteDrive(id: Int) async throws {
+        // Capture the drive before deleting for stale-file tracking.
+        let deletedDrive = drives.first(where: { $0.id == id })
+
         do {
             try await apiService.deleteDrive(id: id)
         } catch let error as APIError {
@@ -142,16 +145,12 @@ final class DriveManager: ObservableObject {
         }
         drives.removeAll { $0.id == id }
         carStatsManager.rebuildStats(from: drives)
-        await refreshAchievementsFromServer()
 
-        // Remove any stale in-flight file so recoverPendingDrives doesn't
-        // re-upload it on the next poll (re-creating the deleted drive).
-        let fm = FileManager.default
-        if let entries = try? fm.contentsOfDirectory(at: .temporaryDirectory, includingPropertiesForKeys: nil) {
-            for url in entries where url.lastPathComponent.hasPrefix("in_flight_drive_") && url.pathExtension == "json" {
-                try? fm.removeItem(at: url)
-            }
+        if let drive = deletedDrive {
+            drivePoller.noteDriveDeleted(userID: drive.userID, startTime: drive.startTime)
         }
+
+        await refreshAchievementsFromServer()
     }
 
     @MainActor
