@@ -224,24 +224,22 @@ struct StatValue: View {
 
 struct InstrumentCard<Content: View>: View {
     let content: Content
-    var glass: Bool
+    var padding: CGFloat = Spacing.md
 
-    init(glass: Bool = false, @ViewBuilder content: () -> Content) {
-        self.glass = glass
+    init(padding: CGFloat = Spacing.md, @ViewBuilder content: () -> Content) {
+        self.padding = padding
         self.content = content()
     }
 
     var body: some View {
         content
-            .padding(Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(glass ? Color.ftGlassSurface : Color.ftCardBg)
-            )
+            .padding(padding)
+            .background(Color.ftGlassCardFill)
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .stroke(glass ? Color.ftGlassStroke : Color.clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: Radius.xl)
+                    .stroke(Color.ftGlassCardStroke, lineWidth: 1)
             )
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
     }
 }
 
