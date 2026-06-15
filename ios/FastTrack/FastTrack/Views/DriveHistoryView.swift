@@ -174,7 +174,7 @@ struct DriveRowView: View, Equatable {
             HStack {
                 Label(settings.speedDisplay(drive.maxSpeed), systemImage: "speedometer")
                 Spacer()
-                Label(settings.distanceDisplay(drive.distance, decimals: 2), systemImage: "map")
+                Label(settings.distanceDisplay(drive.distance, decimals: 1), systemImage: "map")
                 Spacer()
                 Label(drive.durationString, systemImage: "clock")
             }
