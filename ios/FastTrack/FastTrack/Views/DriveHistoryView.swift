@@ -60,6 +60,7 @@ struct DriveHistoryView: View {
                         }
                     }
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+                    .refreshable { driveManager.fetchDrives() }
                 }
             }
             .navigationTitle("Drive History")
