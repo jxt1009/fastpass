@@ -151,31 +151,39 @@ struct RootView: View {
                 }
             }
         }
-        .onChange(of: scenePhase) { _, newPhase in
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            print("🔵🌙 scenePhase onChange: \(oldPhase) → \(newPhase), isRecording=\(driveManager.isRecording)")
             screenWake.inner.update(
                 isRecording: driveManager.isRecording,
                 keepScreenOn: settings.keepScreenOn,
                 scenePhase: newPhase
             )
+            print("🔵🌙 screenWake updated for phase \(newPhase)")
             switch newPhase {
             case .active:
+                print("🔵🌙 scenePhase .active — starting polling")
                 if authManager.isAuthenticated {
                     notificationsManager.startPolling()
                 }
             case .background:
+                print("🔵🌙 scenePhase .background — stopping polling")
                 notificationsManager.stopPolling()
             default:
                 break
             }
+            print("🔵🌙 scenePhase onChange done for \(newPhase)")
         }
         .onChange(of: driveManager.isRecording) { _, recording in
+            print("🔵🎬 isRecording onChange: \(recording), scenePhase=\(scenePhase)")
             screenWake.inner.update(
                 isRecording: recording,
                 keepScreenOn: settings.keepScreenOn,
                 scenePhase: scenePhase
             )
+            print("🔵🎬 screenWake updated for isRecording=\(recording)")
         }
         .onChange(of: settings.keepScreenOn) { _, keep in
+            print("🔵💡 keepScreenOn onChange: \(keep)")
             screenWake.inner.update(
                 isRecording: driveManager.isRecording,
                 keepScreenOn: keep,

@@ -22,9 +22,11 @@ final class ScreenWakeController {
     @MainActor
     func update(isRecording: Bool, keepScreenOn: Bool, scenePhase: ScenePhase) {
         let shouldDisable = isRecording && keepScreenOn && scenePhase == .active
+        print("🔵⚡ screenWake.update: rec=\(isRecording) keep=\(keepScreenOn) phase=\(scenePhase) → disable=\(shouldDisable) lastApplied=\(String(describing: lastApplied))")
         guard shouldDisable != lastApplied else { return }
         lastApplied = shouldDisable
         idleTimer.isIdleTimerDisabled = shouldDisable
+        print("🔵⚡ idleTimer.isIdleTimerDisabled = \(shouldDisable)")
     }
 }
 

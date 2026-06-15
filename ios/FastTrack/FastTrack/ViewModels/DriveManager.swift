@@ -128,8 +128,11 @@ final class DriveManager: ObservableObject {
     // MARK: - Recording control
 
     func startRecording() {
+        print("🔵🚗 DriveManager.startRecording() begin, isRecording=\(recordingController.isRecording)")
         recordingController.startRecording()
+        print("🔵🚗 recordingController.startRecording() done, isRecording=\(recordingController.isRecording)")
         liveActivity.start(recordingStartTime: recordingController.recordingStartTime)
+        print("🔵🚗 liveActivity.start() done")
     }
 
     @MainActor
