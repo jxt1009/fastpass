@@ -28,7 +28,7 @@ struct NotificationsView: View {
                 }
                 .listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-                .background(Color.ftSurfaceBg.ignoresSafeArea())
+                .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             }
         }
         .navigationTitle("Notifications")

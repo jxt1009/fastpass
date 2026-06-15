@@ -125,6 +125,7 @@ struct DriveDetailView: View {
             }
             .padding()
         }
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .navigationTitle("Drive Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

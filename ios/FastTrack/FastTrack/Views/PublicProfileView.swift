@@ -107,7 +107,7 @@ struct PublicProfileView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(Color.ftSurfaceBg.ignoresSafeArea())
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
     }
 
     // MARK: - Narrow header

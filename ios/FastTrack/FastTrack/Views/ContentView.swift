@@ -19,6 +19,11 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
+                // Gradient background (behind map)
+                Rectangle()
+                    .fill(driveManager.isRecording ? AnyShapeStyle(Color.ftBgGradientWarm) : AnyShapeStyle(Color.ftBgGradient))
+                    .ignoresSafeArea()
+
                 // Always-visible map backdrop
                 LiveMapView(
                     userLocation: locationManager.currentLocation?.coordinate

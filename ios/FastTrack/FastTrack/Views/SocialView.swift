@@ -24,6 +24,7 @@ struct SocialView: View {
                 Divider()
                 content
             }
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle("Leaderboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -159,6 +160,7 @@ struct SocialView: View {
                     }
                 }
                 .listStyle(.inset)
+                .scrollContentBackground(.hidden)
                 .opacity(isLoading ? 0.5 : 1.0)
                 .animation(.easeInOut(duration: 0.2), value: isLoading)
 

@@ -277,8 +277,6 @@ struct SplashView: View {
 
     var body: some View {
         ZStack {
-            Color.ftSectionBg.ignoresSafeArea()
-
             VStack(spacing: 24) {
                 Spacer()
 
@@ -320,6 +318,7 @@ struct SplashView: View {
                 .padding(.bottom, 52)
             }
         }
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                 iconScale = 1.0
