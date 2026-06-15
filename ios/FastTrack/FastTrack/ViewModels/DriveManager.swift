@@ -145,6 +145,9 @@ final class DriveManager: ObservableObject {
     @MainActor
     func deleteDrive(id: Int) async throws {
         let deletedDrive = drives.first(where: { $0.id == id })
+        #if DEBUG
+        print("🗑️ DriveManager.delete(\(id)): before=\(drives.count) ids=\(drives.map(\.id ?? -1))")
+        #endif
 
         do {
             try await apiService.deleteDrive(id: id)
@@ -155,15 +158,19 @@ final class DriveManager: ObservableObject {
 
         drives.removeAll { $0.id == id }
         carStatsManager.rebuildStats(from: drives)
+        #if DEBUG
+        print("   after remove=\(drives.count) ids=\(drives.map(\.id ?? -1))")
+        #endif
 
         if let drive = deletedDrive {
             drivePoller.noteDriveDeleted(userID: drive.userID, startTime: drive.startTime)
         }
 
-        // Force a fresh server fetch immediately so the display list reflects
-        // the post-delete state regardless of any in-flight stale fetches.
         if let fresh = try? await apiService.fetchDrives() {
             drivePoller.drives = fresh
+            #if DEBUG
+            print("   after fresh fetch=\(fresh.count) ids=\(fresh.map(\.id ?? -1))")
+            #endif
         }
 
         await refreshAchievementsFromServer()
