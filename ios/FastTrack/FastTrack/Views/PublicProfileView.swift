@@ -54,60 +54,131 @@ struct PublicProfileView: View {
 
     @ViewBuilder
     private func profileContent(_ profile: PublicProfile) -> some View {
-        List {
-            Section {
+        let garage = decodedGarage(from: profile)
+        let statsByCarId = PublicProfileStatsLookup.byCarId(blob: profile.carStatsData)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
                 narrowHeader(profile)
-            }
-            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-            .listRowBackground(Color.ftGlassCardFill)
 
-            // Stats (Top Speed, Best 0-60, Total Distance)
-            Section("Stats") {
-                ForEach(PublicProfileStats.rows(for: profile, settings: settings)) { row in
-                    statRow(
-                        icon: row.icon,
-                        color: row.color,
-                        label: row.label,
-                        value: row.value
+                aggregateStatsSection(profile)
+
+                if !garage.isEmpty {
+                    garageGridSection(garage: garage, profile: profile, statsByCarId: statsByCarId)
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.md)
+        }
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
+    }
+
+    // MARK: - Aggregate Stats Section
+
+    private func aggregateStatsSection(_ profile: PublicProfile) -> some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible()), GridItem(.flexible()),
+            GridItem(.flexible()), GridItem(.flexible())
+        ], spacing: Spacing.sm) {
+            InstrumentStatCell(
+                icon: "flag.fill", iconColor: .ftGreen,
+                label: "Drives",
+                value: "\(profile.driveCount)",
+                unit: ""
+            )
+            InstrumentStatCell(
+                icon: "map.fill", iconColor: .ftBlue,
+                label: "Distance",
+                value: String(format: "%.1f", settings.distanceValue(profile.totalDistance)),
+                unit: settings.distanceUnit
+            )
+            InstrumentStatCell(
+                icon: "bolt.fill", iconColor: .ftGold,
+                label: "Top Speed",
+                value: String(format: "%.0f", settings.speedValue(profile.topSpeed)),
+                unit: settings.speedUnit
+            )
+            InstrumentStatCell(
+                icon: "timer", iconColor: .ftAmber,
+                label: "Best 0-60",
+                value: profile.best060Time.map { String(format: "%.2f", $0) } ?? "—",
+                unit: profile.best060Time != nil ? "sec" : ""
+            )
+        }
+    }
+
+    // MARK: - Garage Grid Section
+
+    private func garageGridSection(garage: [UserCar], profile: PublicProfile, statsByCarId: [String: CarStats]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160))], spacing: Spacing.md) {
+            ForEach(garage) { car in
+                NavigationLink {
+                    PublicCarDetailView(
+                        username: profile.username,
+                        car: car,
+                        stats: statsByCarId[car.id],
+                        carStatsData: profile.carStatsData
                     )
+                } label: {
+                    publicCarCard(car: car, stats: statsByCarId[car.id])
                 }
-            }
-            .listRowBackground(Color.ftGlassCardFill)
-
-            // Garage (per the redesign, read-only with photos + short stats).
-            // Each card is wrapped in a NavigationLink with .buttonStyle(.plain)
-            // so it pushes the read-only PublicCarDetailView for that car
-            // without the system disclosure indicator on top of the card's
-            // own chevron hint.
-            if let garage = decodedGarage(from: profile), !garage.isEmpty {
-                Section("Garage") {
-                    // Decode the per-car stats blob once for the section
-                    // rather than re-parsing the JSON for every row inside
-                    // the ForEach.
-                    let statsByCarId = PublicProfileStatsLookup.byCarId(blob: profile.carStatsData)
-                    ForEach(garage) { car in
-                        NavigationLink {
-                            PublicCarDetailView(
-                                username: profile.username,
-                                car: car,
-                                stats: statsByCarId[car.id],
-                                carStatsData: profile.carStatsData
-                            )
-                        } label: {
-                            PublicGarageCard(
-                                car: car,
-                                stats: statsByCarId[car.id]
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .listRowBackground(Color.ftGlassCardFill)
+                .buttonStyle(.plain)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
+    }
+
+    private func publicCarCard(car: UserCar, stats: CarStats?) -> some View {
+        InstrumentCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                CarPhotoView(
+                    car: car,
+                    url: car.photoUrl.flatMap { $0.isEmpty ? nil : URL(string: $0) },
+                    cornerRadius: 0
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 160)
+                .clipped()
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(car.nickname.isEmpty ? car.shortDisplay : car.nickname)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text(car.displayString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    StatsGrid(spacing: 4) {
+                        StatMini(title: "Drives", value: "\(stats?.totalDrives ?? 0)")
+                        StatMini(
+                            title: settings.distanceUnit == "mi" ? "Miles" : "KM",
+                            value: String(format: "%.0f", settings.distanceValue(stats?.totalDistance ?? 0))
+                        )
+                        VStack(spacing: 2) {
+                            StatusDot(
+                                level: .best,
+                                label: stats.map { String(format: "%.0f", settings.speedValue($0.bestTopSpeed)) } ?? "—"
+                            )
+                            .font(.caption)
+                            Text("Top Speed")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        VStack(spacing: 2) {
+                            StatusDot(
+                                level: .nearBest,
+                                label: stats?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "—"
+                            )
+                            .font(.caption)
+                            Text("0-60")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(Spacing.sm)
+            }
+        }
     }
 
     // MARK: - Narrow header
@@ -227,33 +298,7 @@ struct PublicProfileView: View {
         profile.country
     }
 
-    // MARK: - Subviews (counters + stat rows)
-
-    private func countView(value: Int, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("\(value)")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
-
-    private func statRow(icon: String, color: Color, label: String, value: String) -> some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-                .frame(width: 24)
-            Text(label)
-                .foregroundStyle(.primary)
-            Spacer()
-            Text(value)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-        }
-    }
+    // MARK: - Avatar fallback
 
     private func avatarFallback(initial: String) -> some View {
         ZStack {
@@ -272,7 +317,7 @@ struct PublicProfileView: View {
 
     // MARK: - Garage + per-car stats parsing
 
-    private func decodedGarage(from profile: PublicProfile) -> [UserCar]? {
+    private func decodedGarage(from profile: PublicProfile) -> [UserCar] {
         GarageBlob.decode(profile.garage)
     }
 
