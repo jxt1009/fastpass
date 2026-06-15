@@ -157,7 +157,7 @@ struct StatCard: View {
             }
 .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color.ftCardBg)
+            .background(Color.ftGlassCardFill)
             .cornerRadius(Radius.lg)
         }
     }
@@ -286,7 +286,7 @@ struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color.ftSectionBg.opacity(0.5))
+            .fill(Color.white.opacity(0.06))
             .frame(width: width, height: height)
             .shimmer()
     }
@@ -323,7 +323,7 @@ struct StatCardSkeleton: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.ftCardBg)
+        .background(Color.ftGlassCardFill)
         .cornerRadius(Radius.lg)
     }
 }

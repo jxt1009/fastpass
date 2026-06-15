@@ -23,7 +23,7 @@ struct NotificationsView: View {
                             NotificationRow(notification: n)
                         }
                         .buttonStyle(.plain)
-                        .listRowBackground(Color.ftCardBg)
+                        .listRowBackground(Color.ftGlassCardFill)
                     }
                 }
                 .listStyle(.insetGrouped)

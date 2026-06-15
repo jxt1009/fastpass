@@ -135,7 +135,7 @@ struct SocialView: View {
                     ) {
                         Section {
                             LeaderboardYourPositionCard(entry: userEntry, category: selectedCategory)
-                                .listRowBackground(Color.ftCardBg)
+                                .listRowBackground(Color.ftGlassCardFill)
                         }
                     }
                     Section {
@@ -152,9 +152,12 @@ struct SocialView: View {
                                 )
                             }
                             .listRowBackground(
-                                isCurrentUserRow
-                                    ? Color.ftBlue.opacity(0.08)
-                                    : Color.ftCardBg
+                                ZStack {
+                                    Color.ftGlassCardFill
+                                    if isCurrentUserRow {
+                                        Color.ftBlue.opacity(0.08)
+                                    }
+                                }
                             )
                         }
                     }
@@ -256,10 +259,16 @@ private struct LeaderboardQuickFilterChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.md)
-                .fill(accent ? Color.ftBlue.opacity(0.12) : Color.ftCardBg)
-        )
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: Radius.md)
+                        .fill(Color.ftGlassCardFill)
+                    if accent {
+                        RoundedRectangle(cornerRadius: Radius.md)
+                            .fill(Color.ftBlue.opacity(0.12))
+                    }
+                }
+            )
     }
 }
 

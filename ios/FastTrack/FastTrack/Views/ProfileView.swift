@@ -235,7 +235,7 @@ struct ProfileView: View {
             StatsGrid(spacing: 12) {
                 ForEach(0..<6, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .fill(Color.ftCardBg.opacity(0.2))
+                        .fill(Color.white.opacity(0.06))
                         .frame(height: 80)
                         .shimmer()
                 }
@@ -243,7 +243,7 @@ struct ProfileView: View {
             // Full-width card skeletons
             ForEach(0..<3, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color.ftCardBg.opacity(0.2))
+                    .fill(Color.white.opacity(0.06))
                     .frame(height: 60)
                     .shimmer()
             }
@@ -324,7 +324,7 @@ struct ProfileView: View {
             .foregroundColor(.red)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.ftCardBg)
+            .background(Color.ftGlassCardFill)
             .cornerRadius(Radius.lg)
         }
         .disabled(isDeletingAccount)
@@ -339,9 +339,9 @@ struct ProfileView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.red)
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.ftCardBg)
-                .cornerRadius(Radius.lg)
+            .padding()
+            .background(Color.ftGlassCardFill)
+            .cornerRadius(Radius.lg)
         }
         .confirmationDialog(
             "Sign out of FastTrack?",

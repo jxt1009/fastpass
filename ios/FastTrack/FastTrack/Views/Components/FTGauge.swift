@@ -147,11 +147,11 @@ struct FTGauge: View {
         .padding(.horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.ftSectionBg, lineWidth: 1)
+                .stroke(Color.ftGlassCardStroke, lineWidth: 1)
         )
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.ftCardBg)
+                .fill(Color.ftGlassCardFill)
         )
     }
 
