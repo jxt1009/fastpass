@@ -35,10 +35,22 @@ class DrivePoller: ObservableObject {
         fetchDrives()
         Task { [weak self] in await self?.recoverPendingDrives() }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            self?.fetchDrives()
-            Task { [weak self] in await self?.recoverPendingDrives() }
+            Task { [weak self] in await self?.pollCycle() }
         }
     }
+
+    private func pollCycle() async {
+        do {
+            let fetched = try await apiService.fetchDrives()
+            self.drives = fetched
+            self.isLoadingDrives = false
+        } catch {
+            self.isLoadingDrives = false
+        }
+        await recoverPendingDrives()
+    }
+
+    private var isRecovering = false
 
     func stopPolling() {
         pollTimer?.invalidate()
@@ -48,6 +60,10 @@ class DrivePoller: ObservableObject {
     func recoverPendingDrives(
         in directory: URL = FileManager.default.temporaryDirectory
     ) async {
+        guard !isRecovering else { return }
+        isRecovering = true
+        defer { isRecovering = false }
+
         let fm = FileManager.default
         let entries: [URL]
         do {
@@ -64,14 +80,8 @@ class DrivePoller: ObservableObject {
         }
         guard !candidates.isEmpty else { return }
 
-        // Fetch the current server-side list so we can skip stale files.
-        let serverDrives: [Drive]
-        do {
-            serverDrives = try await apiService.fetchDrives()
-            self.drives = serverDrives
-        } catch {
-            serverDrives = self.drives  // fall back to local cache
-        }
+        // Use the current drives list (freshly fetched by pollCycle) for dedup.
+        let existingDrives = self.drives
 
         for url in candidates {
             let data: Data
@@ -90,8 +100,8 @@ class DrivePoller: ObservableObject {
             }
 
             // Dedup: if a drive with this start time and user ID already
-            // exists on the server, the in-flight file is stale.
-            if serverDrives.contains(where: { $0.startTime == drive.startTime && $0.userID == drive.userID }) {
+            // exists, the in-flight file is stale.
+            if existingDrives.contains(where: { $0.startTime == drive.startTime && $0.userID == drive.userID }) {
                 try? FileManager.default.removeItem(at: url)
                 continue
             }
