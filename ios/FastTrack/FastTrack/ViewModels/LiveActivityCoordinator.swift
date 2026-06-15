@@ -8,7 +8,7 @@ final class LiveActivityCoordinator: LiveActivityController {
     private var liveActivity: Activity<DriveActivityAttributes>?
     private var lastUpdate: Date?
 
-    func start(recordingStartTime: Date?) async {
+    func start(recordingStartTime: Date?) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             Self.log.error("Live Activities not authorized")
             return

@@ -129,7 +129,7 @@ final class DriveManager: ObservableObject {
 
     func startRecording() {
         recordingController.startRecording()
-        Task { await liveActivity.start(recordingStartTime: recordingController.recordingStartTime) }
+        liveActivity.start(recordingStartTime: recordingController.recordingStartTime)
     }
 
     @MainActor

@@ -14,7 +14,7 @@ final class LiveActivityCoordinationTests: XCTestCase {
         private(set) var lastEndedWithLinger: TimeInterval?
         private(set) var lastEndedWithFinalState: DriveActivityAttributes.DriveActivityState?
 
-        func start(recordingStartTime: Date?) async { calls.append(.init(kind: .start)) }
+        func start(recordingStartTime: Date?) { calls.append(.init(kind: .start)) }
         func update(speedMph: Double, distanceMiles: Double, currentGForce: Double, currentMaxSpeed: Double) async {
             calls.append(.init(kind: .update))
         }
