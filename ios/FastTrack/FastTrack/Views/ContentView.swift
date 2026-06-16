@@ -57,7 +57,7 @@ struct ContentView: View {
 
                     controlsSection
                         .padding(.horizontal, Spacing.md)
-                        .padding(.bottom, 80)
+                        .padding(.bottom, Spacing.lg)
                 }
             }
             .navigationTitle("FastTrack")

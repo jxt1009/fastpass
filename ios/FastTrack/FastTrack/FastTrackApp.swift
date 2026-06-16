@@ -187,15 +187,6 @@ struct RootView: View {
                     .id(tabResetIDs[3])
                     .tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppTab.profile)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .toolbar(.hidden, for: .tabBar)
-            .overlay(alignment: .bottom) {
-                FloatingTabBar(
-                    selectedTab: $selectedTab,
-                    isHidden: driveManager.isRecording
-                )
-                .padding(.bottom, 16)
-            }
             .sheet(isPresented: $showingProfileSetup) {
                 ProfileSetupView()
                     .interactiveDismissDisabled(!profileManager.isProfileComplete)
@@ -232,6 +223,12 @@ struct RootView: View {
                 .environmentObject(authManager)
         }
     }
+}
+
+// MARK: - App Tab
+
+enum AppTab: Int, CaseIterable {
+    case track, garage, social, profile
 }
 
 // MARK: - Splash Screen

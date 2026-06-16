@@ -103,7 +103,6 @@ private struct ToastOverlayModifier: ViewModifier {
                     message.action?()
                     manager.dismiss()
                 }
-                .padding(.bottom, 80)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .id(message.id)
             }
