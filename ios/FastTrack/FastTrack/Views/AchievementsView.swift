@@ -80,10 +80,10 @@ struct AchievementsView: View {
     private var statsHeader: some View {
         HStack(spacing: 16) {
             Label("\(achievementManager.unlockedAchievements.count) unlocked", systemImage: "trophy.fill")
-                .foregroundStyle(.yellow)
+                .foregroundStyle(Color.ftGold)
             Spacer()
             Label(String(format: "%.0f%%", progressPercentage), systemImage: "chart.line.uptrend.xyaxis")
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.ftGreen)
         }
         .font(.subheadline)
         .padding(.horizontal)
@@ -91,7 +91,7 @@ struct AchievementsView: View {
         .background(Color.ftSurfaceBg)
         .overlay(alignment: .bottom) {
             ProgressView(value: progressPercentage / 100.0)
-                .progressViewStyle(LinearProgressViewStyle(tint: .green))
+                .progressViewStyle(LinearProgressViewStyle(tint: Color.ftGreen))
                 .padding(.horizontal)
         }
     }
@@ -207,10 +207,10 @@ struct AchievementDetailView: View {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Color.ftGreen)
                                 Text("Achievement Unlocked!")
                                     .fontWeight(.medium)
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Color.ftGreen)
                             }
                             .font(.headline)
                             

@@ -151,7 +151,7 @@ struct PublicCarDetailView: View {
         if let stats {
             InstrumentCard {
                 VStack(spacing: 0) {
-                    statRow(icon: "flag.fill", color: .green,
+                    statRow(icon: "flag.fill", color: .ftGreen,
                             label: "Drives",
                             value: "\(stats.totalDrives)")
                     Divider().padding(.vertical, 8)
@@ -163,7 +163,7 @@ struct PublicCarDetailView: View {
                     // consume) so the `bestTopSpeed == 0` "no drives"
                     // sentinel renders as "—" instead of a misleading
                     // "0 mph" / "City Car".
-                    statRow(icon: "speedometer", color: .red,
+                    statRow(icon: "speedometer", color: .ftRed,
                             label: "Top Speed",
                             value: data.bestTopSpeed.map { settings.speedDisplay($0) } ?? "—")
                     Divider().padding(.vertical, 8)

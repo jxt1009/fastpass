@@ -54,12 +54,12 @@ enum AchievementCategory: String, CaseIterable, Codable {
 
     var color: Color {
         switch self {
-        case .speed: return .red
-        case .distance: return .blue
-        case .consistency: return .green
-        case .performance: return .orange
+        case .speed: return .ftRed
+        case .distance: return .ftBlue
+        case .consistency: return .ftGreen
+        case .performance: return .ftAmber
         case .milestone: return .purple
-        case .special: return .yellow
+        case .special: return .ftGold
         }
     }
 }

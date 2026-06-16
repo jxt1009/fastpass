@@ -378,8 +378,8 @@ private struct LeaderboardRow: View {
 
     private var rankColor: Color {
         switch entry.rank {
-        case 1: return .yellow
-        case 2: return Color(white: 0.7)
+        case 1: return .ftGold
+        case 2: return Color(white: 0.5)
         case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
         default: return .secondary
         }
