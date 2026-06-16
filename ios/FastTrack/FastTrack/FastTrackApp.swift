@@ -172,6 +172,7 @@ struct RootView: View {
                     .id(tabResetIDs[3])
                     .tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppTab.profile)
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
             .toolbar(.hidden, for: .tabBar)
             .overlay(alignment: .bottom) {
                 FloatingTabBar(
@@ -229,6 +230,10 @@ struct SplashView: View {
 
     var body: some View {
         ZStack {
+            Rectangle()
+                .fill(Color.ftBgGradient)
+                .ignoresSafeArea()
+
             VStack(spacing: 24) {
                 Spacer()
 
@@ -270,7 +275,6 @@ struct SplashView: View {
                 .padding(.bottom, 52)
             }
         }
-        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                 iconScale = 1.0

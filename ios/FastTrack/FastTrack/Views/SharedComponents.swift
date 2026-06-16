@@ -346,16 +346,32 @@ struct InstrumentStatCell: View {
                     Spacer()
                     if let info { StatInfoButton(entry: info) }
                 }
-                Text(label).font(.caption).foregroundColor(.secondary)
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(alignment: .lastTextBaseline, spacing: 3) {
-                    Text(value).font(.title2).fontWeight(.bold).foregroundColor(.primary)
+                    Text(value)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                     if !unit.isEmpty {
-                        Text(unit).font(.caption).foregroundColor(.secondary)
+                        Text(unit)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 76, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
