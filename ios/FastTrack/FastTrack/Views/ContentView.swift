@@ -309,10 +309,15 @@ private struct SpeedHeroRing: View {
     let diameter: CGFloat
 
     private let trackGradient = AngularGradient(
-        colors: [.ftGreen, .ftGold, .ftAmber, .ftRed],
+        stops: [
+            .init(color: .ftGreen, location: 0.0),
+            .init(color: .ftGold,  location: 0.33),
+            .init(color: .ftAmber, location: 0.67),
+            .init(color: .ftRed,   location: 1.0)
+        ],
         center: .center,
         startAngle: .degrees(150),
-        endAngle: .degrees(390)
+        endAngle: .degrees(150 + 240)
     )
 
     var body: some View {
@@ -361,28 +366,34 @@ private struct TrackMetricCard: View {
                     .font(.system(.headline, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 if !unit.isEmpty {
                     Text(unit.uppercased())
                         .font(FTFont.gaugeLabelCompact).minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
             }
 
             Text(title)
                 .font(FTFont.pill).minimumScaleFactor(0.7)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
 
-            if sparklineData.count >= 3 {
-                Chart {
-                    ForEach(Array(sparklineData.enumerated()), id: \.offset) { i, v in
-                        LineMark(x: .value("i", i), y: .value("v", v))
+            ZStack(alignment: .leading) {
+                if sparklineData.count >= 3 {
+                    Chart {
+                        ForEach(Array(sparklineData.enumerated()), id: \.offset) { i, v in
+                            LineMark(x: .value("i", i), y: .value("v", v))
+                        }
                     }
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .foregroundStyle(color.opacity(0.70))
                 }
-                .chartXAxis(.hidden)
-                .chartYAxis(.hidden)
-                .foregroundStyle(color.opacity(0.70))
-                .frame(height: 14)
             }
+            .frame(height: 14)
 
             GradientProgressBar(value: progress, range: 0...max(1, 0.001), size: .compact)
         }

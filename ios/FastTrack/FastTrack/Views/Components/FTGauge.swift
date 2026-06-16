@@ -76,10 +76,15 @@ struct FTGauge: View {
                     .trim(from: 0, to: max(0.0001, (240.0 / 360.0) * displayedProgress))
                     .stroke(
                         AngularGradient(
-                            colors: [.ftGreen, .ftGold, .ftAmber, .ftRed],
+                            stops: [
+                                .init(color: .ftGreen, location: 0.0),
+                                .init(color: .ftGold,  location: 0.33),
+                                .init(color: .ftAmber, location: 0.67),
+                                .init(color: .ftRed,   location: 1.0)
+                            ],
                             center: .center,
                             startAngle: .degrees(150),
-                            endAngle: .degrees(390)
+                            endAngle: .degrees(150 + 240)
                         ),
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )
