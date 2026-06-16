@@ -102,6 +102,7 @@ struct RootView: View {
     @State private var selectedTab: AppTab = .track
     @State private var showingProfileSetup = false
     @State private var tabResetIDs = (0..<4).map { _ in UUID() }
+    @StateObject private var screenWake = ScreenWakeController()
 
     private static let signOutLog = Logger(subsystem: "app.fasttrack", category: "signOut")
 
@@ -144,6 +145,7 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
+            screenWake.update(scenePhase: newPhase)
             switch newPhase {
             case .active:
                 if authManager.isAuthenticated {
@@ -154,6 +156,19 @@ struct RootView: View {
             default:
                 break
             }
+        }
+        .onChange(of: driveManager.isRecording) { _, newValue in
+            screenWake.update(isRecording: newValue)
+        }
+        .onChange(of: settings.keepScreenOn) { _, newValue in
+            screenWake.update(keepScreenOn: newValue)
+        }
+        .onAppear {
+            screenWake.update(
+                isRecording: driveManager.isRecording,
+                keepScreenOn: settings.keepScreenOn,
+                scenePhase: scenePhase
+            )
         }
     }
 
