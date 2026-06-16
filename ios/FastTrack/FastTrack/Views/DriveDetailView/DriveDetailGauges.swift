@@ -9,11 +9,11 @@ struct DriveDetailGauges: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             StatsGrid(spacing: 12) {
-                FTGauge(style: .compact, label: "Top Speed", value: settings.speedDisplay(drive.maxSpeed), color: .ftAmber)
-                FTGauge(style: .compact, label: "Distance", value: settings.distanceDisplay(drive.distance, decimals: 1), color: .ftBlue)
+                FTGauge(style: .compact, label: "Top Speed", value: settings.speedDisplay(drive.maxSpeed), color: .ftAmber, icon: "bolt.fill")
+                FTGauge(style: .compact, label: "Distance", value: settings.distanceDisplay(drive.distance, decimals: 1), color: .ftBlue, icon: "map.fill")
                 FTGauge(style: .compact, label: "Duration", value: drive.durationString, color: .ftBlue)
                 if let best = drive.best060Time {
-                    FTGauge(style: .compact, label: "0-60", value: String(format: "%.1fs", best), color: .ftGreen)
+                    FTGauge(style: .compact, label: "0-60", value: String(format: "%.1fs", best), color: .ftGreen, icon: "timer")
                 } else {
                     FTGauge(style: .compact, label: "Avg Speed", value: settings.speedDisplay(drive.avgSpeed), color: .secondary)
                 }

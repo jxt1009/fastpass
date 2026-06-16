@@ -16,7 +16,6 @@ struct ContentView: View {
 
     private let hasAcceptedSafetyKey = "hasAcceptedSafetyDisclaimer"
     private let recordingAccent = Color.ftAmber
-    private let idleAccent = Color.ftBlue
 
     var body: some View {
         NavigationStack {
@@ -216,10 +215,14 @@ struct ContentView: View {
             } else {
                 Button {
                     if driveManager.isRecording {
+                        #if DEBUG
                         print("🛑 Stop recording button pressed")
+                        #endif
                         Task { await driveManager.stopRecording() }
                     } else {
+                        #if DEBUG
                         print("▶️ Start recording button pressed")
+                        #endif
                         let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
                         if hasAccepted {
                             driveManager.startRecording()
@@ -246,6 +249,7 @@ struct ContentView: View {
                                 : .default,
                             value: driveManager.isRecording
                         )
+                        // Restart pulse animation when app returns to foreground.
                         .id("pulse-\(scenePhase)")
                 )
                 .sensoryFeedback(.impact(weight: .medium), trigger: driveManager.isRecording) { oldValue, newValue in
@@ -402,10 +406,10 @@ private struct TrackMetricCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 9)
         .padding(.horizontal, 8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .background(Color.ftGlassCardFill, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .stroke(Color.ftOnDarkDivider, lineWidth: 1)
+                .stroke(Color.ftGlassCardStroke, lineWidth: 1)
         )
     }
 }

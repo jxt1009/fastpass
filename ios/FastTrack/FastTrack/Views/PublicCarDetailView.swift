@@ -123,13 +123,15 @@ struct PublicCarDetailView: View {
                 style: .statCell(unit: settings.speedUnit),
                 label: "TOP SPEED",
                 value: topSpeedDisplay ?? "—",
-                color: .ftRed
+                color: .ftRed,
+                icon: "bolt.fill"
             )
             FTGauge(
                 style: .statCell(unit: "sec"),
                 label: "BEST 0-60",
                 value: zeroToSixtyDisplay ?? "—",
-                color: .ftAmber
+                color: .ftAmber,
+                icon: "timer"
             )
         }
     }

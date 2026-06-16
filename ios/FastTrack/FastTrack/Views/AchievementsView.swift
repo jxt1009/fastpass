@@ -88,7 +88,7 @@ struct AchievementsView: View {
         .font(.subheadline)
         .padding(.horizontal)
         .padding(.vertical, 10)
-        .background(Color.ftSurfaceBg)
+        .background(Color.ftGlassCardFill)
         .overlay(alignment: .bottom) {
             ProgressView(value: progressPercentage / 100.0)
                 .progressViewStyle(LinearProgressViewStyle(tint: Color.ftGreen))
@@ -159,7 +159,7 @@ struct CategoryFilterChip: View {
                 .overlay(
                     Group {
                         if isSelected {
-                            Capsule().fill(color.opacity(0.15))
+                            Capsule().fill(color.opacity(0.20))
                             Capsule().stroke(color.opacity(0.30), lineWidth: 1)
                         } else {
                             Capsule().stroke(Color.ftGlassCardStroke, lineWidth: 1)

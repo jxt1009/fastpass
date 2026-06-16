@@ -31,11 +31,13 @@ struct FTGauge: View {
     let label: String
     let value: String
     let color: Color
+    var icon: String? = nil
     var sparklineData: [Double] = []
     var numericValue: Double = 0
     var maxValue: Double = 0
 
     @State private var displayedProgress: Double = 0
+    @State private var displayedNumericValue: Double = 0
 
     var body: some View {
         switch style {
@@ -54,7 +56,7 @@ struct FTGauge: View {
     private func heroBody(progress: Double?, setOn: Date?) -> some View {
         VStack(alignment: .center, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: icon(for: label))
+                Image(systemName: icon ?? self.icon(for: label))
                     .font(.caption)
                     .foregroundColor(color)
                 Text(label.uppercased())
@@ -165,7 +167,7 @@ struct FTGauge: View {
                 .frame(height: 14)
             }
             if maxValue > 0 {
-                GradientProgressBar(value: numericValue, range: 0...maxValue, size: .compact)
+                GradientProgressBar(value: displayedNumericValue, range: 0...maxValue, size: .compact)
                     .padding(.top, 4)
             }
             Text(label.uppercased())
@@ -184,6 +186,14 @@ struct FTGauge: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.ftGlassCardFill)
         )
+        .onAppear {
+            displayedNumericValue = numericValue
+        }
+        .onChange(of: numericValue) { _, newValue in
+            withAnimation(.easeInOut(duration: 0.35)) {
+                displayedNumericValue = newValue
+            }
+        }
     }
 
     // MARK: StatCell
