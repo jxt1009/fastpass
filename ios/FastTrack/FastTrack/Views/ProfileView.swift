@@ -555,7 +555,7 @@ struct CarGarageCard: View {
                             showingStats.toggle()
                         } label: {
                             Image(systemName: showingStats ? "chevron.up" : "chart.bar")
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                         }
                     }
                 }

@@ -116,7 +116,7 @@ struct RootView: View {
     @State private var isInitializing = true
     @State private var selectedTab: AppTab = .track
     @State private var showingProfileSetup = false
-    @State private var tabResetIDs = (0..<4).map { _ in UUID() }
+    @State private var tabResetIDs: [Int: UUID] = [:]
 
     private static let signOutLog = Logger(subsystem: "app.fasttrack", category: "signOut")
 
@@ -221,12 +221,12 @@ struct RootView: View {
                 ContentView()
                     .tabItem { Label("Track", systemImage: "location.fill") }.tag(AppTab.track)
                 GarageView()
-                    .id(tabResetIDs[1])
+                    .id(tabResetIDs[AppTab.garage.rawValue, default: UUID()])
                     .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(AppTab.garage)
                 SocialView()
                     .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(AppTab.social)
                 ProfileView(onSwitchToGarage: { selectedTab = .garage })
-                    .id(tabResetIDs[3])
+                    .id(tabResetIDs[AppTab.profile.rawValue, default: UUID()])
                     .tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppTab.profile)
             }
             .sheet(isPresented: $showingProfileSetup) {
