@@ -2,14 +2,57 @@ import SwiftUI
 
 // ─── Colors ────────────────────────────────────────────────
 
+private struct AdaptiveRadialGradient: ShapeStyle {
+    let darkColors: [Color]
+    let lightColors: [Color]
+    let center: UnitPoint
+    let startRadius: CGFloat
+    let endRadius: CGFloat
+
+    func resolve(in env: EnvironmentValues) -> some ShapeStyle {
+        let colors = env.colorScheme == .light ? lightColors : darkColors
+        return AnyShapeStyle(
+            RadialGradient(
+                colors: colors,
+                center: center,
+                startRadius: startRadius,
+                endRadius: endRadius
+            )
+        )
+    }
+}
+
 extension Color {
     static let ftBlue   = Color(red: 10/255, green: 132/255, blue: 255/255)   // #0A84FF
-    static let ftAmber  = Color(red: 255/255, green: 107/255, blue: 53/255)   // #FF6B35
-    static let ftGreen  = Color(red: 48/255, green: 209/255, blue: 88/255)    // #30D158
     static let ftRed    = Color(red: 255/255, green: 69/255, blue: 58/255)    // #FF453A
-    static let ftGold   = Color(red: 255/255, green: 214/255, blue: 10/255)   // #FFD60A
     static let ftBg     = Color(red: 7/255, green: 7/255, blue: 11/255)       // #07070B
     static let ftSurface = Color(red: 18/255, green: 18/255, blue: 22/255)     // #121216
+
+    // ── Brand colors (light/dark adaptive) ──────────
+    // Light variants darken the palette so text/icons on the near-white
+    // `ftGlassCardFill` light-mode surface pass WCAG AA contrast.
+
+    static var ftGold: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 1.0, green: 0.84, blue: 0.04, alpha: 1.0)   // #FFD60A
+                : UIColor(red: 0.72, green: 0.52, blue: 0.0, alpha: 1.0)   // #B88500
+        })
+    }
+    static var ftAmber: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 1.0, green: 0.42, blue: 0.21, alpha: 1.0)   // #FF6B35
+                : UIColor(red: 0.76, green: 0.25, blue: 0.05, alpha: 1.0)  // #C2410C
+        })
+    }
+    static var ftGreen: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.19, green: 0.82, blue: 0.35, alpha: 1.0)  // #30D158
+                : UIColor(red: 0.08, green: 0.51, blue: 0.24, alpha: 1.0)  // #15803D
+        })
+    }
 
     // ── Semantic backgrounds (light/dark adaptive) ──────────
 
@@ -17,18 +60,6 @@ extension Color {
         trait.userInterfaceStyle == .dark
             ? UIColor(red: 7/255, green: 7/255, blue: 11/255, alpha: 1)
             : UIColor.systemGroupedBackground
-    })
-
-    static let ftCardBg = Color(UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 18/255, green: 18/255, blue: 22/255, alpha: 1)
-            : UIColor.secondarySystemGroupedBackground
-    })
-
-    static let ftSectionBg = Color(UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1)
-            : UIColor.systemBackground
     })
 
     static let ftGlassSurface = Color(UIColor { trait in
@@ -49,7 +80,7 @@ extension Color {
             : UIColor(white: 1, alpha: 0.42)
     })
 
-    static let ftShimmer = Color(white: 1, opacity: 0.35)
+    static let ftShimmer = Color.white.opacity(0.12)
     static let ftScrim = Color.black.opacity(0.45)
     static let ftRankGold = Color.ftGold
     static let ftRankSilver = Color(red: 192/255, green: 192/255, blue: 192/255)
@@ -57,9 +88,73 @@ extension Color {
     static let ftOnDarkDivider = Color.white.opacity(0.14)
     static let ftHairline = Color.white.opacity(0.1)
     static let ftSkeleton = Color(.systemGray5)
-    static let ftPB060Tint = Color.yellow
-    static let ftPBTopSpeedTint = Color.red
+    static let ftPB060Tint = Color.ftGold
+    static let ftPBTopSpeedTint = Color.ftRed
     static let ftErrorBackground = Color.red.opacity(0.6)
+
+    // ── Background gradients ─────────────────────────────────
+
+    /// Default screen background — deep navy → near-black radial gradient.
+    static var ftBgGradient: some ShapeStyle {
+        AdaptiveRadialGradient(
+            darkColors: [Color(red: 0.10, green: 0.10, blue: 0.23), Color(red: 0.027, green: 0.027, blue: 0.043)],
+            lightColors: [Color(red: 0.92, green: 0.94, blue: 0.98), Color(red: 0.78, green: 0.82, blue: 0.90)],
+            center: .topLeading,
+            startRadius: 0,
+            endRadius: 500
+        )
+    }
+
+    /// Recording-active screen background — warm dark radial gradient.
+    static var ftBgGradientWarm: some ShapeStyle {
+        AdaptiveRadialGradient(
+            darkColors: [Color(red: 0.12, green: 0.04, blue: 0.0), Color(red: 0.027, green: 0.027, blue: 0.043)],
+            lightColors: [Color(red: 1.00, green: 0.93, blue: 0.86), Color(red: 0.95, green: 0.88, blue: 0.80)],
+            center: .top,
+            startRadius: 0,
+            endRadius: 500
+        )
+    }
+
+    // ── Glass card tokens ────────────────────────────────────
+
+    /// Glass card fill — white at ~7% (dark) / ~55% (light) opacity. Use with `ftGlassCardStroke` border.
+    static let ftGlassCardFill = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.07)
+            : UIColor(white: 1, alpha: 0.55)
+    })
+    /// Glass card border stroke — white at ~12% (dark) / ~75% (light) opacity.
+    static let ftGlassCardStroke = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.12)
+            : UIColor(white: 1, alpha: 0.75)
+    })
+}
+
+// ─── Status Level ───────────────────────────────────────────
+
+enum StatusLevel {
+    case best       // ftGold  — PB, #1 rank
+    case improving  // ftGreen — improving, above average, GPS excellent
+    case nearBest   // ftAmber — near best, active, GPS good
+    case typical    // ftBlue  — normal, info, GPS fair
+    case inactive   //          — idle, locked, GPS poor
+
+    var color: Color {
+        switch self {
+        case .best:      return .ftGold
+        case .improving: return .ftGreen
+        case .nearBest:  return .ftAmber
+        case .typical:   return .ftBlue
+        case .inactive:
+            return Color(uiColor: UIColor { trait in
+                trait.userInterfaceStyle == .dark
+                    ? UIColor(white: 0.33, alpha: 1.0)
+                    : UIColor(white: 0.55, alpha: 1.0)
+            })
+        }
+    }
 }
 
 // ─── Spacing ───────────────────────────────────────────────
@@ -177,24 +272,22 @@ struct StatValue: View {
 
 struct InstrumentCard<Content: View>: View {
     let content: Content
-    var glass: Bool
+    var padding: CGFloat = Spacing.md
 
-    init(glass: Bool = false, @ViewBuilder content: () -> Content) {
-        self.glass = glass
+    init(padding: CGFloat = Spacing.md, @ViewBuilder content: () -> Content) {
+        self.padding = padding
         self.content = content()
     }
 
     var body: some View {
         content
-            .padding(Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(glass ? Color.ftGlassSurface : Color.ftCardBg)
-            )
+            .padding(padding)
+            .background(Color.ftGlassCardFill)
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.lg)
-                    .stroke(glass ? Color.ftGlassStroke : Color.clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: Radius.xl)
+                    .stroke(Color.ftGlassCardStroke, lineWidth: 1)
             )
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
     }
 }
 

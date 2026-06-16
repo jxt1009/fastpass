@@ -6,6 +6,7 @@ struct AchievementsView: View {
     @EnvironmentObject var settings: AppSettings
     @State private var selectedCategory: AchievementCategory?
     @State private var showingUnlockedOnly = false
+    @State private var selectedAchievement: Achievement?
     
     private var filteredAchievements: [Achievement] {
         var achievements = showingUnlockedOnly ? achievementManager.unlockedAchievements : achievementManager.achievements
@@ -44,16 +45,20 @@ struct AchievementsView: View {
                     )
                 } else {
                     ScrollView {
-                        StatsGrid(spacing: 16) {
+                        LazyVGrid(
+                            columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
+                            spacing: Spacing.sm
+                        ) {
                             ForEach(filteredAchievements) { achievement in
-                                AchievementCard(achievement: achievement)
+                                AchievementBadgeCard(achievement: achievement)
+                                    .onTapGesture { selectedAchievement = achievement }
                             }
                         }
                         .padding()
                     }
-                    .background(Color.ftSurfaceBg.ignoresSafeArea())
                 }
             }
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle("Achievements")
             .navigationBarTitleDisplayMode(.inline)
             .accentColor(.ftBlue)
@@ -63,6 +68,10 @@ struct AchievementsView: View {
             .onChange(of: driveManager.drives) { drives in
                 achievementManager.updateProgress(with: drives)
             }
+            .sheet(item: $selectedAchievement) { achievement in
+                AchievementDetailView(achievement: achievement)
+                    .environmentObject(settings)
+            }
         }
     }
     
@@ -71,18 +80,18 @@ struct AchievementsView: View {
     private var statsHeader: some View {
         HStack(spacing: 16) {
             Label("\(achievementManager.unlockedAchievements.count) unlocked", systemImage: "trophy.fill")
-                .foregroundStyle(.yellow)
+                .foregroundStyle(Color.ftGold)
             Spacer()
             Label(String(format: "%.0f%%", progressPercentage), systemImage: "chart.line.uptrend.xyaxis")
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.ftGreen)
         }
         .font(.subheadline)
         .padding(.horizontal)
         .padding(.vertical, 10)
-        .background(Color.ftSurfaceBg)
+        .background(Color.ftGlassCardFill)
         .overlay(alignment: .bottom) {
             ProgressView(value: progressPercentage / 100.0)
-                .progressViewStyle(LinearProgressViewStyle(tint: .green))
+                .progressViewStyle(LinearProgressViewStyle(tint: Color.ftGreen))
                 .padding(.horizontal)
         }
     }
@@ -121,15 +130,13 @@ struct AchievementsView: View {
             }
             
             // Show/Hide Filter
-            HStack {
+            InstrumentCard {
                 Toggle("Show unlocked only", isOn: $showingUnlockedOnly)
-                    .toggleStyle(SwitchToggleStyle())
-                Spacer()
+                    .tint(.ftBlue)
             }
             .padding(.horizontal)
         }
         .padding(.vertical, 8)
-        .background(Color(.systemBackground))
     }
 }
 
@@ -145,82 +152,22 @@ struct CategoryFilterChip: View {
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : color)
+                .foregroundStyle(isSelected ? color : .secondary)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isSelected ? color : Color(.systemGray6))
-                .cornerRadius(Radius.xxxl)
-        }
-    }
-}
-
-struct AchievementCard: View {
-    let achievement: Achievement
-    @EnvironmentObject var settings: AppSettings
-    var body: some View {
-        NavigationLink(destination: AchievementDetailView(achievement: achievement)) {
-            VStack(alignment: .leading, spacing: 12) {
-                // Header with icon and status
-                HStack {
-                    Image(systemName: achievement.badgeIcon)
-                        .font(.title2)
-                        .foregroundColor(achievement.badgeColor)
-                        .frame(width: 30)
-                    
-                    Spacer()
-                    
-                    if achievement.isUnlocked {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                    } else {
-                        Text(String(format: "%.0f%%", achievement.progress * 100))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
+                .background(Color.ftGlassCardFill)
+                .overlay(
+                    Group {
+                        if isSelected {
+                            Capsule().fill(color.opacity(0.20))
+                            Capsule().stroke(color.opacity(0.30), lineWidth: 1)
+                        } else {
+                            Capsule().stroke(Color.ftGlassCardStroke, lineWidth: 1)
+                        }
                     }
-                }
-                
-                // Title and description
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(achievement.title)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    Text(achievement.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-                
-                Spacer()
-                
-                // Progress section
-                if !achievement.isUnlocked {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(achievement.progressText(with: settings))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        
-                        ProgressView(value: achievement.progress)
-                            .progressViewStyle(LinearProgressViewStyle(tint: achievement.category.color))
-                            .scaleEffect(x: 1, y: 1.5, anchor: .center)
-                    }
-                } else if let unlockedDate = achievement.unlockedDate {
-                    Text("Unlocked \(unlockedDate.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.caption2)
-                        .foregroundColor(.green)
-                        .fontWeight(.medium)
-                }
-            }
-            .padding()
-            .frame(height: 140)
-            .opacity(achievement.isUnlocked ? 1.0 : 0.65)
-            .background(Color.ftCardBg)
-            .cornerRadius(Radius.lg)
+                )
+                .clipShape(Capsule())
         }
-        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -232,10 +179,15 @@ struct AchievementDetailView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                // Large icon
-                Image(systemName: achievement.badgeIcon)
-                    .font(FTFont.iconLarge).minimumScaleFactor(0.6)
-                    .foregroundColor(achievement.badgeColor)
+                // Icon
+                RoundedRectangle(cornerRadius: Radius.xl)
+                    .fill(achievement.category.color.opacity(0.20))
+                    .frame(width: 64, height: 64)
+                    .overlay(
+                        Image(systemName: achievement.icon)
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(achievement.category.color)
+                    )
                 
                 // Title and description
                 VStack(spacing: 8) {
@@ -255,10 +207,10 @@ struct AchievementDetailView: View {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Color.ftGreen)
                                 Text("Achievement Unlocked!")
                                     .fontWeight(.medium)
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Color.ftGreen)
                             }
                             .font(.headline)
                             
@@ -277,10 +229,12 @@ struct AchievementDetailView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
-                            ProgressView(value: achievement.progress)
-                                .progressViewStyle(LinearProgressViewStyle(tint: achievement.category.color))
-                                .scaleEffect(x: 1, y: 2, anchor: .center)
-                                .frame(width: 200)
+                            GradientProgressBar(
+                                value: achievement.progress,
+                                range: 0...1,
+                                size: .hero
+                            )
+                            .padding(.horizontal, Spacing.lg)
                         }
                     }
                 }
@@ -300,6 +254,7 @@ struct AchievementDetailView: View {
                 Spacer()
             }
             .padding()
+            .background(Color.ftBg, ignoresSafeAreaEdges: .all)
             .navigationTitle("Achievement")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -308,6 +263,7 @@ struct AchievementDetailView: View {
                 }
             }
         }
+        .presentationBackground(Color.ftBg)
     }
 }
 

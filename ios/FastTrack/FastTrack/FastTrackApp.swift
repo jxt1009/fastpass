@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import os
 import UIKit
 
@@ -16,6 +17,14 @@ struct FastTrackApp: App {
     @StateObject private var screenWake: ScreenWakeControllerObservable
 
     init() {
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithTransparentBackground()
+        navAppearance.backgroundColor = .clear
+        navAppearance.shadowColor = .clear
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
+
         let apiService = APIService()
         let authMgr = AuthManager(apiService: apiService)
         apiService.authManager = authMgr
@@ -105,9 +114,9 @@ struct RootView: View {
     @EnvironmentObject var screenWake: ScreenWakeControllerObservable
     @Environment(\.scenePhase) private var scenePhase
     @State private var isInitializing = true
-    @State private var selectedTab = 0
+    @State private var selectedTab: AppTab = .track
     @State private var showingProfileSetup = false
-    @State private var tabResetIDs = (0..<4).map { _ in UUID() }
+    @State private var tabResetIDs: [Int: UUID] = [:]
 
     private static let signOutLog = Logger(subsystem: "app.fasttrack", category: "signOut")
 
@@ -155,7 +164,7 @@ struct RootView: View {
                     }
                     driveManager.clearLocalData()
                     notificationsManager.stopPolling()
-                    selectedTab = 0
+                    selectedTab = .track
                 }
             }
         }
@@ -210,15 +219,15 @@ struct RootView: View {
         if authManager.isAuthenticated {
             TabView(selection: $selectedTab) {
                 ContentView()
-                    .tabItem { Label("Track", systemImage: "location.fill") }.tag(0)
+                    .tabItem { Label("Track", systemImage: "location.fill") }.tag(AppTab.track)
                 GarageView()
-                    .id(tabResetIDs[1])
-                    .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(1)
+                    .id(tabResetIDs[AppTab.garage.rawValue, default: UUID()])
+                    .tabItem { Label("Garage", systemImage: "car.2.fill") }.tag(AppTab.garage)
                 SocialView()
-                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(2)
-                ProfileView(onSwitchToGarage: { selectedTab = 1 })
-                    .id(tabResetIDs[3])
-                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(3)
+                    .tabItem { Label("Social", systemImage: "person.2.fill") }.tag(AppTab.social)
+                ProfileView(onSwitchToGarage: { selectedTab = .garage })
+                    .id(tabResetIDs[AppTab.profile.rawValue, default: UUID()])
+                    .tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppTab.profile)
             }
             .sheet(isPresented: $showingProfileSetup) {
                 ProfileSetupView()
@@ -236,14 +245,14 @@ struct RootView: View {
                 }
             }
             .onChange(of: selectedTab) { oldTab, _ in
-                if oldTab != 0 && oldTab != 2 {
-                    tabResetIDs[oldTab] = UUID()
+                if oldTab == .garage || oldTab == .profile {
+                    tabResetIDs[oldTab.rawValue] = UUID()
                 }
             }
             .onOpenURL { url in
                 if url.scheme == "fasttrack", url.host == "stop-recording" {
                     Task { await driveManager.stopRecording() }
-                    selectedTab = 0
+                    selectedTab = .track
                 }
             }
             .onAppear {
@@ -258,6 +267,12 @@ struct RootView: View {
     }
 }
 
+// MARK: - App Tab
+
+enum AppTab: Int, CaseIterable {
+    case track, garage, social, profile
+}
+
 // MARK: - Splash Screen
 
 struct SplashView: View {
@@ -269,7 +284,9 @@ struct SplashView: View {
 
     var body: some View {
         ZStack {
-            Color.ftSectionBg.ignoresSafeArea()
+            Rectangle()
+                .fill(Color.ftBgGradient)
+                .ignoresSafeArea()
 
             VStack(spacing: 24) {
                 Spacer()

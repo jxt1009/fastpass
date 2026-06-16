@@ -157,7 +157,7 @@ struct StatCard: View {
             }
 .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color.ftCardBg)
+            .background(Color.ftGlassCardFill)
             .cornerRadius(Radius.lg)
         }
     }
@@ -179,29 +179,43 @@ struct DetailRow: View {
     }
 }
 
-struct GaugeProgressBar: View {
-    let progress: Double
-    var color: Color = .ftBlue
-    var height: CGFloat = 6
+enum GradientProgressBarSize {
+    case compact, hero
+}
 
-    private var clampedProgress: Double {
-        min(max(progress, 0), 1)
+struct GradientProgressBar: View {
+    let value: Double
+    let range: ClosedRange<Double>
+    let size: GradientProgressBarSize
+
+    var fraction: Double {
+        guard range.upperBound > range.lowerBound else { return 0 }
+        return max(0, min(1, (value - range.lowerBound) / (range.upperBound - range.lowerBound)))
     }
 
-    var body: some View {
-        GeometryReader { proxy in
-            let width = max(proxy.size.width * clampedProgress, height)
+    var trackHeight: CGFloat { size == .compact ? 5 : 8 }
+    var dotDiameter: CGFloat { size == .compact ? 9 : 14 }
 
-            Capsule()
-                .fill(Color.ftSectionBg)
-                .overlay(alignment: .leading) {
-                    Capsule()
-                        .fill(color)
-                        .frame(width: clampedProgress == 0 ? 0 : width)
-                        .animation(Motion.standard, value: clampedProgress)
-                }
+    private let gradient = LinearGradient(
+        colors: [.ftGreen, .ftGold, .ftAmber, .ftRed],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(gradient)
+                    .frame(height: trackHeight)
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(Color.ftBg, lineWidth: 1.5))
+                    .frame(width: dotDiameter, height: dotDiameter)
+                    .offset(x: geo.size.width * fraction - dotDiameter / 2)
+            }
         }
-        .frame(height: height)
+        .frame(height: dotDiameter)
     }
 }
 
@@ -272,7 +286,7 @@ struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color.ftSectionBg.opacity(0.5))
+            .fill(Color.white.opacity(0.06))
             .frame(width: width, height: height)
             .shimmer()
     }
@@ -309,7 +323,7 @@ struct StatCardSkeleton: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.ftCardBg)
+        .background(Color.ftGlassCardFill)
         .cornerRadius(Radius.lg)
     }
 }
@@ -332,16 +346,32 @@ struct InstrumentStatCell: View {
                     Spacer()
                     if let info { StatInfoButton(entry: info) }
                 }
-                Text(label).font(.caption).foregroundColor(.secondary)
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(alignment: .lastTextBaseline, spacing: 3) {
-                    Text(value).font(.title2).fontWeight(.bold).foregroundColor(.primary)
+                    Text(value)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                     if !unit.isEmpty {
-                        Text(unit).font(.caption).foregroundColor(.secondary)
+                        Text(unit)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 76, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -478,6 +508,25 @@ struct SpeechBubble: Shape {
         )
         p.closeSubpath()
         return p
+    }
+}
+
+/// A small filled circle with a label — used to add qualitative context to a metric or state.
+struct StatusDot: View {
+    let level: StatusLevel
+    let label: String
+    var font: Font = .caption
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(level.color)
+                .frame(width: 6, height: 6)
+            Text(label)
+                .font(font)
+                .fontWeight(.semibold)
+                .foregroundStyle(level.color)
+        }
     }
 }
 

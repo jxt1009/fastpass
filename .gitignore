@@ -88,3 +88,9 @@ backend/static/spa/
 # Git worktrees (local development only — never commit these)
 .worktrees/
 .worktree/
+
+# Tooling configs (local only — never commit these)
+.claude/
+.codegraph/
+.opencode/
+.superpowers/

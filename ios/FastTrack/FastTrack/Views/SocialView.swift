@@ -24,6 +24,7 @@ struct SocialView: View {
                 Divider()
                 content
             }
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle("Leaderboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -134,7 +135,7 @@ struct SocialView: View {
                     ) {
                         Section {
                             LeaderboardYourPositionCard(entry: userEntry, category: selectedCategory)
-                                .listRowBackground(Color.ftCardBg)
+                                .listRowBackground(Color.ftGlassCardFill)
                         }
                     }
                     Section {
@@ -151,14 +152,18 @@ struct SocialView: View {
                                 )
                             }
                             .listRowBackground(
-                                isCurrentUserRow
-                                    ? Color.ftBlue.opacity(0.08)
-                                    : Color.ftCardBg
+                                ZStack {
+                                    Color.ftGlassCardFill
+                                    if isCurrentUserRow {
+                                        Color.ftBlue.opacity(0.08)
+                                    }
+                                }
                             )
                         }
                     }
                 }
                 .listStyle(.inset)
+                .scrollContentBackground(.hidden)
                 .opacity(isLoading ? 0.5 : 1.0)
                 .animation(.easeInOut(duration: 0.2), value: isLoading)
 
@@ -254,10 +259,16 @@ private struct LeaderboardQuickFilterChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: Radius.md)
-                .fill(accent ? Color.ftBlue.opacity(0.12) : Color.ftCardBg)
-        )
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: Radius.md)
+                        .fill(Color.ftGlassCardFill)
+                    if accent {
+                        RoundedRectangle(cornerRadius: Radius.md)
+                            .fill(Color.ftBlue.opacity(0.12))
+                    }
+                }
+            )
     }
 }
 
@@ -356,19 +367,19 @@ private struct LeaderboardRow: View {
             Spacer(minLength: 4)
 
             // Stat value
-            Text(category.formattedValue(entry.value, settings: settings))
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.primary)
-                .monospacedDigit()
+            StatusDot(
+                level: entry.rank == 1 ? .best : entry.rank <= 3 ? .improving : .typical,
+                label: category.formattedValue(entry.value, settings: settings)
+            )
+            .font(.subheadline)
         }
         .padding(.vertical, 2)
     }
 
     private var rankColor: Color {
         switch entry.rank {
-        case 1: return .yellow
-        case 2: return Color(white: 0.7)
+        case 1: return .ftGold
+        case 2: return Color(white: 0.5)
         case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
         default: return .secondary
         }

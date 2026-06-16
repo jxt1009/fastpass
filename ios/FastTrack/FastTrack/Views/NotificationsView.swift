@@ -23,12 +23,12 @@ struct NotificationsView: View {
                             NotificationRow(notification: n)
                         }
                         .buttonStyle(.plain)
-                        .listRowBackground(Color.ftCardBg)
+                        .listRowBackground(Color.ftGlassCardFill)
                     }
                 }
                 .listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-                .background(Color.ftSurfaceBg.ignoresSafeArea())
+                .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             }
         }
         .navigationTitle("Notifications")

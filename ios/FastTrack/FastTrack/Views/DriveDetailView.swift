@@ -87,6 +87,7 @@ struct DriveDetailView: View {
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var carStatsManager: CarStatsManager
+    @EnvironmentObject var achievementManager: AchievementManager
 
     private var isOwner: Bool {
         drive.userID == authManager.getUser()?.id
@@ -112,6 +113,22 @@ struct DriveDetailView: View {
                     onSeekForward: seekForward
                 )
 
+                if drive.id == driveManager.pbTopSpeedDriveId {
+                    StatusDot(level: .best, label: "Top Speed PB")
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.ftGold.opacity(0.08))
+                        .overlay(Capsule().stroke(Color.ftGold.opacity(0.20), lineWidth: 1))
+                        .clipShape(Capsule())
+                } else if drive.id == driveManager.pb060DriveId {
+                    StatusDot(level: .nearBest, label: "0-60 PB")
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.ftAmber.opacity(0.08))
+                        .overlay(Capsule().stroke(Color.ftAmber.opacity(0.20), lineWidth: 1))
+                        .clipShape(Capsule())
+                }
+
                 if !routePoints.isEmpty {
                     DriveDetailAttemptsList(zeroToSixtyAttempts: zeroToSixtyAttempts)
                 }
@@ -122,9 +139,12 @@ struct DriveDetailView: View {
                     drive: drive,
                     onTapCarPicker: { showingCarPicker = true }
                 )
+
+                earnedThisDriveSection
             }
             .padding()
         }
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .navigationTitle("Drive Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -159,6 +179,49 @@ struct DriveDetailView: View {
         .onDisappear { stopPlayback() }
         .sheet(isPresented: $showingCarPicker) {
             DriveCarSelectorView(drive: drive)
+        }
+    }
+
+    // MARK: - Earned This Drive
+
+    @ViewBuilder
+    private var earnedThisDriveSection: some View {
+        let earnedAchievements = achievementManager.achievements.filter {
+            $0.isUnlocked && $0.sourceDriveId == drive.id
+        }
+        if !earnedAchievements.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("Earned This Drive")
+                    .font(.headline)
+                ForEach(earnedAchievements) { achievement in
+                    InstrumentCard {
+                        HStack(spacing: Spacing.md) {
+                            RoundedRectangle(cornerRadius: Radius.md)
+                                .fill(achievement.category.color.opacity(0.15))
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Image(systemName: achievement.icon)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(achievement.category.color)
+                                )
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(achievement.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.primary)
+                                Text("Unlocked on this drive")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                    }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.xl)
+                            .fill(achievement.category.color.opacity(0.08))
+                    )
+                }
+            }
         }
     }
 

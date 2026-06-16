@@ -1,9 +1,11 @@
 import SwiftUI
 import MapKit
 import Combine
+import Charts
 
 struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var driveManager: DriveManager
     @EnvironmentObject var settings: AppSettings
@@ -14,11 +16,15 @@ struct ContentView: View {
 
     private let hasAcceptedSafetyKey = "hasAcceptedSafetyDisclaimer"
     private let recordingAccent = Color.ftAmber
-    private let idleAccent = Color.ftBlue
 
     var body: some View {
         NavigationStack {
             ZStack {
+                // Gradient background (behind map)
+                Rectangle()
+                    .fill(driveManager.isRecording ? AnyShapeStyle(Color.ftBgGradientWarm) : AnyShapeStyle(Color.ftBgGradient))
+                    .ignoresSafeArea()
+
                 // Always-visible map backdrop
                 LiveMapView(
                     userLocation: locationManager.currentLocation?.coordinate
@@ -80,8 +86,7 @@ struct ContentView: View {
             ZStack {
                 SpeedHeroRing(
                     progress: speedRingProgress,
-                    tint: driveManager.isRecording ? recordingAccent : idleAccent,
-                    isRecording: driveManager.isRecording
+                    diameter: 256
                 )
                 .frame(width: 256, height: 256)
                 .accessibilityLabel("Current speed \(Int(settings.calibratedSpeedValue(locationManager.currentSpeed))) \(settings.speedUnit)")
@@ -101,31 +106,26 @@ struct ContentView: View {
                         .padding(.vertical, 3)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.ftCardBg.opacity(0.92))
+                                .fill(Color.ftGlassCardFill)
                         )
                 }
             }
 
             HStack(spacing: 8) {
-                Circle()
-                    .fill(gpsStatusColor)
-                    .frame(width: 7, height: 7)
-                    .accessibilityLabel("GPS: \(gpsStatusText)")
-                Text(driveManager.isRecording ? "Recording" : "Idle")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(driveManager.isRecording ? recordingAccent : .secondary)
+                StatusDot(
+                    level: driveManager.isRecording ? .nearBest : .typical,
+                    label: driveManager.isRecording ? "Recording" : "Idle"
+                )
                 Text("•")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(gpsStatusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                StatusDot(level: gpsStatusLevel, label: gpsStatusText)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color.ftCardBg.opacity(0.9))
+                    .fill(Color.ftGlassCardFill)
             )
         }
     }
@@ -133,13 +133,15 @@ struct ContentView: View {
     // MARK: - Gauge Strip
 
     private func gaugeStrip(drive: Drive) -> some View {
-        HStack(spacing: Spacing.sm) {
+        let recentDrives = Array(driveManager.drives.prefix(10))
+        return HStack(spacing: Spacing.sm) {
             TrackMetricCard(
                 title: "MAX",
                 value: String(format: "%.0f", settings.speedValue(drive.maxSpeed)),
                 unit: settings.speedUnit,
                 color: recordingAccent,
-                progress: normalizedSpeedProgress(drive.maxSpeed)
+                progress: normalizedSpeedProgress(drive.maxSpeed),
+                sparklineData: recentDrives.compactMap { $0.maxSpeed > 0 ? settings.speedValue($0.maxSpeed) : nil }
             )
 
             TrackMetricCard(
@@ -147,7 +149,8 @@ struct ContentView: View {
                 value: String(format: "%.0f", settings.speedValue(drive.avgSpeed)),
                 unit: settings.speedUnit,
                 color: .ftBlue,
-                progress: normalizedSpeedProgress(drive.avgSpeed)
+                progress: normalizedSpeedProgress(drive.avgSpeed),
+                sparklineData: recentDrives.compactMap { $0.avgSpeed > 0 ? settings.speedValue($0.avgSpeed) : nil }
             )
 
             TimelineView(.periodic(from: driveManager.recordingStartTime ?? .now, by: 1)) { ctx in
@@ -194,7 +197,7 @@ struct ContentView: View {
                 .disabled(driveManager.isRecording)
                 .opacity(driveManager.isRecording ? 0.5 : 1)
                 .frame(maxWidth: .infinity)
-                .background(Color.ftCardBg)
+                .background(Color.ftGlassCardFill)
                 .cornerRadius(Radius.lg)
             }
 
@@ -212,10 +215,14 @@ struct ContentView: View {
             } else {
                 Button {
                     if driveManager.isRecording {
+                        #if DEBUG
                         print("🛑 Stop recording button pressed")
+                        #endif
                         Task { await driveManager.stopRecording() }
                     } else {
+                        #if DEBUG
                         print("▶️ Start recording button pressed")
+                        #endif
                         let hasAccepted = UserDefaults.standard.bool(forKey: hasAcceptedSafetyKey)
                         if hasAccepted {
                             driveManager.startRecording()
@@ -242,6 +249,8 @@ struct ContentView: View {
                                 : .default,
                             value: driveManager.isRecording
                         )
+                        // Restart pulse animation when app returns to foreground.
+                        .id("pulse-\(scenePhase)")
                 )
                 .sensoryFeedback(.impact(weight: .medium), trigger: driveManager.isRecording) { oldValue, newValue in
                     newValue
@@ -257,6 +266,16 @@ struct ContentView: View {
         let m = (Int(t) % 3600) / 60
         let s = Int(t) % 60
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
+    private var gpsStatusLevel: StatusLevel {
+        guard let location = locationManager.currentLocation else { return .inactive }
+        let accuracy = location.horizontalAccuracy
+        if accuracy < 0 { return .inactive }
+        if accuracy < 5 { return .improving }
+        if accuracy < 10 { return .nearBest }
+        if accuracy < 20 { return .typical }
+        return .inactive
     }
 
     private var gpsStatusColor: Color {
@@ -278,6 +297,7 @@ struct ContentView: View {
         if accuracy < 0 { return "GPS Error" }
         if accuracy < 5 { return "GPS Excellent" }
         if accuracy < 10 { return "GPS Good" }
+        if accuracy < 20 { return "GPS Fair" }
         return "GPS Poor"
     }
 
@@ -291,32 +311,49 @@ struct ContentView: View {
 }
 
 private struct SpeedHeroRing: View {
-    let progress: Double
-    let tint: Color
-    let isRecording: Bool
+    let progress: Double   // 0–1 normalized speed fraction
+    let diameter: CGFloat
+
+    private let trackGradient = AngularGradient(
+        stops: [
+            .init(color: .ftGreen, location: 0.0),
+            .init(color: .ftGold,  location: 0.33),
+            .init(color: .ftAmber, location: 0.67),
+            .init(color: .ftRed,   location: 1.0)
+        ],
+        center: .center,
+        startAngle: .degrees(0),
+        endAngle: .degrees(240)
+    )
 
     var body: some View {
         ZStack {
+            // Track — 240° open arc, gap at bottom
             Circle()
-                .stroke(Color.ftHairline, lineWidth: 16)
+                .trim(from: 0, to: 240.0/360.0)
+                .stroke(Color.white.opacity(0.06), style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .rotationEffect(.degrees(150))
+                .frame(width: diameter, height: diameter)
 
+            // Value arc
             Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    LinearGradient(
-                        colors: [tint.opacity(0.35), tint],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    style: StrokeStyle(lineWidth: 16, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.2), value: progress)
+                .trim(from: 0, to: (240.0/360.0) * progress)
+                .stroke(trackGradient, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .rotationEffect(.degrees(150))
+                .frame(width: diameter, height: diameter)
+                .animation(.linear(duration: 0.1), value: progress)
 
-            Circle()
-                .fill(Color.ftCardBg.opacity(isRecording ? 0.5 : 0.7))
-                .padding(24)
+            // 5 tick marks evenly spaced along the 240° arc
+            ForEach(0..<5) { i in
+                let angle = 150.0 + (240.0 / 4.0) * Double(i)
+                Rectangle()
+                    .fill(Color.white.opacity(0.15))
+                    .frame(width: 1.5, height: 6)
+                    .offset(y: -(diameter / 2) + 5)
+                    .rotationEffect(.degrees(angle))
+            }
         }
+        .frame(width: diameter, height: diameter)
     }
 }
 
@@ -326,6 +363,7 @@ private struct TrackMetricCard: View {
     let unit: String
     let color: Color
     let progress: Double
+    var sparklineData: [Double] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -334,36 +372,44 @@ private struct TrackMetricCard: View {
                     .font(.system(.headline, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 if !unit.isEmpty {
                     Text(unit.uppercased())
                         .font(FTFont.gaugeLabelCompact).minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
             }
 
             Text(title)
                 .font(FTFont.pill).minimumScaleFactor(0.7)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
 
-            GeometryReader { proxy in
-                RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
-                    .fill(color.opacity(0.22))
-                    .overlay(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: Radius.xxs, style: .continuous)
-                            .fill(color)
-                            .frame(width: proxy.size.width * min(1, max(0, progress)))
-                            .animation(.easeInOut(duration: 0.2), value: progress)
+            ZStack(alignment: .leading) {
+                if sparklineData.count >= 3 {
+                    Chart {
+                        ForEach(Array(sparklineData.enumerated()), id: \.offset) { i, v in
+                            LineMark(x: .value("i", i), y: .value("v", v))
+                        }
                     }
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .foregroundStyle(color.opacity(0.70))
+                }
             }
-            .frame(height: 4)
+            .frame(height: 14)
+
+            GradientProgressBar(value: progress, range: 0...max(1, 0.001), size: .compact)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 9)
         .padding(.horizontal, 8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .background(Color.ftGlassCardFill, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .stroke(Color.ftOnDarkDivider, lineWidth: 1)
+                .stroke(Color.ftGlassCardStroke, lineWidth: 1)
         )
     }
 }

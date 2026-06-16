@@ -79,11 +79,11 @@ struct ToastView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.ftCardBg)
+                .fill(Color.ftGlassCardFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.ftSectionBg, lineWidth: 1)
+                .stroke(Color.ftGlassCardStroke, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
         .padding(.horizontal, 16)

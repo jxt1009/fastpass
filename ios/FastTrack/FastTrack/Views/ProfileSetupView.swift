@@ -73,6 +73,8 @@ struct ProfileSetupView: View {
                 }
                 .onChange(of: username) { _, val in validateUsername(val) }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle(profileManager.isProfileComplete ? "Edit Profile" : "Set Up Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 // MARK: - FTGauge
 //
@@ -30,8 +31,13 @@ struct FTGauge: View {
     let label: String
     let value: String
     let color: Color
+    var icon: String? = nil
+    var sparklineData: [Double] = []
+    var numericValue: Double = 0
+    var maxValue: Double = 0
 
     @State private var displayedProgress: Double = 0
+    @State private var displayedNumericValue: Double = 0
 
     var body: some View {
         switch style {
@@ -50,7 +56,7 @@ struct FTGauge: View {
     private func heroBody(progress: Double?, setOn: Date?) -> some View {
         VStack(alignment: .center, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: icon(for: label))
+                Image(systemName: icon ?? self.icon(for: label))
                     .font(.caption)
                     .foregroundColor(color)
                 Text(label.uppercased())
@@ -62,18 +68,31 @@ struct FTGauge: View {
 
             ZStack {
                 Circle()
-                    .stroke(color.opacity(0.15), lineWidth: 8)
+                    .trim(from: 0, to: 240.0 / 360.0)
+                    .stroke(Color.white.opacity(0.06),
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(150))
                     .frame(width: 96, height: 96)
 
                 Circle()
-                    .trim(from: 0, to: max(0.001, displayedProgress))
+                    .trim(from: 0, to: max(0.0001, (240.0 / 360.0) * displayedProgress))
                     .stroke(
-                        color,
+                        AngularGradient(
+                            stops: [
+                                .init(color: .ftGreen, location: 0.0),
+                                .init(color: .ftGold,  location: 0.33),
+                                .init(color: .ftAmber, location: 0.67),
+                                .init(color: .ftRed,   location: 1.0)
+                            ],
+                            center: .center,
+                            startAngle: .degrees(0),
+                            endAngle: .degrees(240)
+                        ),
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )
-                    .rotationEffect(.degrees(-90))
+                    .rotationEffect(.degrees(150))
                     .frame(width: 96, height: 96)
-                    .animation(.easeInOut(duration: 0.6), value: displayedProgress)
+                    .animation(.linear(duration: 0.15), value: displayedProgress)
 
                 Text(value)
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
@@ -81,6 +100,10 @@ struct FTGauge: View {
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
                     .padding(.horizontal, 6)
+            }
+
+            if maxValue > 0 {
+                GradientProgressBar(value: numericValue, range: 0...maxValue, size: .hero)
             }
 
             if let setOn {
@@ -129,14 +152,24 @@ struct FTGauge: View {
                 .foregroundColor(color)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [.ftBlue, .ftAmber],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ))
-                .frame(width: 32, height: 3)
-                .cornerRadius(1.5)
+            if sparklineData.count >= 3 {
+                Chart {
+                    ForEach(Array(sparklineData.enumerated()), id: \.offset) { index, val in
+                        LineMark(
+                            x: .value("Index", index),
+                            y: .value("Value", val)
+                        )
+                    }
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .foregroundStyle(color.opacity(0.70))
+                .frame(height: 14)
+            }
+            if maxValue > 0 {
+                GradientProgressBar(value: displayedNumericValue, range: 0...maxValue, size: .compact)
+                    .padding(.top, 4)
+            }
             Text(label.uppercased())
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundColor(.secondary)
@@ -147,12 +180,20 @@ struct FTGauge: View {
         .padding(.horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.ftSectionBg, lineWidth: 1)
+                .stroke(Color.ftGlassCardStroke, lineWidth: 1)
         )
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.ftCardBg)
+                .fill(Color.ftGlassCardFill)
         )
+        .onAppear {
+            displayedNumericValue = numericValue
+        }
+        .onChange(of: numericValue) { _, newValue in
+            withAnimation(.easeInOut(duration: 0.35)) {
+                displayedNumericValue = newValue
+            }
+        }
     }
 
     // MARK: StatCell

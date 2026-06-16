@@ -58,7 +58,7 @@ struct DriveDetailMap: View {
                 }
         } else {
             RoundedRectangle(cornerRadius: Radius.lg)
-                .fill(Color.ftCardBg)
+                .fill(Color.ftGlassCardFill)
                 .frame(height: 260)
                 .overlay(
                     VStack(spacing: 8) {
@@ -184,7 +184,7 @@ struct DriveDetailMap: View {
             playbackControlsCompact
         }
         .padding()
-        .background(Color.ftCardBg)
+        .background(Color.ftGlassCardFill)
     }
 
     private var gaugeStripRow: some View {
@@ -336,7 +336,7 @@ struct ZeroSixtyAttemptBubble: View {
                 SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)
                     .stroke(Color.white, lineWidth: 1)
             )
-            .foregroundColor(isPersonalBest ? .black : .white)
+            .foregroundColor(.black)
             .offset(y: -22)
         }
     }

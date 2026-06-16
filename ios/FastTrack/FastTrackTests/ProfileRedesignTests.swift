@@ -284,38 +284,37 @@ final class ProfileRedesignTests: XCTestCase {
 
     // MARK: - ProfileView body section order (issue #64 regression guard)
 
-    /// The achievements strip must render directly under the profile
-    /// header and ahead of the garage section, so a returning user can
+    /// The achievements section must render directly under the profile
+    /// header and ahead of the garage link row, so a returning user can
     /// see their recent unlocks without scrolling. This is a line-order
     /// regression guard rather than a SwiftUI snapshot: the project does
     /// not currently use ViewInspector and the layout itself is hard to
     /// inspect without it, but the *order* of the three sections in the
     /// body of `ProfileView` is straightforward to pin down.
-    func testProfileView_AchievementsStripAboveGarage() throws {
+    func testProfileView_AchievementsSectionBelowGarageLink() throws {
         let source = try readProfileViewSource()
         let headerLine = try firstLineNumber(in: source, matching: "profileHeader")
-        let stripLine = try firstLineNumber(in: source, matching: "RecentAchievementsStrip(driveManager:")
-        let garageLine = try firstLineNumber(in: source, matching: "garageSection")
+        let stripLine = try firstLineNumber(in: source, matching: "achievementsSection")
+        let garageLine = try firstLineNumber(in: source, matching: "garageLinkRow")
         XCTAssertGreaterThan(stripLine, headerLine,
-            "RecentAchievementsStrip must come after profileHeader in ProfileView.swift")
-        XCTAssertLessThan(stripLine, garageLine,
-            "RecentAchievementsStrip must come before garageSection in ProfileView.swift")
+            "achievementsSection must come after profileHeader in ProfileView.swift")
+        XCTAssertGreaterThan(stripLine, garageLine,
+            "achievementsSection must come after garageLinkRow in ProfileView.swift")
     }
 
-    // MARK: - "View Garage" entry point (Phase 2 / Track E)
+    // MARK: - "Your Garage" entry point (Phase 2 / Track E)
 
-    /// The garage section header must include a "View Garage" entry
-    /// point that pushes `GarageView`. This is a structural guard:
-    /// line-order source check, matching the pattern of the
-    /// achievements-strip regression guard above. A regression that
-    /// drops the link (or replaces `GarageView()` with a different
-    /// destination) would break this test.
+    /// The garage section header must include a "Your Garage" entry
+    /// point that calls the `onSwitchToGarage` callback (which the
+    /// RootView wires to `selectedTab = .garage`). This is a structural
+    /// guard: a regression that drops the link or removes the callback
+    /// would break this test.
     func testProfileView_HasViewGarageLink() throws {
         let source = try readProfileViewSource()
-        XCTAssertTrue(source.contains("View Garage"),
-            "ProfileView.swift must contain a 'View Garage' entry point that pushes GarageView")
-        XCTAssertTrue(source.contains("GarageView()"),
-            "ProfileView.swift must push a GarageView destination from the 'View Garage' link")
+        XCTAssertTrue(source.contains("Your Garage"),
+            "ProfileView.swift must contain a 'Your Garage' entry point")
+        XCTAssertTrue(source.contains("onSwitchToGarage"),
+            "ProfileView.swift must invoke onSwitchToGarage to switch to the Garage tab")
     }
 
     // MARK: - Helpers

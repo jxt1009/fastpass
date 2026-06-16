@@ -47,6 +47,8 @@ struct SettingsView: View {
                 .listRowInsets(.init(top: 12, leading: 16, bottom: 12, trailing: 16))
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
     }

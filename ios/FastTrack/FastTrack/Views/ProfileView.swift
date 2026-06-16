@@ -32,12 +32,14 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.ftSurfaceBg.ignoresSafeArea()
+                Rectangle()
+                    .fill(Color.ftBgGradient)
+                    .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
                         garageLinkRow
-                        RecentAchievementsStrip(achievementManager: achievementManager, driveManager: driveManager)
+                        achievementsSection
                         if driveManager.isLoadingDrives {
                             profileStatsSkeleton
                         } else {
@@ -51,7 +53,7 @@ struct ProfileView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 16) {
@@ -142,11 +144,18 @@ struct ProfileView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    if !bioLine.isEmpty {
-                        Text(bioLine)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
+                    if let profile = profileManager.profile {
+                        if !profile.country.isEmpty {
+                            Text(profile.country)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        if !profile.carDisplayString.isEmpty {
+                            StatusDot(level: .typical, label: profile.carDisplayString)
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
                     }
                 }
 
@@ -225,6 +234,59 @@ struct ProfileView: View {
         .padding(.vertical, 4)
     }
 
+    // MARK: - Achievements Section
+
+    private var achievementsSection: some View {
+        let achievements = achievementManager.achievements
+        let unlockedCount = achievements.filter(\.isUnlocked).count
+        let totalCount = achievements.count
+        let recentlyUnlocked = Array(
+            RecentAchievementsStripLogic.recentUnlocks(from: achievements, maxCount: 5)
+        )
+
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text("Achievements")
+                    .font(.headline)
+                Spacer()
+                NavigationLink("See all") {
+                    AchievementsView()
+                }
+                .font(.subheadline)
+                .foregroundStyle(Color.ftBlue)
+            }
+
+            if totalCount > 0 {
+                HStack {
+                    Text("\(unlockedCount) / \(totalCount) unlocked")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                GradientProgressBar(
+                    value: Double(unlockedCount),
+                    range: 0...Double(max(totalCount, 1)),
+                    size: .compact
+                )
+            }
+
+            if recentlyUnlocked.isEmpty {
+                Text("Start driving to earn achievements")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.sm) {
+                        ForEach(recentlyUnlocked) { achievement in
+                            AchievementChip(achievement: achievement)
+                        }
+                    }
+                    .padding(.horizontal, 1)
+                }
+            }
+        }
+    }
+
     // MARK: - Loading skeleton (dark theme)
 
     private var profileStatsSkeleton: some View {
@@ -233,7 +295,7 @@ struct ProfileView: View {
             StatsGrid(spacing: 12) {
                 ForEach(0..<6, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .fill(Color.ftCardBg.opacity(0.2))
+                        .fill(Color.white.opacity(0.06))
                         .frame(height: 80)
                         .shimmer()
                 }
@@ -241,7 +303,7 @@ struct ProfileView: View {
             // Full-width card skeletons
             ForEach(0..<3, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: Radius.lg)
-                    .fill(Color.ftCardBg.opacity(0.2))
+                    .fill(Color.white.opacity(0.06))
                     .frame(height: 60)
                     .shimmer()
             }
@@ -322,7 +384,7 @@ struct ProfileView: View {
             .foregroundColor(.red)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.ftCardBg)
+            .background(Color.ftGlassCardFill)
             .cornerRadius(Radius.lg)
         }
         .disabled(isDeletingAccount)
@@ -337,9 +399,9 @@ struct ProfileView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.red)
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.ftCardBg)
-                .cornerRadius(Radius.lg)
+            .padding()
+            .background(Color.ftGlassCardFill)
+            .cornerRadius(Radius.lg)
         }
         .confirmationDialog(
             "Sign out of FastTrack?",
@@ -493,7 +555,7 @@ struct CarGarageCard: View {
                             showingStats.toggle()
                         } label: {
                             Image(systemName: showingStats ? "chevron.up" : "chart.bar")
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                         }
                     }
                 }

@@ -3,14 +3,16 @@ import XCTest
 
 // Phase 2 / Track F of #64: the public profile's garage cards are
 // tappable (push a read-only per-car detail). These tests guard
-// against regressions in two ways:
+// against regressions in the following ways:
 //
-//   1. A line/source-order regression guard on `PublicProfileView`:
-//      the garage section must wrap each card in a `NavigationLink` to
+//   1. A source assertion on `PublicProfileView`: the garage grid
+//      must wrap each card in a `NavigationLink` to
 //      `PublicCarDetailView`, not just render the card on its own.
-//   2. A source assertion on `PublicGarageCard`: the card must render
-//      a chevron hint so the "tap to view" affordance survives a
-//      redesign that strips wrapping gestures.
+//   2. The inline card function must not own a tap handler — the
+//      wrapping `NavigationLink` is the only gesture.
+//
+// `PublicGarageCard` was deleted in the Task-12 redesign and replaced
+// by an inline `publicCarCard` function in `PublicProfileView`.
 //
 // Like the other line-order regression guards in this test target
 // (`testProfileView_AchievementsStripAboveGarage`), we read the source
@@ -22,73 +24,57 @@ final class PublicProfileRedesignTests: XCTestCase {
 
     // MARK: - NavigationLink wiring
 
-    /// The public profile's garage section must wrap each
-    /// `PublicGarageCard` in a `NavigationLink` to `PublicCarDetailView`
-    /// so tapping a car pushes the per-car detail. Regression guard
-    /// for #64 Track F.
+    /// The public profile's garage grid must wrap each card in a
+    /// `NavigationLink` to `PublicCarDetailView` so tapping a car
+    /// pushes the per-car detail. Regression guard for #64 Track F.
     func testPublicProfile_GarageCardsAreTappable() throws {
         let source = try readPublicProfileViewSource()
-        let garageBody = try firstSubstring(in: source, open: "Section(\"Garage\")", close: "}\n            }")
-        XCTAssertTrue(garageBody.contains("NavigationLink"),
-            "PublicProfileView's Garage section must wrap each card in a NavigationLink")
-        XCTAssertTrue(garageBody.contains("PublicCarDetailView("),
-            "PublicProfileView's Garage section must push PublicCarDetailView")
+        XCTAssertTrue(source.contains("NavigationLink"),
+            "PublicProfileView's garage grid must wrap each card in a NavigationLink")
+        XCTAssertTrue(source.contains("PublicCarDetailView("),
+            "PublicProfileView's garage grid must push PublicCarDetailView")
     }
 
     /// Explicit guard that the public profile still wires
     /// `NavigationLink { PublicCarDetailView(...) }` (not some other
-    /// view). The duplicate-chevron fix in #64 / spec section 4.2.4
-    /// changed the card's chrome; this test makes sure the navigation
+    /// view). The Task-12 redesign replaced the List+PublicGarageCard
+    /// with a ScrollView+LazyVGrid; this test makes sure the navigation
     /// behaviour itself didn't regress.
     func testPublicProfileView_KeepsNavigationLinkToPublicCarDetailView() throws {
         let source = try readPublicProfileViewSource()
-        let garageBody = try firstSubstring(in: source, open: "Section(\"Garage\")", close: "}\n            }")
-        XCTAssertTrue(garageBody.contains("NavigationLink"),
-            "PublicProfileView's Garage section must wrap each card in a NavigationLink")
-        XCTAssertTrue(garageBody.contains("PublicCarDetailView("),
-            "PublicProfileView's Garage section must push PublicCarDetailView")
+        XCTAssertTrue(source.contains("NavigationLink"),
+            "PublicProfileView's garage grid must wrap each card in a NavigationLink")
+        XCTAssertTrue(source.contains("PublicCarDetailView("),
+            "PublicProfileView's garage grid must push PublicCarDetailView")
     }
 
-    // MARK: - Card chevron hint
+    // MARK: - Inline card tap-handler guard
 
-    /// `PublicGarageCard` must NOT render a trailing chevron hint. The
-    /// system disclosure indicator (on a `NavigationLink` inside a
-    /// `List`) is the consistent "tap to view" affordance across the
-    /// whole profile, and a card-local chevron on top of the system
-    /// one was a doubled-up affordance on iOS 17+. Regression guard
-    /// for spec section 4.2.4.
-    func testPublicGarageCard_HasNoTrailingChevronHint() throws {
-        let source = try readPublicGarageCardSource()
-        XCTAssertFalse(source.contains("chevron.right"),
-            "PublicGarageCard must not render a chevron.right; the system disclosure indicator on the NavigationLink is the only affordance")
+    /// The inline `publicCarCard` function must NOT install an
+    /// `onTapGesture` on the card content; the wrapping `NavigationLink`
+    /// is the tap handler. A gesture-in-link would double-handle on iOS 17+.
+    func testPublicCarCard_DoesNotOwnItsOwnTapHandler() throws {
+        let source = try readPublicProfileViewSource()
+        // Extract just the publicCarCard function body
+        guard let funcRange = source.range(of: "private func publicCarCard(") else {
+            XCTFail("publicCarCard function not found in PublicProfileView.swift")
+            return
+        }
+        let cardBody = String(source[funcRange.lowerBound...])
+        XCTAssertFalse(cardBody.contains("onTapGesture"),
+            "publicCarCard must let the parent NavigationLink own the tap; the card itself should not install an onTapGesture")
     }
 
-    /// `PublicGarageCard` must NOT wrap its body in a `Button` (or
-    /// `onTapGesture` on the card itself), because the parent
-    /// `NavigationLink` is the tap handler. A button-in-button would
-    /// double-handle the tap on iOS 17+. Regression guard for #64
-    /// Track F.
-    func testPublicGarageCard_DoesNotOwnItsOwnTapHandler() throws {
-        let source = try readPublicGarageCardSource()
-        XCTAssertFalse(source.contains("onTapGesture"),
-            "PublicGarageCard must let the parent NavigationLink own the tap; the card itself should not install an onTapGesture")
-        // Strip comments before scanning for `Button` so the file-level
-        // doc comment (which legitimately mentions "Button" in prose)
-        // doesn't trip the guard. We only care about code that actually
-        // instantiates a `Button` view.
-        let codeOnly = source
-            .split(separator: "\n")
-            .map { line -> String in
-                if let commentStart = line.range(of: "//") {
-                    return String(line[..<commentStart.lowerBound])
-                }
-                return String(line)
-            }
-            .joined(separator: "\n")
-        XCTAssertFalse(codeOnly.contains("Button("),
-            "PublicGarageCard must not wrap its body in a Button(...) initializer; the parent NavigationLink is the tap handler.")
-        XCTAssertFalse(codeOnly.contains("Button {"),
-            "PublicGarageCard must not wrap its body in a Button { ... } trailing-closure init; the parent NavigationLink is the tap handler.")
+    // MARK: - ScrollView layout guard
+
+    /// The redesigned public profile must use a `ScrollView` + `VStack`
+    /// layout, not the old `List` / `.insetGrouped` pattern.
+    func testPublicProfileView_UsesScrollViewLayout() throws {
+        let source = try readPublicProfileViewSource()
+        XCTAssertTrue(source.contains("ScrollView"),
+            "PublicProfileView must use ScrollView layout after Task-12 redesign")
+        XCTAssertFalse(source.contains(".insetGrouped"),
+            "PublicProfileView must not use .insetGrouped List style after Task-12 redesign")
     }
 
     /// The public car detail view must distinguish "no data recorded"
@@ -106,10 +92,6 @@ final class PublicProfileRedesignTests: XCTestCase {
 
     private func readPublicProfileViewSource() throws -> String {
         try readSourceFile(name: "PublicProfileView.swift", in: "Views")
-    }
-
-    private func readPublicGarageCardSource() throws -> String {
-        try readSourceFile(name: "PublicGarageCard.swift", in: "Views")
     }
 
     private func readPublicCarDetailViewSource() throws -> String {
@@ -137,22 +119,5 @@ final class PublicProfileRedesignTests: XCTestCase {
         XCTFail("\(name) not found at expected locations: \(candidates). Regression guard cannot run.")
         struct FileNotFound: Error {}
         throw FileNotFound()
-    }
-
-    /// Returns the substring of `text` starting at the first occurrence
-    /// of `open` (exclusive) and ending at the next occurrence of
-    /// `close` (inclusive). Fails the test if either marker is missing.
-    private func firstSubstring(in text: String, open: String, close: String) throws -> String {
-        struct MarkerMissing: Error { let label: String }
-        guard let openRange = text.range(of: open) else {
-            XCTFail("Could not find `\(open)` in source.")
-            throw MarkerMissing(label: open)
-        }
-        let start = openRange.upperBound
-        guard let closeRange = text.range(of: close, range: start..<text.endIndex) else {
-            XCTFail("Could not find closing `\(close)` after `\(open)` in source.")
-            throw MarkerMissing(label: close)
-        }
-        return String(text[start..<closeRange.upperBound])
     }
 }

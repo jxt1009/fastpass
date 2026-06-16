@@ -176,10 +176,11 @@ struct GarageView: View {
                 }
                 .padding()
             }
-            .background(Color.ftSurfaceBg.ignoresSafeArea())
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .onAppear { driveManager.fetchDrives() }
             .navigationTitle("Your Garage")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -378,7 +379,7 @@ struct GarageCarCard: View, Equatable {
         }
         .background(
             RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .fill(Color.ftCardBg)
+                .fill(Color.ftGlassCardFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
@@ -404,18 +405,26 @@ struct GarageCarCard: View, Equatable {
                     settings.distanceValue(stats?.totalDistance ?? 0)
                 )
             )
-            StatMini(
-                title: "Top Speed",
-                value: stats.map {
-                    String(format: "%.0f", settings.speedValue($0.bestTopSpeed))
-                } ?? "—"
-            )
-            StatMini(
-                title: "0-60",
-                value: stats?.bestZeroToSixty.map {
-                    String(format: "%.1fs", $0)
-                } ?? "—"
-            )
+            VStack(spacing: 2) {
+                StatusDot(
+                    level: .best,
+                    label: stats.map { String(format: "%.0f", settings.speedValue($0.bestTopSpeed)) } ?? "—"
+                )
+                .font(.caption)
+                Text("Top Speed")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            VStack(spacing: 2) {
+                StatusDot(
+                    level: .nearBest,
+                    label: stats?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "—"
+                )
+                .font(.caption)
+                Text("0-60")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
