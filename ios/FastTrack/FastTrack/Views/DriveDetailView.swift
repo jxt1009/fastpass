@@ -215,8 +215,11 @@ struct DriveDetailView: View {
                             }
                             Spacer()
                         }
-                        .background(achievement.category.color.opacity(0.08))
                     }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.xl)
+                            .fill(achievement.category.color.opacity(0.08))
+                    )
                 }
             }
         }

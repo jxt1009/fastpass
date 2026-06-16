@@ -118,7 +118,8 @@ struct CarDetailHero: View {
                 ),
                 label: "Top Speed",
                 value: topSpeedDisplay,
-                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0)
+                color: SpeedColor.color(for: data?.bestTopSpeed ?? 0),
+                icon: "bolt.fill"
             )
             FTGauge(
                 style: .hero(
@@ -131,7 +132,8 @@ struct CarDetailHero: View {
                 ),
                 label: "Best 0-60",
                 value: zeroSixtyDisplay,
-                color: .ftAmber
+                color: .ftAmber,
+                icon: "timer"
             )
         }
     }
