@@ -180,6 +180,7 @@ struct GarageView: View {
             .onAppear { driveManager.fetchDrives() }
             .navigationTitle("Your Garage")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {

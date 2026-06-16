@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import os
 
 @main
@@ -14,6 +15,14 @@ struct FastTrackApp: App {
     @StateObject private var apiService: APIService
 
     init() {
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithTransparentBackground()
+        navAppearance.backgroundColor = .clear
+        navAppearance.shadowColor = .clear
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
+
         let apiService = APIService()
         let authMgr = AuthManager(apiService: apiService)
         apiService.authManager = authMgr
