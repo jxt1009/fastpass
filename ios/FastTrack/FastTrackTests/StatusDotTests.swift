@@ -52,7 +52,16 @@ final class StatusDotTests: XCTestCase {
     }
 
     func testInactiveLevelUsesGrayColor() {
-        XCTAssertEqual(StatusLevel.inactive.color, Color(white: 0.33))
+        for trait in [UITraitCollection(userInterfaceStyle: .light),
+                      UITraitCollection(userInterfaceStyle: .dark)] {
+            let levelRGBA = rgba(of: StatusLevel.inactive.color, trait: trait)
+            let expected = trait.userInterfaceStyle == .dark
+                ? rgba(of: Color(white: 0.33), trait: trait)
+                : rgba(of: Color(white: 0.55), trait: trait)
+            XCTAssertEqual(levelRGBA.r, expected.r, accuracy: 0.001)
+            XCTAssertEqual(levelRGBA.g, expected.g, accuracy: 0.001)
+            XCTAssertEqual(levelRGBA.b, expected.b, accuracy: 0.001)
+        }
     }
 
     func testStatusDotInstantiates() {
