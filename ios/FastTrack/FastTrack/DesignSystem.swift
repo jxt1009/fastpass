@@ -24,12 +24,35 @@ private struct AdaptiveRadialGradient: ShapeStyle {
 
 extension Color {
     static let ftBlue   = Color(red: 10/255, green: 132/255, blue: 255/255)   // #0A84FF
-    static let ftAmber  = Color(red: 255/255, green: 107/255, blue: 53/255)   // #FF6B35
-    static let ftGreen  = Color(red: 48/255, green: 209/255, blue: 88/255)    // #30D158
     static let ftRed    = Color(red: 255/255, green: 69/255, blue: 58/255)    // #FF453A
-    static let ftGold   = Color(red: 255/255, green: 214/255, blue: 10/255)   // #FFD60A
     static let ftBg     = Color(red: 7/255, green: 7/255, blue: 11/255)       // #07070B
     static let ftSurface = Color(red: 18/255, green: 18/255, blue: 22/255)     // #121216
+
+    // ── Brand colors (light/dark adaptive) ──────────
+    // Light variants darken the palette so text/icons on the near-white
+    // `ftGlassCardFill` light-mode surface pass WCAG AA contrast.
+
+    static var ftGold: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 1.0, green: 0.84, blue: 0.04, alpha: 1.0)   // #FFD60A
+                : UIColor(red: 0.72, green: 0.52, blue: 0.0, alpha: 1.0)   // #B88500
+        })
+    }
+    static var ftAmber: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 1.0, green: 0.42, blue: 0.21, alpha: 1.0)   // #FF6B35
+                : UIColor(red: 0.76, green: 0.25, blue: 0.05, alpha: 1.0)  // #C2410C
+        })
+    }
+    static var ftGreen: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.19, green: 0.82, blue: 0.35, alpha: 1.0)  // #30D158
+                : UIColor(red: 0.08, green: 0.51, blue: 0.24, alpha: 1.0)  // #15803D
+        })
+    }
 
     // ── Semantic backgrounds (light/dark adaptive) ──────────
 
@@ -65,8 +88,8 @@ extension Color {
     static let ftOnDarkDivider = Color.white.opacity(0.14)
     static let ftHairline = Color.white.opacity(0.1)
     static let ftSkeleton = Color(.systemGray5)
-    static let ftPB060Tint = Color.yellow
-    static let ftPBTopSpeedTint = Color.red
+    static let ftPB060Tint = Color.ftGold
+    static let ftPBTopSpeedTint = Color.ftRed
     static let ftErrorBackground = Color.red.opacity(0.6)
 
     // ── Background gradients ─────────────────────────────────

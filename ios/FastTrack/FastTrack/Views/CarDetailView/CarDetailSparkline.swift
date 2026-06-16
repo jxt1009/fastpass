@@ -129,7 +129,7 @@ struct CarDetailSparkline: View {
             Text("PB")
                 .font(.caption2)
                 .fontWeight(.bold)
-                .foregroundColor(.red)
+                .foregroundColor(Color.ftRed)
         }
     }
 

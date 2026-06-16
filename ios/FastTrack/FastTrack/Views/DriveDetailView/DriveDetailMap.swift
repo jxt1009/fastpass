@@ -336,7 +336,7 @@ struct ZeroSixtyAttemptBubble: View {
                 SpeechBubble(cornerRadius: Radius.xs + 2, tailWidth: 8, tailHeight: 5)
                     .stroke(Color.white, lineWidth: 1)
             )
-            .foregroundColor(isPersonalBest ? .black : .white)
+            .foregroundColor(.black)
             .offset(y: -22)
         }
     }
