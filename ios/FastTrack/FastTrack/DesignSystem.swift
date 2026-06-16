@@ -147,7 +147,12 @@ enum StatusLevel {
         case .improving: return .ftGreen
         case .nearBest:  return .ftAmber
         case .typical:   return .ftBlue
-        case .inactive:  return Color(white: 0.33)
+        case .inactive:
+            return Color(uiColor: UIColor { trait in
+                trait.userInterfaceStyle == .dark
+                    ? UIColor(white: 0.33, alpha: 1.0)
+                    : UIColor(white: 0.55, alpha: 1.0)
+            })
         }
     }
 }
