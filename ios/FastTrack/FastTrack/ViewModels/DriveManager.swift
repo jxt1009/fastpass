@@ -6,7 +6,7 @@ import UIKit
 @MainActor
 final class DriveManager: ObservableObject {
     let recordingController: DriveRecordingController
-    let liveActivityCoordinator: LiveActivityCoordinator
+    let liveActivity: LiveActivityController
     let drivePoller: DrivePoller
 
     @Published var isRecording = false
@@ -36,7 +36,8 @@ final class DriveManager: ObservableObject {
         settings: AppSettings,
         apiService: DriveAPI,
         carStatsManager: CarStatsManager,
-        achievementManager: AchievementManager
+        achievementManager: AchievementManager,
+        liveActivity: LiveActivityController? = nil
     ) {
         self.authManager = authManager
         self.profileManager = profileManager
@@ -54,8 +55,7 @@ final class DriveManager: ObservableObject {
         )
         self.recordingController = recordingController
 
-        let liveActivityCoordinator = LiveActivityCoordinator()
-        self.liveActivityCoordinator = liveActivityCoordinator
+        self.liveActivity = liveActivity ?? LiveActivityCoordinator()
 
         let drivePoller = DrivePoller(
             apiService: apiService,
@@ -109,13 +109,23 @@ final class DriveManager: ObservableObject {
 
     func startRecording() {
         recordingController.startRecording()
-        liveActivityCoordinator.startLiveActivity(recordingStartTime: recordingController.recordingStartTime)
+        liveActivity.start(recordingStartTime: recordingController.recordingStartTime)
     }
 
     @MainActor
     func stopRecording() async {
+        let finalSnapshot = recordingController.currentDrive.map { drive -> DriveActivityAttributes.DriveActivityState in
+            DriveActivityAttributes.DriveActivityState(
+                phase: .ended,
+                speedMph: 0,
+                gForce: 0,
+                distanceMiles: drive.distance * 0.000621371,
+                maxSpeedMph: drive.maxSpeed * 2.23694,
+                elapsedSeconds: drive.duration
+            )
+        }
         await recordingController.stopRecording()
-        liveActivityCoordinator.endLiveActivity()
+        await liveActivity.end(finalState: finalSnapshot, lingerSeconds: 4)
         if let savedDrive = recordingController.currentDrive {
             carStatsManager.updateStats(for: savedDrive)
         }
@@ -246,10 +256,19 @@ final class DriveManager: ObservableObject {
         userAchievements = []
         achievementsCatalog = []
     }
+
+    /// Sweep any Live Activities left over from a previous app session.
+    /// Called once at launch; safe to no-op when nothing is currently recording.
+    func discardOrphanLiveActivities() async {
+        await liveActivity.dismissAllOrphans()
+    }
 }
 
 extension DriveManager {
-    static func forTesting(apiService: DriveAPI) -> DriveManager {
+    static func forTesting(
+        apiService: DriveAPI,
+        liveActivity: LiveActivityController? = nil
+    ) -> DriveManager {
         let realAPI = APIService()
         let authMgr = AuthManager(apiService: realAPI)
         realAPI.authManager = authMgr
@@ -259,7 +278,8 @@ extension DriveManager {
             settings: AppSettings(apiService: realAPI),
             apiService: apiService,
             carStatsManager: CarStatsManager(apiService: realAPI),
-            achievementManager: AchievementManager()
+            achievementManager: AchievementManager(),
+            liveActivity: liveActivity
         )
     }
 

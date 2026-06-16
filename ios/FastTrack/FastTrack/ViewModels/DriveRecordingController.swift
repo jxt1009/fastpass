@@ -198,10 +198,6 @@ class DriveRecordingController: ObservableObject {
 
         locationManager?.startUpdatingLocation()
 
-        if settings.keepScreenOn {
-            UIApplication.shared.isIdleTimerDisabled = true
-        }
-
         let profile = profileManager.profile
         var selectedCar = profile?.selectedCar
 
@@ -243,7 +239,6 @@ class DriveRecordingController: ObservableObject {
     func stopRecording() async {
         guard isRecording else { return }
         locationManager?.stopUpdatingLocation()
-        UIApplication.shared.isIdleTimerDisabled = false
 
         guard var drive = currentDrive, !recordingLocations.isEmpty else {
             isRecording = false
