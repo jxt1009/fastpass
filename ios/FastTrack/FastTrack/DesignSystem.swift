@@ -2,6 +2,26 @@ import SwiftUI
 
 // ─── Colors ────────────────────────────────────────────────
 
+private struct AdaptiveRadialGradient: ShapeStyle {
+    let darkColors: [Color]
+    let lightColors: [Color]
+    let center: UnitPoint
+    let startRadius: CGFloat
+    let endRadius: CGFloat
+
+    func resolve(in env: EnvironmentValues) -> some ShapeStyle {
+        let colors = env.colorScheme == .light ? lightColors : darkColors
+        return AnyShapeStyle(
+            RadialGradient(
+                colors: colors,
+                center: center,
+                startRadius: startRadius,
+                endRadius: endRadius
+            )
+        )
+    }
+}
+
 extension Color {
     static let ftBlue   = Color(red: 10/255, green: 132/255, blue: 255/255)   // #0A84FF
     static let ftAmber  = Color(red: 255/255, green: 107/255, blue: 53/255)   // #FF6B35
@@ -53,8 +73,9 @@ extension Color {
 
     /// Default screen background — deep navy → near-black radial gradient.
     static var ftBgGradient: some ShapeStyle {
-        RadialGradient(
-            colors: [Color(red: 0.10, green: 0.10, blue: 0.23), Color(red: 0.027, green: 0.027, blue: 0.043)],
+        AdaptiveRadialGradient(
+            darkColors: [Color(red: 0.10, green: 0.10, blue: 0.23), Color(red: 0.027, green: 0.027, blue: 0.043)],
+            lightColors: [Color(red: 0.92, green: 0.94, blue: 0.98), Color(red: 0.78, green: 0.82, blue: 0.90)],
             center: .topLeading,
             startRadius: 0,
             endRadius: 500
@@ -63,8 +84,9 @@ extension Color {
 
     /// Recording-active screen background — warm dark radial gradient.
     static var ftBgGradientWarm: some ShapeStyle {
-        RadialGradient(
-            colors: [Color(red: 0.12, green: 0.04, blue: 0.0), Color(red: 0.027, green: 0.027, blue: 0.043)],
+        AdaptiveRadialGradient(
+            darkColors: [Color(red: 0.12, green: 0.04, blue: 0.0), Color(red: 0.027, green: 0.027, blue: 0.043)],
+            lightColors: [Color(red: 1.00, green: 0.93, blue: 0.86), Color(red: 0.95, green: 0.88, blue: 0.80)],
             center: .top,
             startRadius: 0,
             endRadius: 500
@@ -73,10 +95,18 @@ extension Color {
 
     // ── Glass card tokens ────────────────────────────────────
 
-    /// Glass card fill — white at ~7% opacity. Use with `ftGlassCardStroke` border.
-    static let ftGlassCardFill = Color.white.opacity(0.07)
-    /// Glass card border stroke — white at ~12% opacity.
-    static let ftGlassCardStroke = Color.white.opacity(0.12)
+    /// Glass card fill — white at ~7% (dark) / ~55% (light) opacity. Use with `ftGlassCardStroke` border.
+    static let ftGlassCardFill = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.07)
+            : UIColor(white: 1, alpha: 0.55)
+    })
+    /// Glass card border stroke — white at ~12% (dark) / ~75% (light) opacity.
+    static let ftGlassCardStroke = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.12)
+            : UIColor(white: 1, alpha: 0.75)
+    })
 }
 
 // ─── Status Level ───────────────────────────────────────────
