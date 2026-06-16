@@ -83,8 +83,8 @@ struct FTGauge: View {
                                 .init(color: .ftRed,   location: 1.0)
                             ],
                             center: .center,
-                            startAngle: .degrees(150),
-                            endAngle: .degrees(150 + 240)
+                            startAngle: .degrees(0),
+                            endAngle: .degrees(240)
                         ),
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )

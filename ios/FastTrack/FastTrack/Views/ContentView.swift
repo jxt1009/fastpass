@@ -57,7 +57,7 @@ struct ContentView: View {
 
                     controlsSection
                         .padding(.horizontal, Spacing.md)
-                        .padding(.bottom, Spacing.lg)
+                        .padding(.bottom, 80)
                 }
             }
             .navigationTitle("FastTrack")
@@ -318,8 +318,8 @@ private struct SpeedHeroRing: View {
             .init(color: .ftRed,   location: 1.0)
         ],
         center: .center,
-        startAngle: .degrees(150),
-        endAngle: .degrees(150 + 240)
+        startAngle: .degrees(0),
+        endAngle: .degrees(240)
     )
 
     var body: some View {
