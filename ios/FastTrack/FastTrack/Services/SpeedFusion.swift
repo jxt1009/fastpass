@@ -13,6 +13,8 @@ import CoreMotion
 
 class SpeedFusion {
 
+    private let lock = NSLock()
+
     // MARK: - Kalman state
     private(set) var speed: Double = 0          // m/s
     private var P: Double = 4.0                  // variance (m/s)²
@@ -44,6 +46,9 @@ class SpeedFusion {
     // MARK: - Predict (called at 25 Hz from CMDeviceMotion)
     /// `longAccelG` = longitudinal acceleration in **g** units, from IMU projected onto travel direction
     func predict(longAccelG: Double, dt: Double) {
+        lock.lock()
+        defer { lock.unlock() }
+
         // While zero-locked (GPS confirmed stopped), only break lock on meaningful forward acceleration
         if isZeroLocked {
             stationaryDuration = stationaryHoldTime
@@ -71,6 +76,9 @@ class SpeedFusion {
     // MARK: - Update (called at ~1 Hz when GPS fires)
     /// `gpsSpeedAccuracy` comes from CLLocation.speedAccuracy (m/s std dev); use -1 if unavailable
     func update(gpsSpeed: Double, gpsSpeedAccuracy: Double) {
+        lock.lock()
+        defer { lock.unlock() }
+
         guard gpsSpeed >= 0 else { return }  // GPS returns -1 when invalid
 
         // Zero-speed lock: GPS confidently reports stopped — snap to zero and hold
@@ -113,10 +121,14 @@ class SpeedFusion {
     }
 
     func updateCourse(_ course: Double) {
+        lock.lock()
+        defer { lock.unlock() }
         if course >= 0 { lastCourse = course }
     }
 
     func reset() {
+        lock.lock()
+        defer { lock.unlock() }
         speed = 0
         P = 4.0
         isZeroLocked = false
