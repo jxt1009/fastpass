@@ -1,6 +1,19 @@
 import SwiftUI
 import MapKit
 
+/// Computes the MKCoordinateSpan for a set of coordinates, with a 1.3× padding
+/// and a 0.001 minimum to avoid zero-span for single-point routes.
+/// Extracted from `regionForRoute` for testability.
+func routeCoordinateSpan(lats: [Double], lngs: [Double]) -> MKCoordinateSpan {
+    guard !lats.isEmpty, !lngs.isEmpty else {
+        return MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+    }
+    return MKCoordinateSpan(
+        latitudeDelta: max(0.001, (lats.max()! - lats.min()!) * 1.3),
+        longitudeDelta: max(0.001, (lngs.max()! - lngs.min()!) * 1.3)
+    )
+}
+
 // MARK: - DriveDetailMap
 
 struct DriveDetailMap: View {
@@ -262,8 +275,7 @@ struct DriveDetailMap: View {
                                             longitude: (lngs.min()! + lngs.max()!) / 2)
         return MKCoordinateRegion(
             center: center,
-            span: MKCoordinateSpan(latitudeDelta: max(0.001, (lats.max()! - lats.min()!) * 1.3),
-                                   longitudeDelta: max(0.001, (lngs.max()! - lngs.max()!) * 1.3))
+            span: routeCoordinateSpan(lats: lats, lngs: lngs)
         )
     }
 
