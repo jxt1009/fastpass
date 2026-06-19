@@ -20,11 +20,6 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Gradient background (behind map)
-                Rectangle()
-                    .fill(driveManager.isRecording ? AnyShapeStyle(Color.ftBgGradientWarm) : AnyShapeStyle(Color.ftBgGradient))
-                    .ignoresSafeArea()
-
                 // Always-visible map backdrop
                 LiveMapView(
                     userLocation: locationManager.currentLocation?.coordinate
@@ -38,6 +33,7 @@ struct ContentView: View {
                 // Dim overlay on top of map
                 Color.ftSurfaceBg
                     .opacity(driveManager.isRecording ? 0.18 : 0.5)
+                    .ignoresSafeArea()
 
                 // Instrument cluster overlay
                 VStack(spacing: 0) {
@@ -59,6 +55,10 @@ struct ContentView: View {
                         .padding(.bottom, Spacing.lg)
                 }
             }
+            .background(
+                driveManager.isRecording ? AnyShapeStyle(Color.ftBgGradientWarm) : AnyShapeStyle(Color.ftBgGradient),
+                ignoresSafeAreaEdges: .all
+            )
             .navigationTitle("FastTrack")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingCarPicker) {
@@ -321,7 +321,11 @@ private struct SpeedHeroRing: View {
             // Track — 240° open arc, gap at bottom
             Circle()
                 .trim(from: 0, to: 240.0/360.0)
-                .stroke(Color.white.opacity(0.06), style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .stroke(Color(UIColor { trait in
+                    trait.userInterfaceStyle == .dark
+                        ? UIColor(white: 1, alpha: 0.06)
+                        : UIColor(white: 0, alpha: 0.08)
+                }), style: StrokeStyle(lineWidth: 10, lineCap: .round))
                 .rotationEffect(.degrees(150))
                 .frame(width: diameter, height: diameter)
 
@@ -337,7 +341,11 @@ private struct SpeedHeroRing: View {
             ForEach(0..<5) { i in
                 let angle = 150.0 + (240.0 / 4.0) * Double(i)
                 Rectangle()
-                    .fill(Color.white.opacity(0.15))
+                    .fill(Color(UIColor { trait in
+                        trait.userInterfaceStyle == .dark
+                            ? UIColor(white: 1, alpha: 0.15)
+                            : UIColor(white: 0, alpha: 0.12)
+                    }))
                     .frame(width: 1.5, height: 6)
                     .offset(y: -(diameter / 2) + 5)
                     .rotationEffect(.degrees(angle))

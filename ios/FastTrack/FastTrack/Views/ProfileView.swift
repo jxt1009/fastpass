@@ -32,9 +32,6 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Rectangle()
-                    .fill(Color.ftBgGradient)
-                    .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         profileHeader
@@ -52,6 +49,7 @@ struct ProfileView: View {
                     .padding()
                 }
             }
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
