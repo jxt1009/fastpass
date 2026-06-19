@@ -299,10 +299,11 @@ class DriveRecordingController: ObservableObject {
         }
 
         drive.stoppedTime = stoppedTimeTracker.totalStoppedTime
+        let extStats = await RecordingActor.shared.extendedStats()
         drive.leftTurns = leftTurns; drive.rightTurns = rightTurns
-        drive.brakeEvents = brakeEvents; drive.laneChanges = laneChanges
-        drive.maxAcceleration = maxAcceleration; drive.maxDeceleration = maxDeceleration
-        drive.peakGForce = peakGForce; drive.topCornerSpeed = topCornerSpeed
+        drive.brakeEvents = extStats.brakeEvents; drive.laneChanges = laneChanges
+        drive.maxAcceleration = extStats.maxAcceleration; drive.maxDeceleration = extStats.maxDeceleration
+        drive.peakGForce = extStats.peakGForce; drive.topCornerSpeed = extStats.topCornerSpeed
 
         isRecording = false
 
@@ -434,6 +435,7 @@ class DriveRecordingController: ObservableObject {
             coordinate: location.coordinate,
             speed: speed,
             timestamp: ts.timeIntervalSince1970,
+            course: location.course,
             acceleration: speedAccuracyOK && accel > 0 ? accel : nil,
             deceleration: speedAccuracyOK && -accel > 0 ? -accel : nil,
             brakeDetected: accel < -2.5,
@@ -441,6 +443,13 @@ class DriveRecordingController: ObservableObject {
             cornerSpeed: speedAccuracyOK ? speed : nil
         )
         await RecordingActor.shared.ingest(update)
+
+        let extStats = await RecordingActor.shared.extendedStats()
+        self.maxAcceleration = extStats.maxAcceleration
+        self.maxDeceleration = extStats.maxDeceleration
+        self.peakGForce = extStats.peakGForce
+        self.topCornerSpeed = extStats.topCornerSpeed
+        self.brakeEvents = extStats.brakeEvents
     }
 
     func processHeading(course: Double, speed: Double, timestamp: Date) async -> (left: Int, right: Int, lanes: Int)? {

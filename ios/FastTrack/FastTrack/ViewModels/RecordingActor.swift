@@ -29,6 +29,7 @@ struct RecordingActorUpdate: Sendable {
     let coordinate: CLLocationCoordinate2D
     let speed: Double
     let timestamp: TimeInterval
+    let course: Double
     let acceleration: Double?
     let deceleration: Double?
     let brakeDetected: Bool
@@ -68,6 +69,12 @@ actor RecordingActor {
     private var lastIngestedTimestamp: TimeInterval = 0
     private var lastIngestedSpeedAccuracy: Double = 0
     private var hasIngestedOnce: Bool = false
+
+    private var maxAcceleration: Double = 0
+    private var maxDeceleration: Double = 0
+    private var peakGForce: Double = 0
+    private var topCornerSpeed: Double = 0
+    private var brakeEventCount: Int = 0
 
     // MARK: - Heading detection state
 
@@ -112,7 +119,7 @@ actor RecordingActor {
         lastCoordinate = update.coordinate
         lastIngestedLat = update.coordinate.latitude
         lastIngestedLng = update.coordinate.longitude
-        lastIngestedCourse = 0
+        lastIngestedCourse = update.course
         lastIngestedSpeed = update.speed
         lastIngestedTimestamp = update.timestamp
         hasIngestedOnce = true
@@ -124,6 +131,21 @@ actor RecordingActor {
             if update.speed > runningMaxSpeed { runningMaxSpeed = update.speed }
         }
         runningSumSpeed += update.speed
+        if let accel = update.acceleration, accel > maxAcceleration {
+            maxAcceleration = accel
+        }
+        if let decel = update.deceleration, decel > maxDeceleration {
+            maxDeceleration = decel
+        }
+        if let g = update.gForce, g > peakGForce {
+            peakGForce = g
+        }
+        if let corner = update.cornerSpeed, corner > topCornerSpeed {
+            topCornerSpeed = corner
+        }
+        if update.brakeDetected {
+            brakeEventCount += 1
+        }
     }
 
     /// Returns a coalesced snapshot. If `now` is within
@@ -150,6 +172,24 @@ actor RecordingActor {
             runningAvgSpeed: routePointCount > 0 ? runningSumSpeed / Double(routePointCount) : 0,
             lastCoordinate: lastCoordinate,
             publishedAt: now
+        )
+    }
+
+    struct ExtendedStats: Sendable, Equatable {
+        let maxAcceleration: Double
+        let maxDeceleration: Double
+        let peakGForce: Double
+        let topCornerSpeed: Double
+        let brakeEvents: Int
+    }
+
+    func extendedStats() -> ExtendedStats {
+        ExtendedStats(
+            maxAcceleration: maxAcceleration,
+            maxDeceleration: maxDeceleration,
+            peakGForce: peakGForce,
+            topCornerSpeed: topCornerSpeed,
+            brakeEvents: brakeEventCount
         )
     }
 
@@ -242,6 +282,11 @@ actor RecordingActor {
         lastIngestedTimestamp = 0
         lastIngestedSpeedAccuracy = 0
         hasIngestedOnce = false
+        maxAcceleration = 0
+        maxDeceleration = 0
+        peakGForce = 0
+        topCornerSpeed = 0
+        brakeEventCount = 0
         resetHeading()
     }
 }
