@@ -54,10 +54,10 @@ struct BadgePill: View {
     private var background: Color {
         switch style {
         case .you, .selected: return .ftBlue.opacity(0.15)
-        case .pb060: return .yellow
-        case .pbTopSpeed: return .red
+        case .pb060: return .ftGold
+        case .pbTopSpeed: return .ftRed
         case .carChip: return .ftBlue.opacity(0.15)
-        case .count: return .red
+        case .count: return .ftRed
         }
     }
 

@@ -180,8 +180,8 @@ final class DriveManager: ObservableObject {
     @MainActor
     func restoreDrive(_ drive: Drive) async {
         do {
-            _ = try await apiService.createDrive(drive)
-            drives.insert(drive, at: 0)
+            let saved = try await apiService.createDrive(drive)
+            drives.insert(saved, at: 0)
             carStatsManager.rebuildStats(from: drives)
         } catch {
             await ToastManager.shared.show(ToastMessage(text: "Couldn't restore drive: \(error.diagnosticDescription)"))

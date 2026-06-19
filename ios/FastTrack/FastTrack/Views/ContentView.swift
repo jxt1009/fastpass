@@ -278,16 +278,6 @@ struct ContentView: View {
         return .inactive
     }
 
-    private var gpsStatusColor: Color {
-        guard let location = locationManager.currentLocation else { return .red }
-        let accuracy = location.horizontalAccuracy
-
-        if accuracy < 0 { return .red }
-        if accuracy < 5 { return .green }
-        if accuracy < 10 { return .orange }
-        return .red
-    }
-
     private var gpsStatusText: String {
         guard let location = locationManager.currentLocation else {
             return driveManager.isRecording ? "Acquiring GPS..." : "GPS standby"
