@@ -20,17 +20,23 @@ class APIService: ObservableObject {
     /// Decodes ISO 8601 dates with or without fractional seconds.
     /// The default `.iso8601` strategy rejects fractional seconds (e.g.
     /// `2026-06-18T12:34:56.789Z`), which some backend endpoints produce.
+    private static let iso8601Formatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    private static let fractionalFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
     static let dateDecodingStrategy: JSONDecoder.DateDecodingStrategy = .custom { decoder in
         let container = try decoder.singleValueContainer()
         let dateString = try container.decode(String.self)
 
-        let iso8601 = ISO8601DateFormatter()
-        iso8601.formatOptions = [.withInternetDateTime]
-        if let date = iso8601.date(from: dateString) { return date }
-
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: dateString) { return date }
+        if let date = iso8601Formatter.date(from: dateString) { return date }
+        if let date = fractionalFormatter.date(from: dateString) { return date }
 
         throw DecodingError.dataCorruptedError(
             in: container,
@@ -77,6 +83,15 @@ class APIService: ObservableObject {
         return request
     }
 
+    /// Signs the user out and shows a "Session expired" toast. Called when
+    /// token refresh fails or the retry request also returns 401.
+    private func signOutAndToast() async {
+        await MainActor.run {
+            self.authManager?.signOut()
+            ToastManager.shared.show(ToastMessage(text: "Session expired"))
+        }
+    }
+
     /// Executes `request`, and if the response is 401 on an authenticated
     /// request, attempts to refresh the access token and retries once. If the
     /// refresh fails, or the retry also returns 401, signs the user out and
@@ -93,8 +108,7 @@ class APIService: ObservableObject {
             do {
                 try await authManager?.refreshTokenIfNeeded()
             } catch {
-                await MainActor.run { self.authManager?.signOut() }
-                await MainActor.run { ToastManager.shared.show(ToastMessage(text: "Session expired")) }
+                await signOutAndToast()
                 throw APIError.serverError(401)
             }
             var retryRequest = request
@@ -105,8 +119,7 @@ class APIService: ObservableObject {
             guard let retryHttp = retryResponse as? HTTPURLResponse else { throw APIError.invalidResponse }
             guard (200...299).contains(retryHttp.statusCode) else {
                 if retryHttp.statusCode == 401 {
-                    await MainActor.run { self.authManager?.signOut() }
-                    await MainActor.run { ToastManager.shared.show(ToastMessage(text: "Session expired")) }
+                    await signOutAndToast()
                 }
                 throw APIError.serverError(retryHttp.statusCode)
             }
