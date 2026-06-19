@@ -89,6 +89,8 @@ class DriveRecordingController: ObservableObject {
     /// state. Only written from @MainActor; read from detached tasks for an
     /// integer comparison, hence `nonisolated(unsafe)`.
     nonisolated(unsafe) private var recordingGeneration: Int = 0
+    /// Test-only read accessor for the generation counter.
+    nonisolated var testRecordingGeneration: Int { recordingGeneration }
     var speedReadings: RingBuffer<Double> = RingBuffer(capacity: 1500)
     var runningSpeedStats = RunningSpeedStats()
     var latestSpeedSample: SpeedSample?

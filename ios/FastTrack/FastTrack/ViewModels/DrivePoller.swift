@@ -49,7 +49,7 @@ class DrivePoller: ObservableObject {
         }
     }
 
-    private func pollCycle() async {
+    func pollCycle() async {
         let versionAtStart = fetchVersion
         do {
             let fetched = try await apiService.fetchDrives()
