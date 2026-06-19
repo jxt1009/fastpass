@@ -8,13 +8,34 @@ class APIService: ObservableObject {
     let baseURL = "https://fast.toper.dev/api/v1"
     #endif
 
-    private let session: URLSession
+    let session: URLSession
     let sessionDelegate: PinningURLSessionDelegate
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     var inflightFetchDrives: Task<[Drive], Error>?
     weak var authManager: AuthManager? {
         didSet { sessionDelegate.authManager = authManager }
+    }
+
+    /// Decodes ISO 8601 dates with or without fractional seconds.
+    /// The default `.iso8601` strategy rejects fractional seconds (e.g.
+    /// `2026-06-18T12:34:56.789Z`), which some backend endpoints produce.
+    static let dateDecodingStrategy: JSONDecoder.DateDecodingStrategy = .custom { decoder in
+        let container = try decoder.singleValueContainer()
+        let dateString = try container.decode(String.self)
+
+        let iso8601 = ISO8601DateFormatter()
+        iso8601.formatOptions = [.withInternetDateTime]
+        if let date = iso8601.date(from: dateString) { return date }
+
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: dateString) { return date }
+
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "Unrecognized date format: \(dateString)"
+        )
     }
 
     init(authManager: AuthManager? = nil) {
@@ -25,7 +46,7 @@ class APIService: ObservableObject {
         self.sessionDelegate = delegate
         self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         self.decoder = JSONDecoder()
-        self.decoder.dateDecodingStrategy = .iso8601
+        self.decoder.dateDecodingStrategy = Self.dateDecodingStrategy
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
         self.authManager = authManager
@@ -40,7 +61,7 @@ class APIService: ObservableObject {
         self.sessionDelegate = sessionDelegate
         self.session = session
         self.decoder = JSONDecoder()
-        self.decoder.dateDecodingStrategy = .iso8601
+        self.decoder.dateDecodingStrategy = Self.dateDecodingStrategy
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
         self.authManager = authManager

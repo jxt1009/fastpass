@@ -16,7 +16,11 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
     //     | openssl asn1parse -inform DER -strparse 24 -noout -out /dev/stdout 2>/dev/null \
     //     | openssl dgst -sha256 -binary 2>/dev/null \
     //     | base64
-    // Current hash (2026-06-14): FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA=
+    // Current leaf hash (2026-06-14): FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA=
+    // Backup pin: add the intermediate CA's SPKI hash here so a leaf cert
+    // rotation doesn't brick the app. To compute, run the openssl pipeline
+    // in the comment above against the intermediate cert (index 1 in the chain).
+    // TODO: populate with the intermediate CA SPKI hash for resilience.
     private let pinnedSPKIHashes: Set<String> = [
         "FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA="
     ]
@@ -67,23 +71,28 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
             log.warning("authChallenge: trust evaluation failed (\(String(describing: evalError))), proceeding with SPKI check")
         }
 
-        guard let cert = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
-            log.error("authChallenge: no certificate at index 0")
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
+        // Check the full certificate chain for a matching SPKI pin.
+        // This allows backup pins on intermediate CA certs to keep the app
+        // working if the leaf cert rotates.
+        let chainCount = SecTrustGetCertificateCount(serverTrust)
+        var matchedHash: String?
+        for i in 0..<chainCount {
+            guard let cert = SecTrustGetCertificateAtIndex(serverTrust, i),
+                  let hash = Self.computeKeyHash(from: cert) else { continue }
+            if pinnedSPKIHashes.contains(hash) {
+                matchedHash = hash
+                break
+            }
         }
 
-        guard let hash = Self.computeKeyHash(from: cert) else {
-            log.error("authChallenge: failed to compute key hash")
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
-        }
-
-        if pinnedSPKIHashes.contains(hash) {
+        if let hash = matchedHash {
             log.debug("authChallenge: key hash matched, allowing connection")
             completionHandler(.useCredential, URLCredential(trust: serverTrust))
         } else {
-            log.error("authChallenge: key hash mismatch — got \(hash, privacy: .public)")
+            let leafHash = (0..<chainCount).compactMap { i in
+                SecTrustGetCertificateAtIndex(serverTrust, i).flatMap { Self.computeKeyHash(from: $0) }
+            }.first ?? "unknown"
+            log.error("authChallenge: no pinned key hash found in chain — leaf=\(leafHash, privacy: .public)")
             completionHandler(.cancelAuthenticationChallenge, nil)
         }
     }
