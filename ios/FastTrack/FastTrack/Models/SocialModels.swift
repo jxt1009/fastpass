@@ -248,13 +248,27 @@ struct FollowUserEntry: Identifiable, Decodable {
     let userId: Int
     let username: String
     let country: String
+    let fullName: String?
+    let avatarURL: String?
 
     var id: Int { userId }
 
     enum CodingKeys: String, CodingKey {
-        case userId  = "user_id"
+        case userId    = "user_id"
         case username
         case country
+        case fullName  = "full_name"
+        case avatarURL = "avatar_url"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        userId    = try c.decode(Int.self,    forKey: .userId)
+        username  = try c.decode(String.self,  forKey: .username)
+        country   = try c.decode(String.self,  forKey: .country)
+        // Additive — old backends don't return these
+        fullName  = try c.decodeIfPresent(String.self, forKey: .fullName)
+        avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
     }
 }
 

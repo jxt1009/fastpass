@@ -46,10 +46,10 @@ type PublicProfileResponse struct {
 }
 
 type FollowUserEntry struct {
-	UserID   uint   `json:"user_id"   gorm:"column:user_id"`
-	Username string `json:"username"  gorm:"column:username"`
-	Country  string `json:"country"   gorm:"column:country"`
-	FullName string `json:"full_name" gorm:"column:full_name"`
+	UserID    uint   `json:"user_id"    gorm:"column:user_id"`
+	Username  string `json:"username"   gorm:"column:username"`
+	Country   string `json:"country"    gorm:"column:country"`
+	FullName  string `json:"full_name"  gorm:"column:full_name"`
 	AvatarURL string `json:"avatar_url" gorm:"column:avatar_url"`
 }
 

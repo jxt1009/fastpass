@@ -97,20 +97,46 @@ private struct FollowUserRow: View {
         UserRow(
             avatarSize: 40
         ) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [.ftBlue, .purple],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                Text(String(user.username.prefix(1)).uppercased())
-                    .font(.headline)
-                    .foregroundColor(.white)
+            if let avatarURL = user.avatarURL.flatMap({ $0.isEmpty ? nil : URL(string: $0) }) {
+                AsyncImage(url: avatarURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: [.ftBlue, .purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                        Text(String(user.username.prefix(1)).uppercased())
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                }
+                .clipShape(Circle())
+            } else {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [.ftBlue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                    Text(String(user.username.prefix(1)).uppercased())
+                        .font(.headline)
+                        .foregroundColor(.white)
+                }
+                .clipShape(Circle())
             }
-            .clipShape(Circle())
         } primaryContent: {
-            Text("@\(user.username)").font(.body)
+            VStack(alignment: .leading, spacing: 2) {
+                if let name = user.fullName, !name.isEmpty {
+                    Text(name).font(.body)
+                }
+                Text("@\(user.username)")
+                    .font(user.fullName?.isEmpty == false ? .caption : .body)
+                    .foregroundStyle(.secondary)
+            }
         } secondaryContent: {
             if !user.country.isEmpty {
                 Text(user.country).font(.caption).foregroundStyle(.secondary)
