@@ -63,6 +63,15 @@ final class DriveManager: ObservableObject {
         )
         self.drivePoller = drivePoller
 
+        recordingController.onLiveActivityUpdate = { [weak self] speedMph, distanceMiles, gForce, maxSpeed in
+            await self?.liveActivity.update(
+                speedMph: speedMph,
+                distanceMiles: distanceMiles,
+                currentGForce: gForce,
+                currentMaxSpeed: maxSpeed
+            )
+        }
+
         recordingController.$isRecording
             .assign(to: &$isRecording)
         recordingController.$currentDrive

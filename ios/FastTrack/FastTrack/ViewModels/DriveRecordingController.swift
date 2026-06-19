@@ -95,6 +95,11 @@ class DriveRecordingController: ObservableObject {
     var currentMaxSpeed: Double = 0
     var launchTracker = LaunchTracker()
     var attempts060: [ZeroToSixtyAttempt] = []
+
+    /// Called from processSpeedSample's throttled publish path (~10 Hz) to
+    /// drive the Live Activity. DriveManager wires this to
+    /// `liveActivity.update(...)`. The coordinator throttles internally to 1 Hz.
+    var onLiveActivityUpdate: ((_ speedMph: Double, _ distanceMiles: Double, _ currentGForce: Double, _ currentMaxSpeed: Double) async -> Void)?
     var headingWindow: (course: Double, time: Date)?
     var lastTurnOrLaneTime: Date?
     var lastBrakeTime: Date?
@@ -405,6 +410,14 @@ class DriveRecordingController: ObservableObject {
         drive.stoppedTime = stoppedTimeTracker.totalStoppedTime(at: sample.timestamp)
         drive.best060Time = best060Time
         currentDrive = drive
+
+        if let onUpdate = onLiveActivityUpdate {
+            let speedMph = sample.speed * 2.23694
+            let distanceMiles = drive.distance * 0.000621371
+            let gForce = currentGForce
+            let maxSpeed = currentMaxSpeed
+            Task { await onUpdate(speedMph, distanceMiles, gForce, maxSpeed) }
+        }
     }
 
     func routePointSpeed(for location: CLLocation) -> Double {
