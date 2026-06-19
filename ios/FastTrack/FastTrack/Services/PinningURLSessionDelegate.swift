@@ -1,7 +1,6 @@
 import Foundation
 import CryptoKit
 import OSLog
-import os.lock
 
 final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
     private let log = Logger(subsystem: "app.fasttrack", category: "sslPinning")
@@ -21,14 +20,6 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
     private let pinnedSPKIHashes: Set<String> = [
         "FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA="
     ]
-
-    private var _lock = os_unfair_lock()
-    private var _isProcessing401 = false
-
-    private var isProcessing401: Bool {
-        get { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; return _isProcessing401 }
-        set { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; _isProcessing401 = newValue }
-    }
 
     /// Computes the SHA-256 hash of a certificate's raw public key bytes
     /// (as returned by SecKeyCopyExternalRepresentation, NOT the DER-encoded SPKI).
@@ -107,14 +98,6 @@ extension PinningURLSessionDelegate: @preconcurrency URLSessionTaskDelegate {
         }
         if let httpResponse = task.response as? HTTPURLResponse {
             log.debug("taskComplete: status=\(httpResponse.statusCode)")
-            guard httpResponse.statusCode == 401, !isProcessing401 else { return }
-            isProcessing401 = true
-            log.warning("taskComplete: 401 received, signing out")
-            Task { @MainActor in
-                authManager?.signOut()
-                ToastManager.shared.show(ToastMessage(text: "Session expired"))
-                isProcessing401 = false
-            }
         }
     }
 }
