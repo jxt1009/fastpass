@@ -50,8 +50,13 @@ class DrivePoller: ObservableObject {
     }
 
     private func pollCycle() async {
+        let versionAtStart = fetchVersion
         do {
             let fetched = try await apiService.fetchDrives()
+            // A delete may have bumped fetchVersion while this fetch was in
+            // flight; applying a stale result would resurrect the deleted
+            // drive. Match fetchDrives()'s gate.
+            guard self.fetchVersion == versionAtStart else { return }
             self.drives = fetched
             self.isLoadingDrives = false
         } catch {

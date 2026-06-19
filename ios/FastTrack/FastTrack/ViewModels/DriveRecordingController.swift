@@ -82,6 +82,7 @@ class DriveRecordingController: ObservableObject {
     /// the map) is derived from this via RDP decimation so the live polyline
     /// stays bounded regardless of drive length.
     private var allRouteCoordinates: [CLLocationCoordinate2D] = []
+    private var lastDecimatedCount: Int = 0
     /// Bumped on every `startRecording`. Captured by the detached
     /// `processLocationHeavy` task so a location ingested just before stop (or
     /// carried past a reset) can't pollute the next drive's RecordingActor
@@ -193,6 +194,7 @@ class DriveRecordingController: ObservableObject {
         totalDistance = 0
         allRouteCoordinates = []
         routeCoordinates = []
+        lastDecimatedCount = 0
         richRoutePoints = []
         recordedRouteEvents = []
         speedReadings.removeAll()
@@ -260,13 +262,19 @@ class DriveRecordingController: ObservableObject {
         )
     }
 
-    func stopRecording() async {
-        guard isRecording else { return }
+    /// Stops recording and uploads the drive. Returns the server-persisted
+    /// `Drive` on success (with a real `id`), or `nil` on failure / when there
+    /// was nothing to upload. Callers update car stats from this return value
+    /// only — never from `currentDrive`, which is nilled on success and
+    /// retained on failure (where stats must wait for `recoverPendingDrives`
+    /// to avoid double-counting).
+    func stopRecording() async -> Drive? {
+        guard isRecording else { return nil }
         locationManager?.stopUpdatingLocation()
 
         guard var drive = currentDrive, !recordingLocations.isEmpty else {
             isRecording = false
-            return
+            return nil
         }
         let endTime = Date()
         stoppedTimeTracker.finalize(at: endTime)
@@ -349,12 +357,14 @@ class DriveRecordingController: ObservableObject {
             currentDrive = nil
             recordingStartTime = nil
             attempts060 = []
+            return saved
         } catch {
             let surfaced = (error as? APIError) ?? APIError.invalidResponse
             lastError = surfaced
             if let encoded = try? Self.driveEncoder.encode(drive) {
                 try? encoded.write(to: inFlightURL, options: .atomic)
             }
+            return nil
         }
     }
 
@@ -390,7 +400,11 @@ class DriveRecordingController: ObservableObject {
             totalDistance += prev.distance(from: location)
         }
         allRouteCoordinates.append(location.coordinate)
-        routeCoordinates = RouteDecimator.decimate(allRouteCoordinates, toleranceMeters: 5, maxOutput: 500)
+        // Re-decimate only every 50 points (~5s at 10 Hz) to avoid O(n) per tick
+        if allRouteCoordinates.count - lastDecimatedCount >= 50 || allRouteCoordinates.count <= 2 {
+            routeCoordinates = RouteDecimator.decimate(allRouteCoordinates, toleranceMeters: 5, maxOutput: 500)
+            lastDecimatedCount = allRouteCoordinates.count
+        }
         richRoutePoints.append((
             lat: location.coordinate.latitude,
             lng: location.coordinate.longitude,
@@ -603,6 +617,7 @@ class DriveRecordingController: ObservableObject {
         currentDrive = nil
         routeCoordinates = []
         allRouteCoordinates = []
+        lastDecimatedCount = 0
         recordingStartTime = nil
         recordingLocations = []
         totalDistance = 0
