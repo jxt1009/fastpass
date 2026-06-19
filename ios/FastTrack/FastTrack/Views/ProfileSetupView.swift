@@ -131,10 +131,7 @@ struct ProfileSetupView: View {
     private func save() {
         guard isValid else { return }
         isSaving = true
-        
-        // Preserve existing id, garage, car selection, and privacy so editing
-        // the profile doesn't clobber the leaderboard "You" marker, garage, or
-        // the user's privacy choice.
+
         var updatedProfile = UserProfile(
             id: profileManager.profile?.id,
             username: username,
@@ -143,10 +140,29 @@ struct ProfileSetupView: View {
             selectedCarId: profileManager.profile?.selectedCarId,
             isPublic: profileManager.profile?.isPublic ?? true
         )
-        
-        profileManager.saveProfile(updatedProfile)
+
+        let syncTask = profileManager.saveProfile(updatedProfile)
         if let img = avatarImage { profileManager.saveAvatar(img) }
-        isSaving = false
-        dismiss()
+
+        Task {
+            do {
+                try await syncTask.value
+                await MainActor.run {
+                    isSaving = false
+                    dismiss()
+                }
+            } catch {
+                let message: String
+                if case let APIError.serverError(code) = error, code == 409 {
+                    message = "Username is already taken"
+                } else {
+                    message = "Failed to save profile. Check your connection and try again."
+                }
+                await MainActor.run {
+                    usernameError = message
+                    isSaving = false
+                }
+            }
+        }
     }
 }

@@ -8,13 +8,40 @@ class APIService: ObservableObject {
     let baseURL = "https://fast.toper.dev/api/v1"
     #endif
 
-    private let session: URLSession
+    let session: URLSession
     let sessionDelegate: PinningURLSessionDelegate
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     var inflightFetchDrives: Task<[Drive], Error>?
     weak var authManager: AuthManager? {
         didSet { sessionDelegate.authManager = authManager }
+    }
+
+    /// Decodes ISO 8601 dates with or without fractional seconds.
+    /// The default `.iso8601` strategy rejects fractional seconds (e.g.
+    /// `2026-06-18T12:34:56.789Z`), which some backend endpoints produce.
+    private static let iso8601Formatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    private static let fractionalFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    static let dateDecodingStrategy: JSONDecoder.DateDecodingStrategy = .custom { decoder in
+        let container = try decoder.singleValueContainer()
+        let dateString = try container.decode(String.self)
+
+        if let date = iso8601Formatter.date(from: dateString) { return date }
+        if let date = fractionalFormatter.date(from: dateString) { return date }
+
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "Unrecognized date format: \(dateString)"
+        )
     }
 
     init(authManager: AuthManager? = nil) {
@@ -25,7 +52,22 @@ class APIService: ObservableObject {
         self.sessionDelegate = delegate
         self.session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         self.decoder = JSONDecoder()
-        self.decoder.dateDecodingStrategy = .iso8601
+        self.decoder.dateDecodingStrategy = Self.dateDecodingStrategy
+        self.encoder = JSONEncoder()
+        self.encoder.dateEncodingStrategy = .iso8601
+        self.authManager = authManager
+    }
+
+    /// Test seam: inject a pre-built `URLSession` (and its delegate) so tests
+    /// can install a `URLProtocol` via `configuration.protocolClasses`, which
+    /// is more reliable than process-global `URLProtocol.registerClass` on
+    /// some SDKs and avoids the persistent `URLCache`. Internal so it isn't
+    /// part of the public API surface.
+    internal init(session: URLSession, sessionDelegate: PinningURLSessionDelegate, authManager: AuthManager? = nil) {
+        self.sessionDelegate = sessionDelegate
+        self.session = session
+        self.decoder = JSONDecoder()
+        self.decoder.dateDecodingStrategy = Self.dateDecodingStrategy
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
         self.authManager = authManager
@@ -41,14 +83,60 @@ class APIService: ObservableObject {
         return request
     }
 
+    /// Signs the user out and shows a "Session expired" toast. Called when
+    /// token refresh fails or the retry request also returns 401.
+    private func signOutAndToast() async {
+        await MainActor.run {
+            self.authManager?.signOut()
+            ToastManager.shared.show(ToastMessage(text: "Session expired"))
+        }
+    }
+
+    /// Executes `request`, and if the response is 401 on an authenticated
+    /// request, attempts to refresh the access token and retries once. If the
+    /// refresh fails, or the retry also returns 401, signs the user out and
+    /// shows a "Session expired" toast. Non-401 retry errors surface as-is.
+    private func executeWithRefreshRetry<R: Decodable>(
+        _ request: URLRequest,
+        decode: (Data) throws -> R
+    ) async throws -> R {
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        if httpResponse.statusCode == 401,
+           request.value(forHTTPHeaderField: "Authorization") != nil {
+            do {
+                try await authManager?.refreshTokenIfNeeded()
+            } catch {
+                await signOutAndToast()
+                throw APIError.serverError(401)
+            }
+            var retryRequest = request
+            if let token = authManager?.getToken() {
+                retryRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            let (retryData, retryResponse) = try await session.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse else { throw APIError.invalidResponse }
+            guard (200...299).contains(retryHttp.statusCode) else {
+                if retryHttp.statusCode == 401 {
+                    await signOutAndToast()
+                }
+                throw APIError.serverError(retryHttp.statusCode)
+            }
+            return try decode(retryData)
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else { throw APIError.serverError(httpResponse.statusCode) }
+        return try decode(data)
+    }
+
     func get<R: Decodable>(endpoint: String) async throws -> R {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else {
             throw APIError.invalidURL
         }
-        let (data, response) = try await session.data(for: authorizedRequest(url: url))
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200...299).contains(httpResponse.statusCode) else { throw APIError.serverError(httpResponse.statusCode) }
-        return try decoder.decode(R.self, from: data)
+        return try await executeWithRefreshRetry(authorizedRequest(url: url)) { data in
+            try self.decoder.decode(R.self, from: data)
+        }
     }
 
     func post<T: Encodable, R: Decodable>(
@@ -69,6 +157,9 @@ class APIService: ObservableObject {
             if let token = authManager?.getToken() {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
+            return try await executeWithRefreshRetry(request) { data in
+                try self.decoder.decode(R.self, from: data)
+            }
         }
 
         let (data, response) = try await session.data(for: request)
@@ -86,27 +177,19 @@ class APIService: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = try encoder.encode(body)
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
-        return try decoder.decode(R.self, from: data)
+        return try await executeWithRefreshRetry(request) { data in
+            try self.decoder.decode(R.self, from: data)
+        }
     }
 
     func delete(endpoint: String) async throws {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else { throw APIError.invalidURL }
-        print("[delete] URL: \(url.absoluteString)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        print("[delete] Status: \(http.statusCode)")
-        if let body = String(data: data, encoding: .utf8) {
-            print("[delete] Body: \(body)")
-        }
-        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
+        let _: NoDecodable = try await executeWithRefreshRetry(request) { _ in NoDecodable() }
     }
 
     func delete<T: Encodable>(endpoint: String, body: T) async throws {
@@ -118,9 +201,7 @@ class APIService: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = try encoder.encode(body)
-        let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
+        let _: NoDecodable = try await executeWithRefreshRetry(request) { _ in NoDecodable() }
     }
 
     // MARK: - Drive Methods
@@ -150,14 +231,12 @@ class APIService: ObservableObject {
             return json
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: bodyDict)
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200...299).contains(http.statusCode) else { throw APIError.serverError(http.statusCode) }
-
-        if let envelope = try? decoder.decode(Envelope.self, from: data) {
-            return envelope.drive
+        return try await executeWithRefreshRetry(request) { data in
+            if let envelope = try? self.decoder.decode(Envelope.self, from: data) {
+                return envelope.drive
+            }
+            return try self.decoder.decode(Drive.self, from: data)
         }
-        return try decoder.decode(Drive.self, from: data)
     }
 
     func fetchDrives() async throws -> [Drive] {
@@ -296,9 +375,7 @@ class APIService: ObservableObject {
         if let token = authManager?.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await self.session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200...299).contains(httpResponse.statusCode) else { throw APIError.serverError(httpResponse.statusCode) }
+        let data: Data = try await executeWithRefreshRetry(request) { d in d }
         return String(data: data, encoding: .utf8) ?? "{}"
     }
 
@@ -456,6 +533,8 @@ class APIService: ObservableObject {
 }
 
 private struct _EmptyBody: Encodable {}
+
+private struct NoDecodable: Decodable {}
 
 private struct UnreadCountResponse: Decodable {
     let unreadCount: Int

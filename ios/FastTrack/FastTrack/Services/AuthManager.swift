@@ -12,6 +12,13 @@ class AuthManager: ObservableObject {
     private let refreshTokenKey = "com.fasttrack.refresh_token"
     private let userKey = "current_user"
     private var sessionToken: UUID = UUID()
+
+    /// Single-flight coalescer for token refresh. When multiple concurrent
+    /// 401s trigger `refreshTokenIfNeeded()`, they all share the same refresh
+    /// task — preventing refresh-token rotation from invalidating the new
+    /// tokens before they can be saved.
+    private var inflightRefresh: Task<Void, Error>?
+
     let apiService: APIService
     weak var profileManager: ProfileManager?
     weak var carStatsManager: CarStatsManager?
@@ -123,25 +130,39 @@ class AuthManager: ObservableObject {
     }
 
     func refreshTokenIfNeeded() async throws {
-        let myToken = UUID()
-        await MainActor.run { self.sessionToken = myToken }
-
-        guard let refreshToken = getRefreshToken() else {
-            throw AuthError.noRefreshToken
+        // Single-flight: if a refresh is already in progress, await it
+        // instead of starting a second concurrent refresh. This prevents
+        // refresh-token rotation from invalidating the new tokens before
+        // they can be saved (concurrent 401s on app launch).
+        if let existing = inflightRefresh {
+            try await existing.value
+            return
         }
-        
-        let request = RefreshTokenRequest(refreshToken: refreshToken)
-        
-        let response: AuthResponse = try await apiService.post(
-            endpoint: "/auth/refresh",
-            body: request,
-            requiresAuth: false
-        )
 
-        var valid = false
-        await MainActor.run { valid = self.sessionToken == myToken }
-        guard valid else { return }
-        await completeAuthentication(with: response)
+        let task = Task<Void, Error> {
+            defer { Task { @MainActor in self.inflightRefresh = nil } }
+            let myToken = UUID()
+            await MainActor.run { self.sessionToken = myToken }
+
+            guard let refreshToken = self.getRefreshToken() else {
+                throw AuthError.noRefreshToken
+            }
+
+            let request = RefreshTokenRequest(refreshToken: refreshToken)
+
+            let response: AuthResponse = try await self.apiService.post(
+                endpoint: "/auth/refresh",
+                body: request,
+                requiresAuth: false
+            )
+
+            var valid = false
+            await MainActor.run { valid = self.sessionToken == myToken }
+            guard valid else { return }
+            await self.completeAuthentication(with: response)
+        }
+        await MainActor.run { self.inflightRefresh = task }
+        try await task.value
     }
 
     /// Google sign-in path: called from GoogleSignInManager.exchangeCode
@@ -162,6 +183,15 @@ class AuthManager: ObservableObject {
         Self.log.debug("completeAuthentication: starting, sessionToken=\(self.sessionToken.uuidString.prefix(8))")
         let myToken = sessionToken
         Self.log.debug("completeAuthentication: captured myToken=\(myToken.uuidString.prefix(8))")
+
+        // Guard BEFORE keychain writes: if signOut() rotated sessionToken
+        // since this auth flow started, don't write stale tokens back to
+        // the keychain (would "resurrect" the old session after sign-out).
+        guard await isSessionStillValid(myToken) else {
+            Self.log.error("completeAuthentication: session invalidated before keychain write, bailing")
+            return
+        }
+
         saveToken(response.token)
         Self.log.debug("completeAuthentication: token saved")
         saveRefreshToken(response.refreshToken)

@@ -112,7 +112,7 @@ class GoogleSignInManager: NSObject, ObservableObject {
         Self.log.debug("exchangeCode: sending request to \(url.absoluteString)")
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await apiService.session.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 Self.log.error("exchangeCode: invalid response type")
                 await MainActor.run { self.error = "Invalid response from server" }

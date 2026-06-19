@@ -1,7 +1,6 @@
 import Foundation
 import CryptoKit
 import OSLog
-import os.lock
 
 final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
     private let log = Logger(subsystem: "app.fasttrack", category: "sslPinning")
@@ -17,18 +16,14 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
     //     | openssl asn1parse -inform DER -strparse 24 -noout -out /dev/stdout 2>/dev/null \
     //     | openssl dgst -sha256 -binary 2>/dev/null \
     //     | base64
-    // Current hash (2026-06-14): FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA=
+    // Current leaf hash (2026-06-14): FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA=
+    // Backup pin: add the intermediate CA's SPKI hash here so a leaf cert
+    // rotation doesn't brick the app. To compute, run the openssl pipeline
+    // in the comment above against the intermediate cert (index 1 in the chain).
+    // TODO: populate with the intermediate CA SPKI hash for resilience.
     private let pinnedSPKIHashes: Set<String> = [
         "FrCe0Q7tuCCohD2N9iyI63vazZRo3cH0w37GtQb4kDA="
     ]
-
-    private var _lock = os_unfair_lock()
-    private var _isProcessing401 = false
-
-    private var isProcessing401: Bool {
-        get { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; return _isProcessing401 }
-        set { os_unfair_lock_lock(&_lock); defer { os_unfair_lock_unlock(&_lock) }; _isProcessing401 = newValue }
-    }
 
     /// Computes the SHA-256 hash of a certificate's raw public key bytes
     /// (as returned by SecKeyCopyExternalRepresentation, NOT the DER-encoded SPKI).
@@ -76,23 +71,28 @@ final class PinningURLSessionDelegate: NSObject, URLSessionDelegate {
             log.warning("authChallenge: trust evaluation failed (\(String(describing: evalError))), proceeding with SPKI check")
         }
 
-        guard let cert = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
-            log.error("authChallenge: no certificate at index 0")
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
+        // Check the full certificate chain for a matching SPKI pin.
+        // This allows backup pins on intermediate CA certs to keep the app
+        // working if the leaf cert rotates.
+        let chainCount = SecTrustGetCertificateCount(serverTrust)
+        var matchedHash: String?
+        for i in 0..<chainCount {
+            guard let cert = SecTrustGetCertificateAtIndex(serverTrust, i),
+                  let hash = Self.computeKeyHash(from: cert) else { continue }
+            if pinnedSPKIHashes.contains(hash) {
+                matchedHash = hash
+                break
+            }
         }
 
-        guard let hash = Self.computeKeyHash(from: cert) else {
-            log.error("authChallenge: failed to compute key hash")
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            return
-        }
-
-        if pinnedSPKIHashes.contains(hash) {
+        if let hash = matchedHash {
             log.debug("authChallenge: key hash matched, allowing connection")
             completionHandler(.useCredential, URLCredential(trust: serverTrust))
         } else {
-            log.error("authChallenge: key hash mismatch — got \(hash, privacy: .public)")
+            let leafHash = (0..<chainCount).compactMap { i in
+                SecTrustGetCertificateAtIndex(serverTrust, i).flatMap { Self.computeKeyHash(from: $0) }
+            }.first ?? "unknown"
+            log.error("authChallenge: no pinned key hash found in chain — leaf=\(leafHash, privacy: .public)")
             completionHandler(.cancelAuthenticationChallenge, nil)
         }
     }
@@ -107,14 +107,6 @@ extension PinningURLSessionDelegate: @preconcurrency URLSessionTaskDelegate {
         }
         if let httpResponse = task.response as? HTTPURLResponse {
             log.debug("taskComplete: status=\(httpResponse.statusCode)")
-            guard httpResponse.statusCode == 401, !isProcessing401 else { return }
-            isProcessing401 = true
-            log.warning("taskComplete: 401 received, signing out")
-            Task { @MainActor in
-                authManager?.signOut()
-                ToastManager.shared.show(ToastMessage(text: "Session expired"))
-                isProcessing401 = false
-            }
         }
     }
 }
