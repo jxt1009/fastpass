@@ -87,17 +87,18 @@ struct ToastView: View {
         )
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
         .padding(.horizontal, 16)
-        .padding(.bottom, 8)
     }
 }
 
-// MARK: - Overlay modifier
+// MARK: - ToastLayer
 
-private struct ToastOverlayModifier: ViewModifier {
-    @ObservedObject var manager: ToastManager
+struct ToastLayer: View {
+    @ObservedObject var manager: ToastManager = .shared
+    @EnvironmentObject var driveManager: DriveManager
 
-    func body(content: Content) -> some View {
-        content.overlay(alignment: .bottom) {
+    var body: some View {
+        VStack {
+            Spacer()
             if let message = manager.current {
                 ToastView(message: message) {
                     message.action?()
@@ -105,17 +106,17 @@ private struct ToastOverlayModifier: ViewModifier {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .id(message.id)
+                .padding(.bottom, toastBottomPadding)
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: manager.current?.id)
+        .allowsHitTesting(manager.current != nil)
+        .ignoresSafeArea(.keyboard)
     }
-}
 
-extension View {
-    /// Overlay a toast on this view, driven by the given ToastManager.
-    /// Apply to the root view of the app so the toast sits above all
-    /// tabs and sheets.
-    func toastOverlay(_ manager: ToastManager = .shared) -> some View {
-        modifier(ToastOverlayModifier(manager: manager))
+    /// Above the tab bar normally (~49pt tab bar + ~11pt home indicator clearance);
+    /// drops to the bottom safe area when the tab bar is hidden during recording.
+    private var toastBottomPadding: CGFloat {
+        driveManager.isRecording ? 8 : 60
     }
 }
