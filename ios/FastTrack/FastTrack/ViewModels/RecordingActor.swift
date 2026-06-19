@@ -119,7 +119,7 @@ actor RecordingActor {
         lastCoordinate = update.coordinate
         lastIngestedLat = update.coordinate.latitude
         lastIngestedLng = update.coordinate.longitude
-        lastIngestedCourse = update.course
+        lastIngestedCourse = update.course >= 0 ? update.course : lastIngestedCourse
         lastIngestedSpeed = update.speed
         lastIngestedTimestamp = update.timestamp
         hasIngestedOnce = true
