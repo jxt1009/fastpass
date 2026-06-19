@@ -62,6 +62,38 @@ final class ColorContrastTests: XCTestCase {
                           "Light-mode .special should be darker than dark-mode")
     }
 
+    // MARK: - White-opacity token adaptation
+
+    func testFtShimmer_adaptsBetweenLightAndDark() {
+        let light = rgba(of: Color.ftShimmer, trait: lightTrait)
+        let dark = rgba(of: Color.ftShimmer, trait: darkTrait)
+        XCTAssertLessThan(brightness(r: light.r, g: light.g, b: light.b),
+                          brightness(r: dark.r, g: dark.g, b: dark.b),
+                          "Light-mode ftShimmer should be black-tinted (darker) than dark-mode white-tinted")
+    }
+
+    func testFtHairline_adaptsBetweenLightAndDark() {
+        let light = rgba(of: Color.ftHairline, trait: lightTrait)
+        let dark = rgba(of: Color.ftHairline, trait: darkTrait)
+        XCTAssertLessThan(brightness(r: light.r, g: light.g, b: light.b),
+                          brightness(r: dark.r, g: dark.g, b: dark.b),
+                          "Light-mode ftHairline should be black-tinted (darker) than dark-mode white-tinted")
+    }
+
+    func testFtOnDarkDivider_adaptsBetweenLightAndDark() {
+        let light = rgba(of: Color.ftOnDarkDivider, trait: lightTrait)
+        let dark = rgba(of: Color.ftOnDarkDivider, trait: darkTrait)
+        XCTAssertLessThan(brightness(r: light.r, g: light.g, b: light.b),
+                          brightness(r: dark.r, g: dark.g, b: dark.b),
+                          "Light-mode ftOnDarkDivider should be black-tinted (darker) than dark-mode white-tinted")
+    }
+
+    func testFtGlassSurface_lightModeIsDarkNotWhite() {
+        let light = rgba(of: Color.ftGlassSurface, trait: lightTrait)
+        XCTAssertLessThan(brightness(r: light.r, g: light.g, b: light.b), 0.5,
+                          "Light-mode ftGlassSurface should be a dark surface fill (black@8%), not near-white")
+    }
+
     // MARK: - Fixed tokens (pass AA against white in both modes)
 
     func testFtBlueAndFtRedRemainConstant() {
