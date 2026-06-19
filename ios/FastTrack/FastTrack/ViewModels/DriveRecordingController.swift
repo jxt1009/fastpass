@@ -78,6 +78,16 @@ class DriveRecordingController: ObservableObject {
 
     var recordingLocations: [CLLocation] = []
     private var totalDistance: Double = 0
+    /// Full, unsimplified coordinate stream. `routeCoordinates` (published to
+    /// the map) is derived from this via RDP decimation so the live polyline
+    /// stays bounded regardless of drive length.
+    private var allRouteCoordinates: [CLLocationCoordinate2D] = []
+    /// Bumped on every `startRecording`. Captured by the detached
+    /// `processLocationHeavy` task so a location ingested just before stop (or
+    /// carried past a reset) can't pollute the next drive's RecordingActor
+    /// state. Only written from @MainActor; read from detached tasks for an
+    /// integer comparison, hence `nonisolated(unsafe)`.
+    nonisolated(unsafe) private var recordingGeneration: Int = 0
     var speedReadings: RingBuffer<Double> = RingBuffer(capacity: 1500)
     var runningSpeedStats = RunningSpeedStats()
     var latestSpeedSample: SpeedSample?
@@ -181,6 +191,7 @@ class DriveRecordingController: ObservableObject {
         isRecording = true
         recordingLocations = []
         totalDistance = 0
+        allRouteCoordinates = []
         routeCoordinates = []
         richRoutePoints = []
         recordedRouteEvents = []
@@ -202,6 +213,12 @@ class DriveRecordingController: ObservableObject {
         lastBrakeTime = nil
         latestSpeedSample = nil
         headingHistory = []
+
+        // Invalidate any heavy-processing tasks still in flight from a prior
+        // drive, and clear the RecordingActor so the next drive starts from a
+        // clean slate (stopRecording only resets on a successful upload).
+        recordingGeneration &+= 1
+        Task { await RecordingActor.shared.reset() }
 
         locationManager?.startUpdatingLocation()
 
@@ -372,7 +389,8 @@ class DriveRecordingController: ObservableObject {
         if let prev = recordingLocations.dropLast().last {
             totalDistance += prev.distance(from: location)
         }
-        routeCoordinates.append(location.coordinate)
+        allRouteCoordinates.append(location.coordinate)
+        routeCoordinates = RouteDecimator.decimate(allRouteCoordinates, toleranceMeters: 5, maxOutput: 500)
         richRoutePoints.append((
             lat: location.coordinate.latitude,
             lng: location.coordinate.longitude,
@@ -384,8 +402,11 @@ class DriveRecordingController: ObservableObject {
             currentMaxSpeed = speed
         }
 
+        let generation = recordingGeneration
         Task.detached { [weak self] in
-            await self?.processLocationHeavy(location, speed: speed, speedMph: speedMph)
+            guard let self else { return }
+            guard self.recordingGeneration == generation else { return }
+            await self.processLocationHeavy(location, speed: speed, speedMph: speedMph)
         }
 
         updateCurrentDrive()
@@ -581,6 +602,7 @@ class DriveRecordingController: ObservableObject {
         isRecording = false
         currentDrive = nil
         routeCoordinates = []
+        allRouteCoordinates = []
         recordingStartTime = nil
         recordingLocations = []
         totalDistance = 0
