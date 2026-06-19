@@ -344,6 +344,7 @@ class DriveRecordingController: ObservableObject {
         var bgTaskID = UIBackgroundTaskIdentifier.invalid
         bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "DriveUpload") {
             UIApplication.shared.endBackgroundTask(bgTaskID)
+            bgTaskID = UIBackgroundTaskIdentifier.invalid
         }
         defer {
             if bgTaskID != UIBackgroundTaskIdentifier.invalid {

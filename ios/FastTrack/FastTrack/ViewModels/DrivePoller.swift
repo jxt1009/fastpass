@@ -67,6 +67,11 @@ class DrivePoller: ObservableObject {
 
     private var isRecovering = false
 
+    /// Tracks upload retry count per in-flight file. After maxRetries,
+    /// the file is moved to a "failed" subdirectory to stop retrying.
+    private var retryCounts: [URL: Int] = [:]
+    private let maxRetries = 5
+
     /// Keys of recently-deleted drives, so recoverPendingDrives can distinguish
     /// "never uploaded" (retry) from "user deleted" (stale file to discard).
     private var recentlyDeletedDriveKeys: Set<String> = []
@@ -163,7 +168,16 @@ class DrivePoller: ObservableObject {
                 self.drives.insert(saved, at: 0)
                 self.carStatsManager.updateStats(for: saved)
                 try? FileManager.default.removeItem(at: url)
+                retryCounts.removeValue(forKey: url)
             } catch {
+                let count = (retryCounts[url] ?? 0) + 1
+                retryCounts[url] = count
+                if count >= maxRetries {
+                    let failedDir = directory.appendingPathComponent("failed_uploads")
+                    try? FileManager.default.createDirectory(at: failedDir, withIntermediateDirectories: true)
+                    try? FileManager.default.moveItem(at: url, to: failedDir.appendingPathComponent(url.lastPathComponent))
+                    retryCounts.removeValue(forKey: url)
+                }
             }
         }
         recentlyDeletedDriveKeys.removeAll(keepingCapacity: true)
