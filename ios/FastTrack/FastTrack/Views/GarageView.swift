@@ -78,7 +78,7 @@ struct GarageView: View {
                     unit: allCarsStats.best060 != nil ? "sec" : ""
                 )
                 InstrumentStatCell(
-                    icon: "clock.fill", iconColor: .orange,
+                    icon: "clock.fill", iconColor: .ftAmber,
                     label: "Total Duration",
                     value: formatDuration(userStats.totalDuration),
                     unit: ""
@@ -92,7 +92,7 @@ struct GarageView: View {
                     unit: ""
                 )
                 InstrumentStatCell(
-                    icon: "flag.checkered", iconColor: .green,
+                    icon: "flag.checkered", iconColor: .ftGreen,
                     label: "Total Trips",
                     value: "\(userStats.totalTrips)",
                     unit: ""

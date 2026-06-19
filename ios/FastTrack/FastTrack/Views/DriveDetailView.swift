@@ -26,9 +26,9 @@ struct RouteEvent {
 
     var color: Color {
         switch type {
-        case .brake:      return .red
-        case .turnLeft, .turnRight: return .orange
-        case .laneChange: return .yellow
+        case .brake:      return .ftRed
+        case .turnLeft, .turnRight: return .ftAmber
+        case .laneChange: return .ftGold
         }
     }
 

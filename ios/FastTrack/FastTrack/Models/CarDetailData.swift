@@ -61,9 +61,9 @@ enum DrivingStyle: Equatable, Hashable, CaseIterable {
     /// the driving-style-specific palette.
     var color: Color {
         switch self {
-        case .sporty:    return .red
-        case .smooth:    return .green
-        case .balanced:  return .orange
+        case .sporty:    return .ftRed
+        case .smooth:    return .ftGreen
+        case .balanced:  return .ftAmber
         case .unknown:   return .secondary
         }
     }

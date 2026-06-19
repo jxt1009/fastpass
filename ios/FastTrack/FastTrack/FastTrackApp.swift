@@ -96,7 +96,6 @@ struct FastTrackApp: App {
                     .environmentObject(screenWake)
 #endif
             }
-            .toastOverlay()
         }
     }
 }
@@ -126,8 +125,11 @@ struct RootView: View {
                 SplashView()
                     .transition(.opacity)
             } else {
-                mainContent
-                    .transition(.opacity)
+                ZStack {
+                    mainContent
+                        .transition(.opacity)
+                    ToastLayer()
+                }
             }
         }
         .animation(.easeInOut(duration: 0.4), value: isInitializing)

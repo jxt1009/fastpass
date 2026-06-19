@@ -47,7 +47,7 @@ struct CarDetailStatsGrid: View {
                     value: data?.bestZeroToSixty.map { String(format: "%.1fs", $0) } ?? "N/A",
                     category: zeroToSixtyCategory,
                     icon: "bolt.fill",
-                    color: .red
+                    color: .ftRed
                 )
                 PerformanceBreakdownCard(
                     title: "Cornering",

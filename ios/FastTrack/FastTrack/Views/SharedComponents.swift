@@ -17,8 +17,8 @@ enum TrendDirection {
 
     var color: Color {
         switch self {
-        case .up: return .green
-        case .down: return .red
+        case .up: return .ftGreen
+        case .down: return .ftRed
         case .neutral: return .gray
         }
     }

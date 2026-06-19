@@ -95,7 +95,7 @@ struct DrivePerformanceDetailView: View {
                                     Spacer()
                                     ProgressView(value: smoothness / 100)
                                         .progressViewStyle(.linear)
-                                        .tint(smoothness > 75 ? .green : smoothness > 50 ? .orange : .red)
+                                        .tint(smoothness > 75 ? .ftGreen : smoothness > 50 ? .ftAmber : .ftRed)
                                         .frame(width: 100)
                                 }
                             }

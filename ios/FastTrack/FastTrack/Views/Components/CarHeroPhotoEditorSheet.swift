@@ -49,7 +49,7 @@ struct CarHeroPhotoEditorSheet: View {
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(.ftRed)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

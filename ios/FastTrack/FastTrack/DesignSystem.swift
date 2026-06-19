@@ -65,7 +65,7 @@ extension Color {
     static let ftGlassSurface = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? UIColor(white: 1, alpha: 0.06)
-            : UIColor(white: 1, alpha: 0.72)
+            : UIColor(white: 0, alpha: 0.08)
     })
 
     static let ftGlassStroke = Color(UIColor { trait in
@@ -80,13 +80,25 @@ extension Color {
             : UIColor(white: 1, alpha: 0.42)
     })
 
-    static let ftShimmer = Color.white.opacity(0.12)
+    static let ftShimmer = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.12)
+            : UIColor(white: 0, alpha: 0.10)
+    })
     static let ftScrim = Color.black.opacity(0.45)
     static let ftRankGold = Color.ftGold
     static let ftRankSilver = Color(red: 192/255, green: 192/255, blue: 192/255)
     static let ftRankBronze = Color(red: 205/255, green: 127/255, blue: 50/255)
-    static let ftOnDarkDivider = Color.white.opacity(0.14)
-    static let ftHairline = Color.white.opacity(0.1)
+    static let ftOnDarkDivider = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.14)
+            : UIColor(white: 0, alpha: 0.12)
+    })
+    static let ftHairline = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.10)
+            : UIColor(white: 0, alpha: 0.12)
+    })
     static let ftSkeleton = Color(.systemGray5)
     static let ftPB060Tint = Color.ftGold
     static let ftPBTopSpeedTint = Color.ftRed

@@ -54,7 +54,7 @@ struct SignInView: View {
             // Error
             if let err = googleSignInManager.error ?? appleSignInManager.error {
                 Text(err)
-                    .foregroundColor(.red)
+                    .foregroundColor(.ftRed)
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .padding(.top, 12)

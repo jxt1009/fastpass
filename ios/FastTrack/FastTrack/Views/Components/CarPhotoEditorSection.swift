@@ -56,7 +56,7 @@ struct CarPhotoEditorSection: View {
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(.ftRed)
                 }
             }
         }
