@@ -11,9 +11,13 @@ import CoreMotion
 // position-delta), but only arrives ~1 Hz and can spike. The IMU runs
 // at 25 Hz and fills the gaps, giving smooth real-time speed.
 
-class SpeedFusion {
+struct SpeedFusionSnapshot: Sendable {
+    let speed: Double
+    let isZeroLocked: Bool
+    let stationaryConfidence: Double
+}
 
-    private let lock = NSLock()
+actor SpeedFusion {
 
     // MARK: - Kalman state
     private(set) var speed: Double = 0          // m/s
@@ -43,11 +47,15 @@ class SpeedFusion {
     private var lastGPSSpeed: Double = 0
     private var stationaryDuration: Double = 0
 
+    // GPS context mirrored into the actor so the IMU read path (100 Hz) can
+    // obtain the latest raw GPS speed/accuracy without touching LocationManager's
+    // main-actor @Published properties (the previous cross-thread read race).
+    private var lastKnownGPSSpeed: Double = 0
+    private var lastKnownSpeedAccuracy: Double = -1
+
     // MARK: - Predict (called at 25 Hz from CMDeviceMotion)
     /// `longAccelG` = longitudinal acceleration in **g** units, from IMU projected onto travel direction
     func predict(longAccelG: Double, dt: Double) {
-        lock.lock()
-        defer { lock.unlock() }
 
         // While zero-locked (GPS confirmed stopped), only break lock on meaningful forward acceleration
         if isZeroLocked {
@@ -76,8 +84,6 @@ class SpeedFusion {
     // MARK: - Update (called at ~1 Hz when GPS fires)
     /// `gpsSpeedAccuracy` comes from CLLocation.speedAccuracy (m/s std dev); use -1 if unavailable
     func update(gpsSpeed: Double, gpsSpeedAccuracy: Double) {
-        lock.lock()
-        defer { lock.unlock() }
 
         guard gpsSpeed >= 0 else { return }  // GPS returns -1 when invalid
 
@@ -121,21 +127,51 @@ class SpeedFusion {
     }
 
     func updateCourse(_ course: Double) {
-        lock.lock()
-        defer { lock.unlock() }
         if course >= 0 { lastCourse = course }
     }
 
     func reset() {
-        lock.lock()
-        defer { lock.unlock() }
         speed = 0
         P = 4.0
         isZeroLocked = false
         stationaryConfidence = 1.0
         lastCourse = -1
         lastGPSSpeed = 0
+        lastKnownGPSSpeed = 0
+        lastKnownSpeedAccuracy = -1
         stationaryDuration = 0
+    }
+
+    // MARK: - Combined actor-hop helpers (minimize cross-isolation reads)
+
+    /// Read current fused state without modifying it (used to capture pre-predict
+    /// state for the lock-break transition).
+    func currentSnapshot() -> SpeedFusionSnapshot {
+        SpeedFusionSnapshot(speed: speed, isZeroLocked: isZeroLocked, stationaryConfidence: stationaryConfidence)
+    }
+
+    /// Predict + return snapshot in a single actor hop (called at 100 Hz from IMU queue)
+    func predictAndRead(longAccelG: Double, dt: Double) -> SpeedFusionSnapshot {
+        predict(longAccelG: longAccelG, dt: dt)
+        return SpeedFusionSnapshot(speed: speed, isZeroLocked: isZeroLocked, stationaryConfidence: stationaryConfidence)
+    }
+
+    /// Update from GPS + return snapshot in a single actor hop (called at ~1 Hz from main)
+    func updateAndRead(gpsSpeed: Double, gpsSpeedAccuracy: Double) -> SpeedFusionSnapshot {
+        update(gpsSpeed: gpsSpeed, gpsSpeedAccuracy: gpsSpeedAccuracy)
+        return SpeedFusionSnapshot(speed: speed, isZeroLocked: isZeroLocked, stationaryConfidence: stationaryConfidence)
+    }
+
+    // MARK: - GPS context (mirrors rawGPS speed/accuracy for the IMU read path)
+
+    func updateGPSContext(speed: Double, accuracy: Double) {
+        lastKnownGPSSpeed = speed
+        lastKnownSpeedAccuracy = accuracy
+    }
+
+    /// Read GPS context for fallback accel computation (called from IMU queue)
+    func gpsContext() -> (speed: Double, accuracy: Double) {
+        (lastKnownGPSSpeed, lastKnownSpeedAccuracy)
     }
 
     private func updateStationaryEstimate(absLongAccelG: Double, dt: Double) {

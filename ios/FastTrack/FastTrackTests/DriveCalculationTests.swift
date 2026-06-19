@@ -178,35 +178,39 @@ final class DriveCalculationTests: XCTestCase {
         XCTAssertNil(result)
     }
 
-    func testSpeedFusion_ZeroLockEngagesQuicklyNearStop() {
+    func testSpeedFusion_ZeroLockEngagesQuicklyNearStop() async {
         let fusion = SpeedFusion()
 
-        fusion.update(gpsSpeed: 0.4, gpsSpeedAccuracy: 1.0)
-        XCTAssertFalse(fusion.isZeroLocked)
+        await fusion.update(gpsSpeed: 0.4, gpsSpeedAccuracy: 1.0)
+        let afterGPS = await fusion.currentSnapshot()
+        XCTAssertFalse(afterGPS.isZeroLocked)
 
         for _ in 0..<15 {
-            fusion.predict(longAccelG: 0, dt: 1.0 / 25.0)
+            await fusion.predict(longAccelG: 0, dt: 1.0 / 25.0)
         }
 
-        XCTAssertTrue(fusion.isZeroLocked)
-        XCTAssertEqual(fusion.speed, 0, accuracy: 0.01)
-        XCTAssertGreaterThanOrEqual(fusion.stationaryConfidence, 0.99)
+        let final = await fusion.currentSnapshot()
+        XCTAssertTrue(final.isZeroLocked)
+        XCTAssertEqual(final.speed, 0, accuracy: 0.01)
+        XCTAssertGreaterThanOrEqual(final.stationaryConfidence, 0.99)
     }
 
-    func testSpeedFusion_MovingGPSUpdateClearsStationaryConfidenceImmediately() {
+    func testSpeedFusion_MovingGPSUpdateClearsStationaryConfidenceImmediately() async {
         let fusion = SpeedFusion()
 
-        fusion.update(gpsSpeed: 0.4, gpsSpeedAccuracy: 1.0)
-        fusion.predict(longAccelG: 0, dt: 1.0 / 25.0)
+        await fusion.update(gpsSpeed: 0.4, gpsSpeedAccuracy: 1.0)
+        await fusion.predict(longAccelG: 0, dt: 1.0 / 25.0)
 
-        XCTAssertFalse(fusion.isZeroLocked)
-        XCTAssertGreaterThan(fusion.stationaryConfidence, 0.5)
+        let mid = await fusion.currentSnapshot()
+        XCTAssertFalse(mid.isZeroLocked)
+        XCTAssertGreaterThan(mid.stationaryConfidence, 0.5)
 
-        fusion.update(gpsSpeed: 2.2, gpsSpeedAccuracy: 0.8)
+        await fusion.update(gpsSpeed: 2.2, gpsSpeedAccuracy: 0.8)
 
-        XCTAssertFalse(fusion.isZeroLocked)
-        XCTAssertEqual(fusion.stationaryConfidence, 0, accuracy: 0.001)
-        XCTAssertGreaterThanOrEqual(fusion.speed, 0.55)
+        let end = await fusion.currentSnapshot()
+        XCTAssertFalse(end.isZeroLocked)
+        XCTAssertEqual(end.stationaryConfidence, 0, accuracy: 0.001)
+        XCTAssertGreaterThanOrEqual(end.speed, 0.55)
     }
 
     func testLaunchTracker_InterpolatesFastZeroToSixty() {

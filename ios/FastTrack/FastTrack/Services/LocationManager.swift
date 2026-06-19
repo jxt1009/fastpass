@@ -157,7 +157,7 @@ class LocationManager: NSObject, ObservableObject {
         clManager.allowsBackgroundLocationUpdates = false
         clManager.pausesLocationUpdatesAutomatically = true
         stopIMU()
-        fusion.reset()
+        Task { await fusion.reset() }
         currentSpeed = 0
         rawGPSSpeed = 0
         speedAccuracy = -1
@@ -213,56 +213,82 @@ class LocationManager: NSObject, ObservableObject {
             course = currentCourse
         }
 
-        let rawGps = rawGPSSpeed
-        fusion.updateCourse(course)
+        // Route fusion work through the SpeedFusion actor. The IMU callback
+        // returns immediately; the actor serializes per-tick work off main.
+        Task { [weak self] in
+            guard let self else { return }
+            await self.processIMUFusion(
+                motion: motion,
+                course: course,
+                dt: dt,
+                timestamp: timestamp
+            )
+        }
+    }
+
+    private func processIMUFusion(
+        motion: CMDeviceMotion,
+        course: Double,
+        dt: Double,
+        timestamp: Date
+    ) async {
+        await fusion.updateCourse(course)
+
+        let gpsCtx = await fusion.gpsContext()
+        let preSnapshot = await fusion.currentSnapshot()
 
         let longG: Double
         if let projected = IMUProjector.longitudinalAccelG(from: motion, course: course) {
             longG = projected
         } else {
-            let speedTrend = rawGps - fusion.speed
+            let speedTrend = gpsCtx.speed - preSnapshot.speed
             longG = IMUProjector.fallbackAccelG(from: motion, speedTrend: speedTrend)
         }
 
-        let wasLocked = fusion.isZeroLocked
-        fusion.predict(longAccelG: longG, dt: dt)
-        let shouldBreakLock = wasLocked && !fusion.isZeroLocked
+        let wasLocked = preSnapshot.isZeroLocked
+        let postSnapshot = await fusion.predictAndRead(longAccelG: longG, dt: dt)
+        let shouldBreakLock = wasLocked && !postSnapshot.isZeroLocked
 
-        // Fire 100 Hz speed sample for stream capture (lightweight main-dispatch).
+        // Fire 100 Hz speed sample for stream capture (closure dispatches to main itself).
         if let onRaw = onRawSpeedSample {
             let sample = SpeedSample(
-                speed: fusion.speed,
-                rawGPSSpeed: self.rawGPSSpeed,
-                speedAccuracy: self.speedAccuracy,
+                speed: postSnapshot.speed,
+                rawGPSSpeed: gpsCtx.speed,
+                speedAccuracy: gpsCtx.accuracy,
                 timestamp: timestamp,
-                isZeroLocked: fusion.isZeroLocked,
-                stationaryConfidence: fusion.stationaryConfidence
+                isZeroLocked: postSnapshot.isZeroLocked,
+                stationaryConfidence: postSnapshot.stationaryConfidence
             )
             onRaw(sample)
         }
 
         // Throttled main-thread publish for UI and Combine subscribers.
+        let shouldBreakLockForMain = shouldBreakLock
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            if shouldBreakLock {
+            if shouldBreakLockForMain {
                 self.zeroLockBrokeAt = timestamp
             }
-            self.publishSpeedState(at: timestamp)
+            self.publishSpeedStateWith(postSnapshot, at: timestamp)
         }
     }
 
-    private func publishSpeedState(at timestamp: Date, forceSpeedUpdate: Bool = false) {
+    private func publishSpeedStateWith(
+        _ snapshot: SpeedFusionSnapshot,
+        at timestamp: Date,
+        forceSpeedUpdate: Bool = false
+    ) {
         guard forceSpeedUpdate || timestamp.timeIntervalSince(lastSpeedPublishAt) >= 0.1 else {
             return
         }
         lastSpeedPublishAt = timestamp
         let sample = SpeedSample(
-            speed: fusion.speed,
+            speed: snapshot.speed,
             rawGPSSpeed: rawGPSSpeed,
             speedAccuracy: speedAccuracy,
             timestamp: timestamp,
-            isZeroLocked: fusion.isZeroLocked,
-            stationaryConfidence: fusion.stationaryConfidence
+            isZeroLocked: snapshot.isZeroLocked,
+            stationaryConfidence: snapshot.stationaryConfidence
         )
         currentSpeedSample = sample
 
@@ -305,13 +331,30 @@ extension LocationManager: CLLocationManagerDelegate {
         rawGPSSpeed = location.speed
         speedAccuracy = location.speedAccuracy  // m/s std dev (iOS 10+)
 
-        // Feed GPS into Kalman filter
-        let wasLocked = fusion.isZeroLocked
-        fusion.update(gpsSpeed: location.speed, gpsSpeedAccuracy: location.speedAccuracy)
-        if wasLocked && !fusion.isZeroLocked {
-            zeroLockBrokeAt = location.timestamp
+        // Feed GPS into the Kalman filter actor, then publish on main. The actor
+        // serializes this with any in-flight IMU ticks, giving deterministic
+        // ordering between GPS and IMU updates (an improvement over the prior
+        // unsynchronized interleaving).
+        Task { [weak self] in
+            guard let self else { return }
+            await self.fusion.updateGPSContext(speed: location.speed, accuracy: location.speedAccuracy)
+            let preSnapshot = await self.fusion.currentSnapshot()
+            let wasLocked = preSnapshot.isZeroLocked
+            let snapshot = await self.fusion.updateAndRead(gpsSpeed: location.speed, gpsSpeedAccuracy: location.speedAccuracy)
+            let shouldBreakLock = wasLocked && !snapshot.isZeroLocked
+
+            #if DEBUG
+            print("🔄 Speed updated: GPS=\(location.speed), Fused=\(snapshot.speed)")
+            #endif
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if shouldBreakLock {
+                    self.zeroLockBrokeAt = location.timestamp
+                }
+                self.publishSpeedStateWith(snapshot, at: location.timestamp, forceSpeedUpdate: true)
+            }
         }
-        publishSpeedState(at: location.timestamp, forceSpeedUpdate: true)
 
         // Invoke heading detection on every valid GPS sample
         if location.course >= 0, let driveManager = driveManager, driveManager.isRecording {
@@ -323,10 +366,6 @@ extension LocationManager: CLLocationManagerDelegate {
                 )
             }
         }
-
-        #if DEBUG
-        print("🔄 Speed updated: GPS=\(location.speed), Fused=\(fusion.speed)")
-        #endif
     }
 
     func locationManager(_ manager: CLLocationManager,
