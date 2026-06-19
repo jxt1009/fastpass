@@ -316,7 +316,7 @@ struct ProfileView: View {
     private var mainStatsGrid: some View {
         HStack(spacing: 10) {
             InstrumentStatCell(
-                icon: "clock.fill", iconColor: .orange,
+                icon: "clock.fill", iconColor: .ftAmber,
                 label: "Total Duration",
                 value: formatDuration(stats.totalDuration),
                 unit: ""
@@ -328,7 +328,7 @@ struct ProfileView: View {
                 unit: ""
             )
             InstrumentStatCell(
-                icon: "flag.fill", iconColor: .green,
+                icon: "flag.fill", iconColor: .ftGreen,
                 label: "Total Trips",
                 value: "\(stats.totalTrips)",
                 unit: ""
@@ -376,12 +376,12 @@ struct ProfileView: View {
             HStack {
                 if isDeletingAccount {
                     ProgressView()
-                        .tint(.red)
+                        .tint(.ftRed)
                 }
                 Text("Delete Account")
                     .fontWeight(.semibold)
             }
-            .foregroundColor(.red)
+            .foregroundColor(.ftRed)
             .frame(maxWidth: .infinity)
             .padding()
             .background(Color.ftGlassCardFill)
@@ -397,7 +397,7 @@ struct ProfileView: View {
         } label: {
             Text("Sign Out")
                 .fontWeight(.semibold)
-                .foregroundColor(.red)
+                .foregroundColor(.ftRed)
                 .frame(maxWidth: .infinity)
             .padding()
             .background(Color.ftGlassCardFill)

@@ -31,12 +31,12 @@ enum PublicProfileStats {
     static func rows(for profile: PublicProfile, settings: AppSettings) -> [PublicProfileStatRow] {
         [
             PublicProfileStatRow(
-                icon: "speedometer", color: .red,
+                icon: "speedometer", color: .ftRed,
                 label: "Top Speed",
                 value: settings.speedDisplay(profile.topSpeed)
             ),
             PublicProfileStatRow(
-                icon: "timer", color: .orange,
+                icon: "timer", color: .ftAmber,
                 label: "Best 0-60",
                 value: best060Display(profile.best060Time)
             ),

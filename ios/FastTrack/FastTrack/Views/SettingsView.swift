@@ -127,7 +127,7 @@ private struct SpeedometerCalibrationRow: View {
     }
 
     private var sliderColor: Color {
-        settings.speedometerBiasPercent > 0 ? .orange : .blue
+        settings.speedometerBiasPercent > 0 ? .ftAmber : .ftBlue
     }
 }
 

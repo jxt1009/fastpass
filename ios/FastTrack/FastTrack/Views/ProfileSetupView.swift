@@ -59,14 +59,14 @@ struct ProfileSetupView: View {
                             .textInputAutocapitalization(.never)
                         if !usernameError.isEmpty {
                             Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(.red)
+                                .foregroundColor(.ftRed)
                         } else if username.count >= 3 {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundColor(.ftGreen)
                         }
                     }
                     if !usernameError.isEmpty {
-                        Text(usernameError).font(.caption).foregroundColor(.red)
+                        Text(usernameError).font(.caption).foregroundColor(.ftRed)
                     }
                     TextField("Country (optional)", text: $country)
                         .autocorrectionDisabled()

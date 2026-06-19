@@ -312,10 +312,10 @@ struct DriveDetailMap: View {
 
     private func speedBandColor(_ band: Int) -> Color {
         switch band {
-        case 0: return .green
-        case 1: return .yellow
-        case 2: return .orange
-        default: return .red
+        case 0: return .ftGreen
+        case 1: return .ftGold
+        case 2: return .ftAmber
+        default: return .ftRed
         }
     }
 }

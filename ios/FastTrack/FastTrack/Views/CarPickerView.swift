@@ -111,7 +111,7 @@ struct ModelPickerView: View {
             } else if let err = carService.error {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle).foregroundColor(.orange)
+                        .font(.largeTitle).foregroundColor(.ftAmber)
                     Text(err).foregroundColor(.secondary)
                     Button("Retry") {
                         Task { await carService.fetchModels(for: make) }
