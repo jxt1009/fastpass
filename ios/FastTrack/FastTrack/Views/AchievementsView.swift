@@ -254,7 +254,7 @@ struct AchievementDetailView: View {
                 Spacer()
             }
             .padding()
-            .background(Color.ftBg, ignoresSafeAreaEdges: .all)
+            .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
             .navigationTitle("Achievement")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -263,7 +263,7 @@ struct AchievementDetailView: View {
                 }
             }
         }
-        .presentationBackground(Color.ftBg)
+        .presentationBackground(Color.ftBgGradient)
     }
 }
 
