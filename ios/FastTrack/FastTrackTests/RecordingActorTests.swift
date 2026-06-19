@@ -52,4 +52,29 @@ final class RecordingActorTests: XCTestCase {
         XCTAssertEqual(s1.publishedAt, s2.publishedAt)
         XCTAssertNotEqual(s2.publishedAt, s3.publishedAt)
     }
+
+    func test_ingestAccumulatesExtendedStats() async {
+        let actor = RecordingActor()
+        let coord = CLLocationCoordinate2D(latitude: 37.0, longitude: -122.0)
+
+        await actor.ingest(RecordingActorUpdate(
+            coordinate: coord, speed: 10, timestamp: 1, course: 90,
+            acceleration: 3.0, deceleration: nil, brakeDetected: false,
+            gForce: 0.5, cornerSpeed: 8.0
+        ))
+
+        await actor.ingest(RecordingActorUpdate(
+            coordinate: CLLocationCoordinate2D(latitude: 37.001, longitude: -122.0),
+            speed: 5, timestamp: 2, course: 95,
+            acceleration: nil, deceleration: 4.0, brakeDetected: true,
+            gForce: 1.2, cornerSpeed: nil
+        ))
+
+        let stats = await actor.extendedStats()
+        XCTAssertEqual(stats.maxAcceleration, 3.0)
+        XCTAssertEqual(stats.maxDeceleration, 4.0)
+        XCTAssertEqual(stats.peakGForce, 1.2)
+        XCTAssertEqual(stats.topCornerSpeed, 8.0)
+        XCTAssertEqual(stats.brakeEvents, 1)
+    }
 }

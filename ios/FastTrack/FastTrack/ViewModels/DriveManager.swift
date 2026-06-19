@@ -63,6 +63,15 @@ final class DriveManager: ObservableObject {
         )
         self.drivePoller = drivePoller
 
+        recordingController.onLiveActivityUpdate = { [weak self] speedMph, distanceMiles, gForce, maxSpeed in
+            await self?.liveActivity.update(
+                speedMph: speedMph,
+                distanceMiles: distanceMiles,
+                currentGForce: gForce,
+                currentMaxSpeed: maxSpeed
+            )
+        }
+
         recordingController.$isRecording
             .assign(to: &$isRecording)
         recordingController.$currentDrive
@@ -124,10 +133,15 @@ final class DriveManager: ObservableObject {
                 elapsedSeconds: drive.duration
             )
         }
-        await recordingController.stopRecording()
+        let savedDrive = await recordingController.stopRecording()
         await liveActivity.end(finalState: finalSnapshot, lingerSeconds: 4)
-        if let savedDrive = recordingController.currentDrive {
-            carStatsManager.updateStats(for: savedDrive)
+        // Stats come from the server-persisted drive only (real id, confirmed
+        // uploaded). On upload failure stopRecording returns nil and writes an
+        // in-flight file; stats are then applied once by recoverPendingDrives
+        // when it retries — avoiding both the previous "skipped on success"
+        // and "double-count on retry" bugs.
+        if let saved = savedDrive {
+            carStatsManager.updateStats(for: saved)
         }
         await refreshAchievementsFromServer()
     }
