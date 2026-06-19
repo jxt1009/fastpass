@@ -77,6 +77,7 @@ class DriveRecordingController: ObservableObject {
     @Published var currentGForce: Double = 0
 
     var recordingLocations: [CLLocation] = []
+    private var totalDistance: Double = 0
     var speedReadings: RingBuffer<Double> = RingBuffer(capacity: 1500)
     var runningSpeedStats = RunningSpeedStats()
     var latestSpeedSample: SpeedSample?
@@ -179,6 +180,7 @@ class DriveRecordingController: ObservableObject {
         recordingStartTime = Date()
         isRecording = true
         recordingLocations = []
+        totalDistance = 0
         routeCoordinates = []
         richRoutePoints = []
         recordedRouteEvents = []
@@ -367,6 +369,9 @@ class DriveRecordingController: ObservableObject {
         let speedMph = speed * 2.23694
 
         recordingLocations.append(location)
+        if let prev = recordingLocations.dropLast().last {
+            totalDistance += prev.distance(from: location)
+        }
         routeCoordinates.append(location.coordinate)
         richRoutePoints.append((
             lat: location.coordinate.latitude,
@@ -551,11 +556,7 @@ class DriveRecordingController: ObservableObject {
         drive.endLatitude    = lastLoc.coordinate.latitude
         drive.endLongitude   = lastLoc.coordinate.longitude
 
-        var totalDist: Double = 0
-        for i in 1..<recordingLocations.count {
-            totalDist += recordingLocations[i-1].distance(from: recordingLocations[i])
-        }
-        drive.distance = totalDist
+        drive.distance = totalDistance
         if let start = recordingStartTime {
             drive.duration = Date().timeIntervalSince(start)
         }
@@ -582,6 +583,7 @@ class DriveRecordingController: ObservableObject {
         routeCoordinates = []
         recordingStartTime = nil
         recordingLocations = []
+        totalDistance = 0
         speedReadings.removeAll()
         runningSpeedStats.reset()
         publishThrottler.reset()
