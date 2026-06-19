@@ -162,6 +162,15 @@ class AuthManager: ObservableObject {
         Self.log.debug("completeAuthentication: starting, sessionToken=\(self.sessionToken.uuidString.prefix(8))")
         let myToken = sessionToken
         Self.log.debug("completeAuthentication: captured myToken=\(myToken.uuidString.prefix(8))")
+
+        // Guard BEFORE keychain writes: if signOut() rotated sessionToken
+        // since this auth flow started, don't write stale tokens back to
+        // the keychain (would "resurrect" the old session after sign-out).
+        guard await isSessionStillValid(myToken) else {
+            Self.log.error("completeAuthentication: session invalidated before keychain write, bailing")
+            return
+        }
+
         saveToken(response.token)
         Self.log.debug("completeAuthentication: token saved")
         saveRefreshToken(response.refreshToken)
