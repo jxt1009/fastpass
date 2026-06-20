@@ -22,7 +22,6 @@ class AchievementManager: ObservableObject {
     }
 
     func applyServerUnlocks(_ serverUnlocks: [UserAchievement], catalog: [AchievementCatalogEntry] = []) {
-        let byId = Dictionary(uniqueKeysWithValues: achievements.map { ($0.id, $0) })
         var updated = achievements
         for server in serverUnlocks {
             guard let idx = updated.firstIndex(where: { $0.id == server.achievementId }) else { continue }
@@ -39,7 +38,6 @@ class AchievementManager: ObservableObject {
             achievements = updated
             saveAchievements()
         }
-        _ = byId
     }
 
     func updateProgress(with drives: [Drive]) {
