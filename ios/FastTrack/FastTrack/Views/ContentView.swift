@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 import Combine
 import Charts
+import UIKit
 
 struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -47,6 +48,12 @@ struct ContentView: View {
 
                     if driveManager.isRecording, let drive = driveManager.currentDrive {
                         gaugeStrip(drive: drive)
+                            .padding(.bottom, Spacing.sm)
+                    }
+
+                    if locationManager.authorizationStatus == .denied {
+                        gpsDeniedBanner
+                            .padding(.horizontal, Spacing.md)
                             .padding(.bottom, Spacing.sm)
                     }
 
@@ -260,6 +267,38 @@ struct ContentView: View {
     }
 
     // MARK: - Helpers
+
+    private var gpsDeniedBanner: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            Image(systemName: "location.slash.fill")
+                .font(.title3)
+                .foregroundColor(.ftRed)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Location Access Denied")
+                    .font(.headline)
+                Text("FastTrack needs location access to record drives. Enable it in Settings to continue.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Button("Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .buttonStyle(.bordered)
+            .tint(.ftBlue)
+            .controlSize(.small)
+        }
+        .padding()
+        .background(Color.ftGlassCardFill)
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.lg)
+                .stroke(Color.ftRed.opacity(0.25), lineWidth: 1)
+        )
+        .cornerRadius(Radius.lg)
+    }
 
     private func formatElapsed(_ t: TimeInterval) -> String {
         let h = Int(t) / 3600

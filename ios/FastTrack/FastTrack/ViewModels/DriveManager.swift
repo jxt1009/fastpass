@@ -156,6 +156,12 @@ final class DriveManager: ObservableObject {
         drivePoller.fetchDrives()
     }
 
+    /// Async refresh used by pull-to-refresh. Awaits the fetch so the
+    /// `.refreshable` spinner dismisses only once data is updated.
+    func refreshDrives() async {
+        await drivePoller.refreshDrives()
+    }
+
     @MainActor
     func deleteDrive(id: Int) async throws {
         let deletedDrive = drives.first(where: { $0.id == id })
