@@ -34,6 +34,22 @@ class DrivePoller: ObservableObject {
         }
     }
 
+    /// Async variant used by pull-to-refresh so the refresh indicator stays
+    /// visible until the fetch actually completes. `fetchDrives()` is
+    /// fire-and-forget (it spawns an internal Task), which dismisses the
+    /// `.refreshable` spinner immediately.
+    func refreshDrives() async {
+        let versionAtStart = fetchVersion
+        do {
+            let fetched = try await apiService.fetchDrives()
+            guard self.fetchVersion == versionAtStart else { return }
+            self.drives = fetched
+            self.isLoadingDrives = false
+        } catch {
+            self.isLoadingDrives = false
+        }
+    }
+
     /// Called after a local mutation (delete) that would make an in-flight
     /// fetch result stale. The fetch version gate prevents stale data from
     /// overwriting the post-mutation state.

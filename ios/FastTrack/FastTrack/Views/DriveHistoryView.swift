@@ -70,7 +70,7 @@ struct DriveHistoryView: View {
                     }
                     .scrollContentBackground(.hidden)
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
-                    .refreshable { driveManager.fetchDrives() }
+                    .refreshable { await driveManager.refreshDrives() }
                 }
             }
             .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
