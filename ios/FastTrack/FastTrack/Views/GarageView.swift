@@ -108,13 +108,6 @@ struct GarageView: View {
             let recent = allDrives
                 .sorted { $0.startTime > $1.startTime }
                 .prefix(5)
-            #if DEBUG
-            let _ = {
-                let firstId = allDrives.first?.id ?? -1
-                let firstUser = allDrives.first?.userID ?? -1
-                print("🏎️ GarageView: drives.count=\(allDrives.count) first.id=\(firstId) first.userID=\(firstUser)")
-            }()
-            #endif
 
             if !recent.isEmpty {
                 SectionHeader(title: "Recent Drives")
