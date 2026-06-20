@@ -78,6 +78,7 @@ struct AddCarView: View {
     @State private var isUploadingPhoto = false
     @State private var isSavingProfile = false
     @State private var photoError: String?
+    @State private var savedCarId: String?
 
     var body: some View {
         NavigationStack {
@@ -140,6 +141,12 @@ struct AddCarView: View {
     }
 
     private func saveCar() {
+        if savedCarId != nil {
+            isSavingProfile = true
+            Task { await completeSave() }
+            return
+        }
+
         guard let make = carSelection.make,
               var profile = profileManager.profile else { return }
 
@@ -152,6 +159,7 @@ struct AddCarView: View {
         )
 
         profile.addCarToGarage(newCar)
+        savedCarId = newCar.id
         isSavingProfile = true
         let saveTask = profileManager.saveProfile(profile)
 
@@ -166,25 +174,39 @@ struct AddCarView: View {
                 await MainActor.run {
                     self.photoError = "Profile save failed"
                     self.isSavingProfile = false
+                    self.savedCarId = nil
                 }
                 return
             }
-            if let pickedImage {
-                await uploadPhoto(for: newCar.id, image: pickedImage)
-            }
-            await MainActor.run {
-                self.isSavingProfile = false
-                self.dismiss()
-            }
+            await completeSave()
         }
     }
 
-    private func uploadPhoto(for carId: String, image: UIImage) async {
+    private func completeSave() async {
+        guard let carId = savedCarId else {
+            await MainActor.run { self.isSavingProfile = false }
+            return
+        }
+        if let pickedImage, uploadedPhotoURL == nil {
+            let uploaded = await uploadPhoto(for: carId, image: pickedImage)
+            if !uploaded {
+                await MainActor.run { self.isSavingProfile = false }
+                return
+            }
+        }
+        await MainActor.run {
+            self.isSavingProfile = false
+            self.dismiss()
+        }
+    }
+
+    @discardableResult
+    private func uploadPhoto(for carId: String, image: UIImage) async -> Bool {
         isUploadingPhoto = true
         defer { isUploadingPhoto = false }
         guard let data = image.jpegData(compressionQuality: 0.8) else {
             photoError = "Failed to encode photo"
-            return
+            return false
         }
         do {
             let url = try await apiService.uploadCarPhoto(carId: carId, data: data)
@@ -194,10 +216,12 @@ struct AddCarView: View {
                 self.profileManager.saveProfile(p)
                 self.uploadedPhotoURL = url
             }
+            return true
         } catch {
             await MainActor.run {
                 self.photoError = "Photo upload failed"
             }
+            return false
         }
     }
 }
