@@ -84,10 +84,25 @@ class AchievementManager: ObservableObject {
             return min(1.0, totalDistance / achievement.requirement.value)
 
         case .zeroToSixty:
-            return 0.0
+            // Best (lowest) 0-60 time across all drives. Lower is better,
+            // so progress approaches 1.0 as the time approaches the
+            // requirement threshold; at or under the threshold = unlocked.
+            let bestTime = drives.compactMap(\.best060Time).filter { $0 > 0 }.min()
+            guard let bestTime else { return 0.0 }
+            if bestTime <= achievement.requirement.value {
+                return 1.0
+            }
+            return achievement.requirement.value / bestTime
 
         case .smoothness:
-            return 0.0
+            // Smoothness proxy: fewer brake events per mile = smoother.
+            // 0 brake events/mile -> 100%, 10+ brake events/mile -> 0%.
+            let totalDistanceMiles = drives.reduce(0) { $0 + $1.distance } / 1609.34
+            guard totalDistanceMiles > 0 else { return 0.0 }
+            let totalBrakeEvents = drives.reduce(0) { $0 + $1.brakeEvents }
+            let brakeEventsPerMile = Double(totalBrakeEvents) / totalDistanceMiles
+            let smoothnessScore = max(0, 100 - (brakeEventsPerMile * 10))
+            return min(1.0, smoothnessScore / achievement.requirement.value)
 
         case .consecutiveDays:
             let consecutive = calculateConsecutiveDays(from: drives)
@@ -125,10 +140,14 @@ class AchievementManager: ObservableObject {
         for i in 1..<sortedDrives.count {
             let prevDate = calendar.startOfDay(for: sortedDrives[i-1].startTime)
             let currentDate = calendar.startOfDay(for: sortedDrives[i].startTime)
+            let dayDiff = calendar.dateComponents([.day], from: prevDate, to: currentDate).day ?? 0
 
-            if calendar.dateComponents([.day], from: prevDate, to: currentDate).day == 1 {
+            if dayDiff == 1 {
                 consecutiveDays += 1
                 maxConsecutive = max(maxConsecutive, consecutiveDays)
+            } else if dayDiff == 0 {
+                // Same day — don't reset, just continue
+                continue
             } else {
                 consecutiveDays = 1
             }

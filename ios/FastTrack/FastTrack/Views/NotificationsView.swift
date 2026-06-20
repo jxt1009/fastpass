@@ -17,13 +17,23 @@ struct NotificationsView: View {
             } else {
                 List {
                     ForEach(manager.notifications) { n in
-                        Button {
-                            Task { await manager.markRead(n) }
-                        } label: {
-                            NotificationRow(notification: n)
+                        if n.driveId != nil || n.actor != nil {
+                            NavigationLink {
+                                NotificationDestination(notification: n)
+                            } label: {
+                                NotificationRow(notification: n)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowBackground(Color.ftGlassCardFill)
+                        } else {
+                            Button {
+                                Task { await manager.markRead(n) }
+                            } label: {
+                                NotificationRow(notification: n)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowBackground(Color.ftGlassCardFill)
                         }
-                        .buttonStyle(.plain)
-                        .listRowBackground(Color.ftGlassCardFill)
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -101,5 +111,31 @@ private struct NotificationRow: View, Equatable {
                 .fontWeight(.bold)
                 .foregroundColor(.ftBlue)
         }
+    }
+}
+
+// MARK: - Deep-link destination
+
+/// Routes a notification to the relevant screen based on its payload and
+/// marks it read when the destination appears. `driveId` wins over `actor`.
+private struct NotificationDestination: View {
+    let notification: InAppNotification
+    @EnvironmentObject var manager: NotificationsManager
+
+    var body: some View {
+        Group {
+            if let driveId = notification.driveId {
+                RemoteDriveDetailLoader(driveId: driveId)
+            } else if let actor = notification.actor {
+                PublicProfileView(username: actor.username)
+            } else {
+                ContentUnavailableView(
+                    "Notification",
+                    systemImage: "bell",
+                    description: Text(notification.message)
+                )
+            }
+        }
+        .task { await manager.markRead(notification) }
     }
 }

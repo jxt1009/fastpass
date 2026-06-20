@@ -16,6 +16,8 @@ struct AchievementBadgeCard: View {
 
     private var badgeState: BadgeState {
         if achievement.isUnlocked { return .unlocked }
+        // Secret achievements stay hidden (???) until unlocked — no progress ring
+        if achievement.isSecret { return .unknown }
         if achievement.progress > 0 { return .locked }
         return .unknown
     }

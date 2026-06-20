@@ -131,7 +131,22 @@ final class NotificationsManager: ObservableObject {
     func markAllRead() async {
         do {
             try await apiService.markAllNotificationsRead()
-            await MainActor.run { self.unreadCount = 0 }
+            await MainActor.run {
+                self.unreadCount = 0
+                self.notifications = self.notifications.map { n in
+                    guard n.readAt == nil else { return n }
+                    return InAppNotification(
+                        id: n.id,
+                        kind: n.kind,
+                        actor: n.actor,
+                        driveId: n.driveId,
+                        achievementId: n.achievementId,
+                        message: n.message,
+                        readAt: Date(),
+                        createdAt: n.createdAt
+                    )
+                }
+            }
         } catch {
             await MainActor.run { self.lastError = "Couldn't mark all as read" }
         }

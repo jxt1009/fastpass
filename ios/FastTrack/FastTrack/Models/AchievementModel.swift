@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Achievement Model
 
-struct Achievement: Identifiable, Codable {
+struct Achievement: Identifiable, Codable, Equatable {
     let id: String
     let title: String
     let description: String
@@ -14,6 +14,7 @@ struct Achievement: Identifiable, Codable {
     var unlockedDate: Date?
     var progress: Double = 0.0
     var sourceDriveId: Int?
+    var isSecret: Bool = false
 
     func progressText(with settings: AppSettings) -> String {
         if isUnlocked {
@@ -28,6 +29,58 @@ struct Achievement: Identifiable, Codable {
 
     var badgeColor: Color {
         return isUnlocked ? category.color : .gray
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, category, icon, requirement
+        case isUnlocked, unlockedDate, progress, sourceDriveId, isSecret
+    }
+
+    // Custom decoder so persisted achievements that pre-date `isSecret`
+    // (key absent in `user_achievements_v2` UserDefaults data) still decode
+    // instead of throwing and wiping a user's unlocked state.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id            = try c.decode(String.self, forKey: .id)
+        self.title         = try c.decode(String.self, forKey: .title)
+        self.description   = try c.decode(String.self, forKey: .description)
+        self.category      = try c.decode(AchievementCategory.self, forKey: .category)
+        self.icon          = try c.decode(String.self, forKey: .icon)
+        self.requirement   = try c.decode(AchievementRequirement.self, forKey: .requirement)
+        self.isUnlocked    = try c.decode(Bool.self, forKey: .isUnlocked)
+        self.unlockedDate  = try c.decodeIfPresent(Date.self, forKey: .unlockedDate)
+        self.progress      = try c.decode(Double.self, forKey: .progress)
+        self.sourceDriveId = try c.decodeIfPresent(Int.self, forKey: .sourceDriveId)
+        self.isSecret      = try c.decodeIfPresent(Bool.self, forKey: .isSecret) ?? false
+    }
+
+    // Explicit memberwise init — required because `init(from:)` above
+    // suppresses the synthesized memberwise init. Defaults mirror the
+    // prior synthesized init so existing call sites compile unchanged.
+    init(
+        id: String,
+        title: String,
+        description: String,
+        category: AchievementCategory,
+        icon: String,
+        requirement: AchievementRequirement,
+        isUnlocked: Bool = false,
+        unlockedDate: Date? = nil,
+        progress: Double = 0.0,
+        sourceDriveId: Int? = nil,
+        isSecret: Bool = false
+    ) {
+        self.id            = id
+        self.title         = title
+        self.description   = description
+        self.category      = category
+        self.icon          = icon
+        self.requirement   = requirement
+        self.isUnlocked    = isUnlocked
+        self.unlockedDate  = unlockedDate
+        self.progress      = progress
+        self.sourceDriveId = sourceDriveId
+        self.isSecret      = isSecret
     }
 }
 
@@ -66,7 +119,7 @@ enum AchievementCategory: String, CaseIterable, Codable {
 
 // MARK: - Achievement Requirement
 
-struct AchievementRequirement: Codable {
+struct AchievementRequirement: Codable, Equatable {
     let type: RequirementType
     let value: Double
     let condition: String?

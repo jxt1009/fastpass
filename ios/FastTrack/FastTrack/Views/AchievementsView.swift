@@ -51,7 +51,13 @@ struct AchievementsView: View {
                         ) {
                             ForEach(filteredAchievements) { achievement in
                                 AchievementBadgeCard(achievement: achievement)
-                                    .onTapGesture { selectedAchievement = achievement }
+                                    .onTapGesture {
+                                        // Secret + not-yet-unlocked badges stay
+                                        // hidden (??? state) — no detail sheet.
+                                        if !achievement.isSecret || achievement.isUnlocked {
+                                            selectedAchievement = achievement
+                                        }
+                                    }
                             }
                         }
                         .padding()
@@ -67,6 +73,16 @@ struct AchievementsView: View {
             }
             .onChange(of: driveManager.drives) { drives in
                 achievementManager.updateProgress(with: drives)
+            }
+            .onChange(of: achievementManager.recentUnlocks) { _, newUnlocks in
+                if newUnlocks.isEmpty {
+                    // no-op
+                } else if newUnlocks.count == 1 {
+                    ToastManager.shared.show(ToastMessage(text: "Achievement unlocked: \(newUnlocks[0].title)"))
+                } else {
+                    ToastManager.shared.show(ToastMessage(text: "\(newUnlocks.count) achievements unlocked!"))
+                }
+                achievementManager.clearRecentUnlocks()
             }
             .sheet(item: $selectedAchievement) { achievement in
                 AchievementDetailView(achievement: achievement)
