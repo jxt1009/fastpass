@@ -36,41 +36,43 @@ struct CarDetailHero: View {
     @ViewBuilder
     private var heroSection: some View {
         ZStack(alignment: .bottomLeading) {
-            photo
-                .frame(maxWidth: .infinity)
-                .frame(height: 260)
-                .clipped()
+            ZStack(alignment: .bottomLeading) {
+                photo
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 260)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
+
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.65)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
                 .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
+                .frame(height: 260)
+                .allowsHitTesting(false)
 
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.65)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Radius.xxl, style: .continuous))
-            .frame(height: 260)
-            .allowsHitTesting(false)
-
-            VStack(alignment: .leading, spacing: 4) {
-                if let nickname = car?.nickname, !nickname.isEmpty {
-                    Text(nickname)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
+                VStack(alignment: .leading, spacing: 4) {
+                    if let nickname = car?.nickname, !nickname.isEmpty {
+                        Text(nickname)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
+                    Text(car?.displayString ?? "")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.9))
                         .lineLimit(1)
                 }
-                Text(car?.displayString ?? "")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.9))
-                    .lineLimit(1)
+                .padding(16)
             }
-            .padding(16)
+            .contentShape(Rectangle())
+            .onTapGesture { onTapPhoto() }
 
             heroPhotoEditButton
         }
-        .contentShape(Rectangle())
-        .onTapGesture { onTapPhoto() }
     }
 
     private var heroPhotoEditButton: some View {
