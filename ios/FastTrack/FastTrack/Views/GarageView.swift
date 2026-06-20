@@ -23,6 +23,7 @@ struct GarageView: View {
     @State private var drivePendingDelete: Drive?
     @State private var showingDeleteConfirmation = false
     @State private var deleteError: String?
+    @State private var lastDriveFetch: Date?
 
     private var cars: [UserCar] {
         profileManager.profile?.garage ?? []
@@ -177,7 +178,12 @@ struct GarageView: View {
                 .padding()
             }
             .background(Color.ftBgGradient, ignoresSafeAreaEdges: .all)
-            .onAppear { driveManager.fetchDrives() }
+            .onAppear {
+                let now = Date()
+                if let last = lastDriveFetch, now.timeIntervalSince(last) < 5 { return }
+                lastDriveFetch = now
+                driveManager.fetchDrives()
+            }
             .navigationTitle("Your Garage")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
