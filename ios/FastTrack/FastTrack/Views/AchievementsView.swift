@@ -52,9 +52,9 @@ struct AchievementsView: View {
                             ForEach(filteredAchievements) { achievement in
                                 AchievementBadgeCard(achievement: achievement)
                                     .onTapGesture {
-                                        // Secret / not-started badges (??? state)
-                                        // must not reveal the detail sheet.
-                                        if achievement.isUnlocked || achievement.progress > 0 {
+                                        // Secret + not-yet-unlocked badges stay
+                                        // hidden (??? state) — no detail sheet.
+                                        if !achievement.isSecret || achievement.isUnlocked {
                                             selectedAchievement = achievement
                                         }
                                     }
@@ -75,8 +75,12 @@ struct AchievementsView: View {
                 achievementManager.updateProgress(with: drives)
             }
             .onChange(of: achievementManager.recentUnlocks) { _, newUnlocks in
-                for unlock in newUnlocks {
-                    ToastManager.shared.show(ToastMessage(text: "Achievement unlocked: \(unlock.title)"))
+                if newUnlocks.isEmpty {
+                    // no-op
+                } else if newUnlocks.count == 1 {
+                    ToastManager.shared.show(ToastMessage(text: "Achievement unlocked: \(newUnlocks[0].title)"))
+                } else {
+                    ToastManager.shared.show(ToastMessage(text: "\(newUnlocks.count) achievements unlocked!"))
                 }
                 achievementManager.clearRecentUnlocks()
             }
