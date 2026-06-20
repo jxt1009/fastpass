@@ -172,14 +172,12 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             UserDefaults.standard.set("enter_\(newPhase)", forKey: "crash_bg_state")
-            UserDefaults.standard.synchronize()
             screenWake.inner.update(
                 isRecording: driveManager.isRecording,
                 keepScreenOn: settings.keepScreenOn,
                 scenePhase: newPhase
             )
             UserDefaults.standard.set("screenWake_\(newPhase)", forKey: "crash_bg_state")
-            UserDefaults.standard.synchronize()
             switch newPhase {
             case .active:
                 if authManager.isAuthenticated {
@@ -191,7 +189,6 @@ struct RootView: View {
                 break
             }
             UserDefaults.standard.set("done_\(newPhase)", forKey: "crash_bg_state")
-            UserDefaults.standard.synchronize()
         }
         .onChange(of: driveManager.isRecording) { _, recording in
             screenWake.inner.update(

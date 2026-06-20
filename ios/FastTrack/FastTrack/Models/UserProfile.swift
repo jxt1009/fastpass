@@ -235,9 +235,7 @@ class ProfileManager: ObservableObject {
         return Task {
             do {
                 try await apiService.updateProfile(p)
-                print("✅ Profile saved to server successfully")
             } catch {
-                print("❌ Failed to save profile to server: \(error)")
                 throw error
             }
         }
@@ -278,7 +276,6 @@ class ProfileManager: ObservableObject {
             if let data = try? JSONEncoder().encode(restored) {
                 UserDefaults.standard.set(data, forKey: profileKey)
             }
-            print("✅ Profile restored from server: \(serverUsername)")
         }
 
         // Always backfill the id from the server when the local copy is missing
@@ -291,7 +288,6 @@ class ProfileManager: ObservableObject {
             if let p = self.profile, let data = try? JSONEncoder().encode(p) {
                 UserDefaults.standard.set(data, forKey: profileKey)
             }
-            print("✅ Profile id backfilled from server: \(serverUser.id)")
         }
 
         // Restore avatar from server URL if we don't have one locally
@@ -300,7 +296,6 @@ class ProfileManager: ObservableObject {
                let image = UIImage(data: data) {
                 profileImage = image
                 try? data.write(to: avatarURL())
-                print("✅ Avatar restored from server")
             }
         }
     }
@@ -314,9 +309,7 @@ class ProfileManager: ObservableObject {
             Task {
                 do {
                     try await apiService.uploadAvatar(imageData: data)
-                    print("✅ Avatar uploaded to server")
                 } catch {
-                    print("❌ Failed to upload avatar: \(error)")
                 }
             }
         }

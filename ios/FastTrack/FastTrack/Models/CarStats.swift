@@ -61,7 +61,6 @@ class CarStatsManager: ObservableObject {
     
     func updateStats(for drive: Drive, suppressUpload: Bool = false) {
         guard let carId = drive.carId, !carId.isEmpty else {
-            print("⚠️ Drive has no car ID, skipping stats update")
             return
         }
         
@@ -106,7 +105,6 @@ class CarStatsManager: ObservableObject {
             saveCarStats()
         }
         
-        print("📊 Updated stats for car \(carId): \(stats.totalDrives) drives, \(String(format: "%.1f", stats.totalDistanceMiles)) miles")
     }
     
     func getStats(for carId: String) -> CarStats? {
@@ -211,9 +209,7 @@ class CarStatsManager: ObservableObject {
             if let encoded = try? JSONEncoder().encode(carStats) {
                 UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
             }
-            print("✅ Car stats restored from server")
         } catch {
-            print("⚠️ Could not restore car stats from server: \(error)")
         }
     }
 }

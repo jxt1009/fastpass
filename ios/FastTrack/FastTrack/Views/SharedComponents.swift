@@ -286,7 +286,7 @@ struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color.white.opacity(0.06))
+            .fill(Color.ftSkeleton)
             .frame(width: width, height: height)
             .shimmer()
     }

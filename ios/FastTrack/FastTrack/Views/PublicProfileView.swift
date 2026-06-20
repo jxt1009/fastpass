@@ -272,13 +272,6 @@ struct PublicProfileView: View {
         GarageBlob.decode(profile.garage)
     }
 
-    /// Returns the `CarStats` for a given car id by parsing the raw
-    /// `car_stats_data` JSON blob the server stores on each user. Returns
-    /// nil if the blob is missing/empty/malformed or the car is not in
-    /// the blob.
-    @available(*, unavailable, message: "Decode the blob once via PublicProfileStatsLookup.byCarId(blob:) and look up by id.")
-    private func statsForCar(id: String, blob: String?) -> CarStats? { nil }
-
     // MARK: - Data Loading
 
     private func loadProfile() async {
