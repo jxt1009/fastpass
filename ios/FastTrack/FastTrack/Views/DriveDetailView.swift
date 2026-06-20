@@ -81,6 +81,7 @@ struct DriveDetailView: View {
     @State private var showingDeleteConfirmation = false
     @State private var isDeleting = false
     @State private var deleteError: String?
+    @State private var showingPerformanceDetails = false
     @Environment(\.dismiss) private var dismiss
 
     @EnvironmentObject var settings: AppSettings
@@ -91,6 +92,11 @@ struct DriveDetailView: View {
 
     private var isOwner: Bool {
         drive.userID == authManager.getUser()?.id
+    }
+
+    private var hasExtendedStats: Bool {
+        drive.maxAcceleration > 0 || drive.maxDeceleration > 0 || drive.peakGForce > 0 ||
+        drive.brakeEvents > 0 || drive.leftTurns > 0 || drive.rightTurns > 0
     }
 
     var body: some View {
@@ -134,6 +140,21 @@ struct DriveDetailView: View {
                 }
 
                 DriveDetailGauges(drive: drive, settings: settings)
+
+                if hasExtendedStats {
+                    Button {
+                        showingPerformanceDetails = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                            Text("Performance Details")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.headline)
+                    }
+                    .buttonStyle(InstrumentButtonStyle(color: .ftBlue))
+                }
 
                 DriveDetailTripCard(
                     drive: drive,
@@ -179,6 +200,9 @@ struct DriveDetailView: View {
         .onDisappear { stopPlayback() }
         .sheet(isPresented: $showingCarPicker) {
             DriveCarSelectorView(drive: drive)
+        }
+        .sheet(isPresented: $showingPerformanceDetails) {
+            DrivePerformanceDetailView(drive: drive)
         }
     }
 
