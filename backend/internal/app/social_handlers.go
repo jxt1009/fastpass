@@ -46,9 +46,11 @@ type PublicProfileResponse struct {
 }
 
 type FollowUserEntry struct {
-	UserID   uint   `json:"user_id"   gorm:"column:user_id"`
-	Username string `json:"username"  gorm:"column:username"`
-	Country  string `json:"country"   gorm:"column:country"`
+	UserID    uint   `json:"user_id"    gorm:"column:user_id"`
+	Username  string `json:"username"   gorm:"column:username"`
+	Country   string `json:"country"    gorm:"column:country"`
+	FullName  string `json:"full_name"  gorm:"column:full_name"`
+	AvatarURL string `json:"avatar_url" gorm:"column:avatar_url"`
 }
 
 type UserSearchResult struct {
@@ -449,7 +451,7 @@ func getFollowers(c *gin.Context) {
 
 	entries := make([]FollowUserEntry, 0)
 	db.Raw(`
-		SELECT u.id AS user_id, u.username, u.country
+		SELECT u.id AS user_id, u.username, u.country, u.full_name, u.avatar_url
 		FROM follows f
 		JOIN users u ON f.follower_id = u.id
 		WHERE f.following_id = ?
@@ -468,7 +470,7 @@ func getFollowing(c *gin.Context) {
 
 	entries := make([]FollowUserEntry, 0)
 	db.Raw(`
-		SELECT u.id AS user_id, u.username, u.country
+		SELECT u.id AS user_id, u.username, u.country, u.full_name, u.avatar_url
 		FROM follows f
 		JOIN users u ON f.following_id = u.id
 		WHERE f.follower_id = ?
