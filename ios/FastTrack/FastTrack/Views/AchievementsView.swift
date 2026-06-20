@@ -74,6 +74,12 @@ struct AchievementsView: View {
             .onChange(of: driveManager.drives) { drives in
                 achievementManager.updateProgress(with: drives)
             }
+            .onChange(of: achievementManager.recentUnlocks) { _, newUnlocks in
+                for unlock in newUnlocks {
+                    ToastManager.shared.show(ToastMessage(text: "Achievement unlocked: \(unlock.title)"))
+                }
+                achievementManager.clearRecentUnlocks()
+            }
             .sheet(item: $selectedAchievement) { achievement in
                 AchievementDetailView(achievement: achievement)
                     .environmentObject(settings)

@@ -140,10 +140,14 @@ class AchievementManager: ObservableObject {
         for i in 1..<sortedDrives.count {
             let prevDate = calendar.startOfDay(for: sortedDrives[i-1].startTime)
             let currentDate = calendar.startOfDay(for: sortedDrives[i].startTime)
+            let dayDiff = calendar.dateComponents([.day], from: prevDate, to: currentDate).day ?? 0
 
-            if calendar.dateComponents([.day], from: prevDate, to: currentDate).day == 1 {
+            if dayDiff == 1 {
                 consecutiveDays += 1
                 maxConsecutive = max(maxConsecutive, consecutiveDays)
+            } else if dayDiff == 0 {
+                // Same day — don't reset, just continue
+                continue
             } else {
                 consecutiveDays = 1
             }
