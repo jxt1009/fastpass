@@ -38,7 +38,8 @@ enum AchievementCatalog {
                 description: "Hit the legendary 150 mph mark",
                 category: .speed,
                 icon: "bolt.fill",
-                requirement: AchievementRequirement(type: .maxSpeed, value: 67.056, condition: nil)
+                requirement: AchievementRequirement(type: .maxSpeed, value: 67.056, condition: nil),
+                isSecret: true
             ),
 
             Achievement(
@@ -128,7 +129,8 @@ enum AchievementCatalog {
                 description: "Maintain 90% driving smoothness score",
                 category: .consistency,
                 icon: "waveform.path",
-                requirement: AchievementRequirement(type: .smoothness, value: 90.0, condition: nil)
+                requirement: AchievementRequirement(type: .smoothness, value: 90.0, condition: nil),
+                isSecret: true
             ),
 
             Achievement(

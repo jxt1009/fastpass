@@ -51,7 +51,13 @@ struct AchievementsView: View {
                         ) {
                             ForEach(filteredAchievements) { achievement in
                                 AchievementBadgeCard(achievement: achievement)
-                                    .onTapGesture { selectedAchievement = achievement }
+                                    .onTapGesture {
+                                        // Secret / not-started badges (??? state)
+                                        // must not reveal the detail sheet.
+                                        if achievement.isUnlocked || achievement.progress > 0 {
+                                            selectedAchievement = achievement
+                                        }
+                                    }
                             }
                         }
                         .padding()
